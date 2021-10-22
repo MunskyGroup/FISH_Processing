@@ -6,6 +6,10 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
 This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish)
 
+## Code architecture
+
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/code_architecture.png alt="drawing" width="1200"/>
+
 ## Installation
 
 * Create a virtual environment
