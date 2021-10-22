@@ -54,6 +54,15 @@ class NASConnection():
     '''
     def __init__(self,argument):
         pass
+    def connect():
+        pass
+    def close():
+        pass
+    def read():
+        pass
+    def write():
+        pass
+    
 
 
 class MergeChannels():
@@ -146,6 +155,8 @@ class SpotDetection():
     '''
     def __init__(self,argument):
         pass
+    def detect():
+        pass
 
 
 class DataProcessing():
@@ -160,10 +171,25 @@ class DataProcessing():
     '''
     def __init__(self,argument):
         pass
+    def 
 
 
 class Utilities ():
         '''
+    Description for the class.
+    
+    Parameters
+    --  --  --  --  -- 
+
+    parameter: bool, optional
+        parameter description. The default is True. 
+    '''
+    def __init__(self,argument):
+        pass
+    
+    
+class Metadata():
+    '''
     Description for the class.
     
     Parameters
