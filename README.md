@@ -1,10 +1,10 @@
-# FISH_Processing with Big-FISH
+# FISH_Processing with (FISH-quant v2) Big-FISH.
 
 Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
 ## Description
 
-This library is intended to analyze sm-FISH images using [Big-FISH](https://github.com/fish-quant/big-fish)
+This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish)
 
 ## Installation
 
