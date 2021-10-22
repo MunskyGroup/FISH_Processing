@@ -19,7 +19,7 @@ source activate bigfish_env
 pip install 'tensorflow == 2.3.0'
 pip install 'tensorflow-addons == 0.12.1'
 ```
-* Install Big-FISH
+* Install Big-FISHk
 ```bash
 pip install big-fish
 ```
