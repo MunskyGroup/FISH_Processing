@@ -3,3 +3,7 @@ tensorflow >=2.5.1
 tensorflow-addons==0.12.1
 pandas == 0.24.0
 pysmb == 1.2.7
+joblib==1.1.0
+tqdm==4.62.3
+pysmb==1.2.7
+tifffile==2020.9.3

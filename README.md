@@ -27,6 +27,10 @@ pip install 'tensorflow-addons == 0.12.1'
 ```bash
 pip install big-fish
 ```
+* To deactivate the enviroment use
+```
+conda deactivate
+```
 
 ## Licenses for dependencies
 - License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert.
