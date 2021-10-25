@@ -1,0 +1,12 @@
+name: FISH_processing
+dependencies:
+  - pip
+  -python==3.6
+  - pip:
+    - big-fish==0.5.0
+    - tifffile==2020.9.3
+    - torch==1.10.0
+    - tqdm==4.62.3
+    - cellpose==0.6.5
+    - pysmb==1.2.7
+

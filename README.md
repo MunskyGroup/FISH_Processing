@@ -1,10 +1,10 @@
-# FISH_Processing with (FISH-quant v2) Big-FISH.
+# FISH_Processing with (FISH-quant v2) Big-FISH and Cellpose.
 
 Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
 ## Description
 
-This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish)
+This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish) and [Cellpose](https://github.com/MouseLand/cellpose).
 
 ## Code architecture
 
@@ -12,32 +12,43 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 
 ## Installation
 
-* Create a virtual environment
+* To create a virtual environment navigate to the location of the requirements file, and use:
+```bash
+    conda create -n FISH_processing python=3.6 -y
+    source activate FISH_processing
 
-```bash
-conda create -n bigfish_env python=3.6
-source activate bigfish_env
 ```
-* Install dependencies
+
+
+* To install GPU for Cellpose (Optional step). Only for Linux and Windows users check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```
-pip install 'tensorflow == 2.3.0'
-pip install 'tensorflow-addons == 0.12.1'
+    conda install pytorch cudatoolkit=10.2 -c pytorch
+    conda install -c anaconda cudatoolkit
 ```
-* Install Big-FISH
-```bash
-pip install big-fish
+To install CPU for Cellpose (Optional step). Only for Mac users check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```
+    conda install pytorch -c pytorch
+```
+
+* To include the rest of requeriments use:
+```
+    pip install -r requirements.txt
+```
+
+
+Additional steps to deactivate or remove the environment from the computer:
+
+
 * To deactivate the enviroment use
 ```
-conda deactivate
+    conda deactivate
+```
+
+* To remove the enviroment use:
+```
+    conda env remove -n FISH_processing
 ```
 
 ## Licenses for dependencies
 - License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert.
-
-
-
-
-
-
-
+- License for [Cellpose](https://github.com/MouseLand/cellpose): BSD 3-Clause. Copyright © 2020 Howard Hughes Medical Institute
