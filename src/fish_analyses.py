@@ -800,19 +800,16 @@ class DataProcessing():
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
-    counter_total_cells : int, optional
-        index to indicate the number of cells on the dataframe. The default is 0.
     dataframe : Pandas dataframe or None.
         Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size. The default is None.
     '''
-    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, counter_total_cells=0,dataframe =None):
+    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei,dataframe =None):
         self.spotDectionCSV=spotDectionCSV 
         self.clusterDectionCSV=clusterDectionCSV
         self.masks_complete_cells=masks_complete_cells
         self.masks_nuclei=masks_nuclei
         self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
-        self.counter_total_cells=counter_total_cells
-        self.dataframe =dataframe
+        self.dataframe=dataframe
 
     def get_dataframe(self):
         '''
@@ -822,19 +819,17 @@ class DataProcessing():
         --  --  -- -
         dataframe,  : Pandas dataframe
             Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size.
-        counter_total_cells : int
-            Index indicating the number of cells in the current dataframe.
         '''
     
-        def mask_selector(masks, id,calculate_centroid= True):
-            temp_mask = np.zeros_like(masks) # making a copy of the image
-            selected_mask = temp_mask + (masks==id) # Selecting a single mask and making this mask equal to one and the background equal to zero.
-            mask_area = np.count_nonzero(selected_mask)
+        def mask_selector(mask,calculate_centroid= True):
+            #temp_mask = np.zeros_like(masks) # making a copy of the image
+            #selected_mask = temp_mask + (masks==id) # Selecting a single mask and making this mask equal to one and the background equal to zero.
+            mask_area = np.count_nonzero(mask)
             if calculate_centroid == True:
-                centroid_y,centroid_x = ndimage.measurements.center_of_mass(selected_mask)
+                centroid_y,centroid_x = ndimage.measurements.center_of_mass(mask)
             else:
                 centroid_y,centroid_x = 0,0
-            return selected_mask , mask_area, centroid_y,centroid_x
+            return  mask_area, centroid_y, centroid_x
 
         def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, cell_counter =0 ):
             # spotDectionCSV      nrna x  [Z,Y,X,idx_foci]
@@ -899,37 +894,46 @@ class DataProcessing():
             array_complete[:,7] = cell_area      #'cell_area_px'
             # df = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
+            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int}
+            df = df.astype(new_dtypes)
             return df
 
 
         # Initializing Dataframe
         if not ( self.dataframe is None):
-            old_dataframe = self.dataframe
+            new_dataframe = self.dataframe
+            counter_total_cells = np.amax( self.dataframe['cell_id'].values[0]) +1
+            counter_image =  np.amax( self.dataframe['image_id'].values[0]) +1
         else:
-            old_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
+            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
+            counter_image = 0 
+            counter_total_cells = 0
 
-            
         # loop for each cell in image
-        n_masks = np.amax(self.masks_nuclei)
-        for id_cell in range (1,n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-            selected_nuc_mask , nuc_area, nuc_centroid_y, nuc_centroid_x      = mask_selector(self.masks_nuclei, id_cell)
-            selected_cyt_only_mask , cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei, id_cell,calculate_centroid=False)
-            selected_cell_mask , cell_area, _, _                              = mask_selector(self.masks_complete_cells, id_cell,calculate_centroid=False)
+        n_masks = len(self.masks_nuclei)
+        for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+            #selected_nuc_mask , nuc_area, nuc_centroid_y, nuc_centroid_x      = mask_selector(self.masks_nuclei, id_cell)
+            #selected_cyt_only_mask , cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei, id_cell,calculate_centroid=False)
+            #selected_cell_mask , cell_area, _, _                              = mask_selector(self.masks_complete_cells, id_cell,calculate_centroid=False)
+            nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
+            cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei[id_cell],calculate_centroid=False)
+            cell_area, _, _                          = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=False)
+            
             # Data extraction
-            new_dataframe = data_to_df(old_dataframe, 
+            new_dataframe = data_to_df(new_dataframe, 
                                 self.spotDectionCSV, 
                                 self.clusterDectionCSV, 
-                                mask_nuc = self.selected_nuc_mask, 
-                                mask_cytosol_only=self.selected_cyt_only_mask, 
+                                mask_nuc = self.masks_nuclei[id_cell], 
+                                mask_cytosol_only=self.masks_cytosol_no_nuclei[id_cell], 
                                 nuc_area=nuc_area,
                                 cyto_area=cyto_area, 
                                 cell_area=cell_area, 
                                 centroid_y = nuc_centroid_y, 
                                 centroid_x = nuc_centroid_x,
-                                image_counter=i,
+                                image_counter=counter_image,
                                 cell_counter =counter_total_cells)
             counter_total_cells +=1
-        return new_dataframe, counter_total_cells
+        return new_dataframe
 
 
 class Utilities ():
