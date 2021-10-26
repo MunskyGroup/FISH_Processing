@@ -25,7 +25,7 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
     conda install pytorch cudatoolkit=10.2 -c pytorch
     conda install -c anaconda cudatoolkit
 ```
-To install CPU for Cellpose (Optional step). Only for Mac users check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+*To install CPU for Cellpose (Optional step). Only for Mac users check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```
     conda install pytorch -c pytorch
 ```
