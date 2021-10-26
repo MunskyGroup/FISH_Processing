@@ -16,35 +16,31 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 ```bash
     conda create -n FISH_processing python=3.6 -y
     source activate FISH_processing
-
 ```
 
 
-* To install GPU for Cellpose (Optional step). Only for Linux and Windows users check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+* To install GPU for Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```
     conda install pytorch cudatoolkit=10.2 -c pytorch
-    conda install -c anaconda cudatoolkit
 ```
-*To install CPU for Cellpose (Optional step). Only for Mac users check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+* To install CPU for Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```
     conda install pytorch -c pytorch
 ```
 
-* To include the rest of requeriments use:
+* To include the rest of requirements use:
 ```
     pip install -r requirements.txt
 ```
 
-
 Additional steps to deactivate or remove the environment from the computer:
 
-
-* To deactivate the enviroment use
+* To deactivate the environment use
 ```
     conda deactivate
 ```
 
-* To remove the enviroment use:
+* To remove the environment use:
 ```
     conda env remove -n FISH_processing
 ```

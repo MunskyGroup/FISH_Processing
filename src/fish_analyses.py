@@ -56,11 +56,13 @@ if import_libraries == 1:
     from skimage.transform import warp
     from skimage import transform
     from skimage.filters import gaussian
-    from scipy.ndimage import gaussian_laplace
+    
     from skimage.draw import polygon_perimeter
     from skimage.restoration import denoise_nl_means, estimate_sigma, denoise_wavelet
     from skimage.morphology import square, dilation
     from skimage.io import imread
+    from scipy.ndimage import gaussian_laplace
+    from scipy import ndimage
 
     # Plotting
     import matplotlib.pyplot as plt
@@ -69,7 +71,7 @@ if import_libraries == 1:
     
     from joblib import Parallel, delayed
     import multiprocessing
-    
+
 
 class NASConnection():
     '''
@@ -92,6 +94,7 @@ class NASConnection():
     def write():
         pass
     
+
 class ReadImages():
     '''
     This class reads all .tif images in a given folder and returns the names of these files, path, and number of files.
@@ -126,6 +129,7 @@ class ReadImages():
         number_files = len(path_files)
         list_images = [imread(f) for f in path_files]
         return list_images, path_files, list_files_names, number_files
+
 
 class MergeChannels():
     '''
@@ -184,6 +188,83 @@ class MergeChannels():
         number_files = len(list_file_names)
         return list_file_names, list_merged_images, number_files,save_to_path
 
+
+class RemoveExtrema():
+    '''
+    This class is intended to remove extreme values from a video. The format of the video must be [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
+
+    Parameters
+    --  --  --  --  -- 
+    video : NumPy array
+        Array of images with dimensions [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
+    min_percentile : float, optional
+        Lower bound to normalize intensity. The default is 1.
+    max_percentile : float, optional
+        Higher bound to normalize intensity. The default is 99.
+    selected_channels : List or None, optional
+        Use this option to select a list channels to remove extrema. The default is None and applies the removal of extrema to all the channels.
+    '''
+    def __init__(self, video:np.ndarray, min_percentile:float = 1, max_percentile:float = 99, selected_channels = None):
+        self.video = video
+        self.min_percentile = min_percentile
+        self.max_percentile = max_percentile
+        #self.ignore_channel = ignore_channel
+        if not (type(selected_channels) is list):
+                self.selected_channels = [selected_channels]
+        else:
+            self.selected_channels =selected_channels
+
+    def remove_outliers(self):
+        '''
+        This method normalizes the values of a video by removing extreme values.
+
+        Returns
+        --  --  -- -
+        normalized_video : np.uint16
+            Normalized video. Array with dimensions [T, Y, X, C] or image with format [Y, X].
+        '''
+        normalized_video = np.copy(self.video)
+        normalized_video = np.array(normalized_video, 'float32');
+        # Normalization code for image with format [Y, X]
+        if len(self.video.shape) == 2:
+            number_timepoints = 1
+            number_channels = 1
+            normalized_video_temp = normalized_video
+            if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
+                max_val = np.percentile(normalized_video_temp, self.max_percentile)
+                min_val = np.percentile(normalized_video_temp, self.min_percentile)
+                normalized_video_temp [normalized_video_temp > max_val] = max_val
+                normalized_video_temp [normalized_video_temp < min_val] = min_val
+                normalized_video_temp [normalized_video_temp < 0] = 0
+        
+        # Normalization for video with format [Y, X, C].
+        if len(self.video.shape) == 3:
+            number_channels   = self.video.shape[2]
+            for index_channels in range (number_channels):
+                if (index_channels in self.selected_channels) or (self.selected_channels is None) :
+                    normalized_video_temp = normalized_video[ :, :, index_channels]
+                    if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
+                        max_val = np.percentile(normalized_video_temp, self.max_percentile)
+                        min_val = np.percentile(normalized_video_temp, self.min_percentile)
+                        normalized_video_temp [normalized_video_temp > max_val] = max_val
+                        normalized_video_temp [normalized_video_temp < min_val] =  min_val
+                        normalized_video_temp [normalized_video_temp < 0] = 0
+        
+        # Normalization for video with format [T, Y, X, C] or [Z, Y, X, C].
+        if len(self.video.shape) == 4:
+            number_timepoints, number_channels   = self.video.shape[0], self.video.shape[3]
+            for index_channels in range (number_channels):
+                if (index_channels in self.selected_channels) or (self.selected_channels is None) :
+                #if not self.ignore_channel == index_channels:
+                    for index_time in range (number_timepoints):
+                        normalized_video_temp = normalized_video[index_time, :, :, index_channels]
+                        if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
+                            max_val = np.percentile(normalized_video_temp, self.max_percentile)
+                            min_val = np.percentile(normalized_video_temp, self.min_percentile)
+                            normalized_video_temp [normalized_video_temp > max_val] = max_val
+                            normalized_video_temp [normalized_video_temp < min_val] = min_val
+                            normalized_video_temp [normalized_video_temp < 0] = 0
+        return np.asarray(normalized_video, 'uint16')
 
 
 class Cellpose():
@@ -311,7 +392,7 @@ class Cellpose():
         return selected_masks
 
 
-class CellposeFISH():
+class CellSegmentation():
     '''
     This class is intended to detect cells in FISH images using **Cellpose**. The class uses optimization to generate the meta-parameters used by cellpose. This class segments the nucleus and cytosol for every cell detected in the image.
 
@@ -346,7 +427,7 @@ class CellposeFISH():
         self.tested_thresholds = np.round(np.linspace(0, 3, NUMBER_TESTED_THRESHOLDS), 0)
         self.remove_fragmented_cells = remove_fragmented_cells
         model_test = models.Cellpose(gpu=True, model_type='cyto')
-        if model_test.gpu ==1:
+        if model_test.gpu ==0:
             self.NUMBER_OF_CORES = multiprocessing.cpu_count()
         else:
             self.NUMBER_OF_CORES = 1
@@ -398,7 +479,6 @@ class CellposeFISH():
         
         # this function is intended to convert and np.int16 image to np.int8
         def convert_to_int8(image):
-            #image = RemoveExtrema(image, min_percentile = 0, max_percentile = 50).remove_outliers()
             image = stack.rescale(image, channel_to_stretch=0,stretching_percentile=95)
             imin, imax = np.min(image), np.max(image) 
             image -= imin
@@ -609,132 +689,247 @@ class CellposeFISH():
         return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks
 
 
-
-class RemoveExtrema():
+class SpotDetection():
     '''
-    This class is intended to remove extreme values from a video. The format of the video must be [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
+    This class is intended to detect spots in FISH images using Big-FISH Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
 
     Parameters
     --  --  --  --  -- 
-    video : NumPy array
-        Array of images with dimensions [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
-    min_percentile : float, optional
-        Lower bound to normalize intensity. The default is 1.
-    max_percentile : float, optional
-        Higher bound to normalize intensity. The default is 99.
-    selected_channels : List or None, optional
-        Use this option to select a list channels to remove extrema. The default is None and applies the removal of extrema to all the channels.
+    The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    image : NumPy array
+        Array of images with dimensions [Z, Y, X, C] .
+    FISH_channel : int
+        Specific channel with FISH spots that are used for the quantification
+    voxel_size_z : int, optional
+        Height of a voxel, along the z axis, in nanometers. The default is 300.
+    voxel_size_yx : int, optional
+        Size of a voxel on the yx plan in nanometers. The default is 150.
+    psf_z : int, optional
+        Theoretical size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
+    psf_yx : int, optional
+        Theoretical size of the PSF emitted by a spot in the yx plan in nanometers.
+    cluster_radius : int, optional
+        Maximum distance between two samples for one to be considered as in the neighborhood of the other. Radius expressed in nanometer.
+    minimum_spots_cluster : int, optional
+        Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
+    show_plot : bool, optional
+        If True shows a 2D maximum projection of the image and the detected spots. The default is False
+    
     '''
-    def __init__(self, video:np.ndarray, min_percentile:float = 1, max_percentile:float = 99, selected_channels = None):
-        self.video = video
-        self.min_percentile = min_percentile
-        self.max_percentile = max_percentile
-        #self.ignore_channel = ignore_channel
-        if not (type(selected_channels) is list):
-                self.selected_channels = [selected_channels]
-        else:
-            self.selected_channels =selected_channels
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius=350,minimum_spots_cluster=4,  show_plot =False):
+        self.image = image
+        self.FISH_channel = FISH_channel
+        self.voxel_size_z = voxel_size_z
+        self.voxel_size_yx = voxel_size_yx
+        self.psf_z = psf_z
+        self.psf_yx = psf_yx
+        self.cluster_radius = cluster_radius
+        self.minimum_spots_cluster = minimum_spots_cluster
+        self.show_plot = show_plot
 
-    def remove_outliers(self):
+
+    def detect(self):
         '''
-        This method normalizes the values of a video by removing extreme values.
+        This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using Big-FISH Copyright © 2020, Arthur Imbert.
 
         Returns
         --  --  -- -
-        normalized_video : np.uint16
-            Normalized video. Array with dimensions [T, Y, X, C] or image with format [Y, X].
+        clusterDectionCSV : np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
+            One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
+        spotDectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
+            Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, value is -1.
+
         '''
-        normalized_video = np.copy(self.video)
-        normalized_video = np.array(normalized_video, 'float32');
-        # Normalization code for image with format [Y, X]
-        if len(self.video.shape) == 2:
-            number_timepoints = 1
-            number_channels = 1
-            normalized_video_temp = normalized_video
-            if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
-                max_val = np.percentile(normalized_video_temp, self.max_percentile)
-                min_val = np.percentile(normalized_video_temp, self.min_percentile)
-                normalized_video_temp [normalized_video_temp > max_val] = max_val
-                normalized_video_temp [normalized_video_temp < min_val] = min_val
-                normalized_video_temp [normalized_video_temp < 0] = 0
+        rna=self.image[:,:,:,self.FISH_channel]
+        # Calculating Sigma with  the parameters for the PSF.
+        (radius_z, radius_yx, radius_yx) = stack.get_radius(self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx)
+        sigma_z, sigma_yx, sigma_yx = stack.get_sigma(self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx)
+        sigma = (sigma_z, sigma_yx, sigma_yx)
+        ## SPOT DETECTION
+        rna_log = stack.log_filter(rna, sigma) # LoG filter
+        mask = detection.local_maximum_detection(rna_log, min_distance=sigma) # local maximum detection
+        threshold = detection.automated_threshold_setting(rna_log, mask) # thresholding
+        spots, _ = detection.spots_thresholding(rna_log, mask, threshold, remove_duplicate=True)
+        # Decomposing dense regions
+        spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
+            rna, spots, 
+            self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx,
+            alpha=0.9,   # alpha impacts the number of spots per candidate region
+            beta=1,      # beta impacts the number of candidate regions to decompose
+            gamma=5)     # gamma the filtering step to denoise the image
         
-        # Normalization for video with format [Y, X, C].
-        if len(self.video.shape) == 3:
-            number_channels   = self.video.shape[2]
-            for index_channels in range (number_channels):
-                if (index_channels in self.selected_channels) or (self.selected_channels is None) :
-                    normalized_video_temp = normalized_video[ :, :, index_channels]
-                    if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
-                        max_val = np.percentile(normalized_video_temp, self.max_percentile)
-                        min_val = np.percentile(normalized_video_temp, self.min_percentile)
-                        normalized_video_temp [normalized_video_temp > max_val] = max_val
-                        normalized_video_temp [normalized_video_temp < min_val] =  min_val
-                        normalized_video_temp [normalized_video_temp < 0] = 0
-        
-        # Normalization for video with format [T, Y, X, C] or [Z, Y, X, C].
-        if len(self.video.shape) == 4:
-            number_timepoints, number_channels   = self.video.shape[0], self.video.shape[3]
-            for index_channels in range (number_channels):
-                if (index_channels in self.selected_channels) or (self.selected_channels is None) :
-                #if not self.ignore_channel == index_channels:
-                    for index_time in range (number_timepoints):
-                        normalized_video_temp = normalized_video[index_time, :, :, index_channels]
-                        if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
-                            max_val = np.percentile(normalized_video_temp, self.max_percentile)
-                            min_val = np.percentile(normalized_video_temp, self.min_percentile)
-                            normalized_video_temp [normalized_video_temp > max_val] = max_val
-                            normalized_video_temp [normalized_video_temp < min_val] = min_val
-                            normalized_video_temp [normalized_video_temp < 0] = 0
-        return np.asarray(normalized_video, 'uint16')
-
-class CellSegmentation():
-    '''
-    Description for the class.
-    
-    Parameters
-    --  --  --  --  -- 
-
-    parameter: bool, optional
-        parameter description. The default is True. 
-    '''
-    def __init__(self,argument):
-        pass
-    def nucleus_segmentation():
-        pass
-    def cytosol_segmentation():
-        pass
-    def automated_segmentation():
-        pass
-
-
-class SpotDetection():
-    '''
-    Description for the class.
-    
-    Parameters
-    --  --  --  --  -- 
-
-    parameter: bool, optional
-        parameter description. The default is True. 
-    '''
-    def __init__(self,argument):
-        pass
-    def detect():
-        pass
+        ### CLUSTER DETECTION
+        radius = self.cluster_radius
+        nb_min_spots = self.minimum_spots_cluster
+        spots_post_clustering, clusters = detection.detect_clusters(
+            spots_post_decomposition, 
+            self.voxel_size_z, self.voxel_size_yx, radius, nb_min_spots)
+        # Saving results with new variable names
+        spotDectionCSV = spots_post_clustering
+        clusterDectionCSV = clusters
+        ## PLOTTING
+        if self.show_plot == True:
+            image_2D = stack.focus_projection(rna, proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
+            #image_2D = stack.rescale(image_2D, channel_to_stretch=0,stretching_percentile=95)
+            plot.plot_detection(image_2D, 
+                            spots=[spots_post_decomposition, clusters[:, :3]], 
+                            shape=["circle", "polygon"], 
+                            radius=[radius_yx, radius_yx*2], 
+                            color=["red", "blue"],
+                            linewidth=[1, 2], 
+                            fill=[False, True], 
+                            framesize=(8.5, 5), 
+                            contrast=True)
+        return [spotDectionCSV, clusterDectionCSV]
 
 
 class DataProcessing():
     '''
-    Description for the class.
+    This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
     
     Parameters
     --  --  --  --  -- 
 
-    parameter: bool, optional
-        parameter description. The default is True. 
+    spotDectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
+            One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
+    clusterDectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
+            Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, value is -1.
+    masks_complete_cells : List of NumPy arrays or a single NumPy array
+            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    masks_nuclei: List of NumPy arrays or a single NumPy array
+            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
+            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    counter_total_cells : int, optional
+        index to indicate the number of cells on the dataframe. The default is 0.
+    dataframe : Pandas dataframe or None.
+        Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size. The default is None.
     '''
-    def __init__(self,argument):
-        pass
+    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, counter_total_cells=0,dataframe =None):
+        self.spotDectionCSV=spotDectionCSV 
+        self.clusterDectionCSV=clusterDectionCSV
+        self.masks_complete_cells=masks_complete_cells
+        self.masks_nuclei=masks_nuclei
+        self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
+        self.counter_total_cells=counter_total_cells
+        self.dataframe =dataframe
+
+    def get_dataframe(self):
+        '''
+        This method extracts data from the class SpotDetection and return the data as a dataframe.
+
+        Returns
+        --  --  -- -
+        dataframe,  : Pandas dataframe
+            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size.
+        counter_total_cells : int
+            Index indicating the number of cells in the current dataframe.
+        '''
+    
+        def mask_selector(masks, id,calculate_centroid= True):
+            temp_mask = np.zeros_like(masks) # making a copy of the image
+            selected_mask = temp_mask + (masks==id) # Selecting a single mask and making this mask equal to one and the background equal to zero.
+            mask_area = np.count_nonzero(selected_mask)
+            if calculate_centroid == True:
+                centroid_y,centroid_x = ndimage.measurements.center_of_mass(selected_mask)
+            else:
+                centroid_y,centroid_x = 0,0
+            return selected_mask , mask_area, centroid_y,centroid_x
+
+        def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, cell_counter =0 ):
+            # spotDectionCSV      nrna x  [Z,Y,X,idx_foci]
+            # clusterDectionCSV   nc   x  [Z,Y,X,size,idx_foci]
+            # Removing TS from the image and calculating RNA in nucleus
+            spots_no_ts, _, ts = stack.remove_transcription_site(spotDectionCSV, clusterDectionCSV, mask_nuc, ndim=3)
+            #rna_out_ts      [Z,Y,X,idx_foci]         Coordinates of the detected RNAs with shape. One coordinate per dimension (zyx or yx coordinates) plus the index of the foci assigned to the RNA. If no foci was assigned, value is -1. RNAs from transcription sites are removed.
+            #foci            [Z,Y,X,size, idx_foci]   One coordinate per dimension for the foci centroid (zyx or yx coordinates), the number of RNAs detected in the foci and its index.
+            #ts              [Z,Y,X,size,idx_ts]      One coordinate per dimension for the transcription site centroid (zyx or yx coordinates), the number of RNAs detected in the transcription site and its index.
+            spots_nuc, _ = stack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
+            # Detecting spots in the nucleus
+            spots_cytosol_only, _ = stack.identify_objects_in_region(mask_cytosol_only, spotDectionCSV[:,:3], ndim=3)
+            # coord_innp  Coordinates of the objects detected inside the region.
+            # coord_outnp Coordinates of the objects detected outside the region.
+            # ts                     n x [Z,Y,X,size,idx_ts]
+            # spots_nuc              n x [Z,Y,X]
+            # spots_cytosol_only     n x [Z,Y,X]
+            number_columns = len(df. columns)
+            num_ts = ts.shape[0]
+            num_nuc = spots_nuc.shape[0]
+            num_cyt = spots_cytosol_only.shape[0] 
+            array_ts =                  np.zeros( ( num_ts,number_columns)  )
+            array_spots_nuc =           np.zeros( ( num_nuc,number_columns) )
+            array_spots_cytosol_only =  np.zeros( ( num_cyt  ,number_columns) )
+            # Spot index 
+            spot_idx_ts =  np.arange(0,                  num_ts                                                 ,1 )
+            spot_idx_nuc = np.arange(num_ts,             num_ts + num_nuc                                       ,1 )
+            spot_idx_cyt = np.arange(num_ts + num_nuc,   num_ts + num_nuc + num_cyt  ,1 )
+            spot_idx = np.concatenate((spot_idx_ts,  spot_idx_nuc, spot_idx_cyt ))
+            # Populating arrays
+            array_ts[:,8:11] = ts[:,:3] # populating coord 
+            array_ts[:,11] = 1          # is_nuc
+            array_ts[:,12] = 1          # is_cluster
+            array_ts[:,13] =  ts[:,3]   # cluster_size
+            array_spots_nuc[:,8:11] = spots_nuc[:,:3] # populating coord 
+            array_spots_nuc[:,11] = 1                 # is_nuc
+            array_spots_nuc[:,12] = 0                 # is_cluster
+            array_spots_nuc[:,13] = 0                 # cluster_size
+            array_spots_cytosol_only[:,8:11] = spots_cytosol_only[:,:3] # populating coord 
+            array_spots_cytosol_only[:,11] = 0                 # is_nuc
+            array_spots_cytosol_only[:,12] = 0                 # is_cluster
+            array_spots_cytosol_only[:,13] =  0                # cluster_size
+            # concatenate array
+            array_complete = np.vstack((array_ts, array_spots_nuc, array_spots_cytosol_only))
+            
+            # Saves a dataframe with zeros when no spots  are detected on the cell.
+            if array_complete.size ==0:
+                array_complete = np.zeros( ( 1,number_columns)  )
+                # if NO spots are detected populate  with -1
+                array_complete[:,2] = -1     # spot_id
+                array_complete[:,8:11] = -1
+            else:
+                # if spots are detected populate  the reported  array
+                array_complete[:,2] = spot_idx.T     # spot_id
+            # populating  array with cell  information
+            array_complete[:,0] = image_counter  # image_id
+            array_complete[:,1] = cell_counter   # cell_id
+            array_complete[:,3] = centroid_y     #'nuc_y_centoid'
+            array_complete[:,4] = centroid_x     #'nuc_x_centoid'
+            array_complete[:,5] = nuc_area       #'nuc_area_px'
+            array_complete[:,6] = cyto_area      # cyto_area_px
+            array_complete[:,7] = cell_area      #'cell_area_px'
+            # df = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
+            df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
+            return df
+
+
+        # Initializing Dataframe
+        if not ( self.dataframe is None):
+            old_dataframe = self.dataframe
+        else:
+            old_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
+
+            
+        # loop for each cell in image
+        n_masks = np.amax(self.masks_nuclei)
+        for id_cell in range (1,n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+            selected_nuc_mask , nuc_area, nuc_centroid_y, nuc_centroid_x      = mask_selector(self.masks_nuclei, id_cell)
+            selected_cyt_only_mask , cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei, id_cell,calculate_centroid=False)
+            selected_cell_mask , cell_area, _, _                              = mask_selector(self.masks_complete_cells, id_cell,calculate_centroid=False)
+            # Data extraction
+            new_dataframe = data_to_df(old_dataframe, 
+                                self.spotDectionCSV, 
+                                self.clusterDectionCSV, 
+                                mask_nuc = self.selected_nuc_mask, 
+                                mask_cytosol_only=self.selected_cyt_only_mask, 
+                                nuc_area=nuc_area,
+                                cyto_area=cyto_area, 
+                                cell_area=cell_area, 
+                                centroid_y = nuc_centroid_y, 
+                                centroid_x = nuc_centroid_x,
+                                image_counter=i,
+                                cell_counter =counter_total_cells)
+            counter_total_cells +=1
+        return new_dataframe, counter_total_cells
 
 
 class Utilities ():
@@ -766,3 +961,33 @@ class Metadata():
     
 
 
+class PlotImages():
+    '''
+    This class intended to plot all the channels from an image with format  [Z, Y, X, C].
+    
+    Parameters
+    --  --  --  --  -- 
+
+    image: NumPy array
+        Array of images with dimensions [Z, Y, X, C].
+    figsize : tuple with figure size, optional.
+        Tuple with format (x_size, y_size). the default is (8.5, 5).
+
+    '''
+    def __init__(self,image,figsize=(8.5, 5)):
+        self.image = image
+        self.figsize = figsize
+        
+    def plot(self):
+        '''
+        This function plots all the channels for the original image.
+        '''
+        number_channels = self.image.shape[3]
+        fig, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
+        for i in range (0,number_channels ):
+            img_2D = stack.focus_projection(self.image[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
+            img_2D = stack.gaussian_filter(img_2D,sigma=5)
+            axes[i].imshow( img_2D ,cmap='viridis') 
+            axes[i].set_title('Channel_'+str(i))
+        plt.show()
+        return 
