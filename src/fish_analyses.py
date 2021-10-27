@@ -964,7 +964,6 @@ class Metadata():
         pass
     
 
-
 class PlotImages():
     '''
     This class intended to plot all the channels from an image with format  [Z, Y, X, C].
