@@ -11,6 +11,8 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 # ExceptionName, function_name, GLOBAL_CONSTANT_NAME,
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
 
+
+
 import_libraries = 1
 if import_libraries == 1:
     # importing Big-FISH
@@ -28,9 +30,11 @@ if import_libraries == 1:
     import time
     from skimage.io import imread
     from scipy import ndimage
-    import smb 
     import glob
     import tifffile
+
+    from cellpose import models
+
     # importing tensor flow
     import os; from os import listdir; from os.path import isfile, join
     # to remove tensorflow warnings
@@ -43,7 +47,7 @@ if import_libraries == 1:
     warnings.filterwarnings('ignore', category=DeprecationWarning)
     warnings.filterwarnings('ignore', category=FutureWarning)
     import sys
-    from cellpose import models
+    
     # Skimage
     from skimage import img_as_float64, img_as_uint
     from skimage.filters.rank import entropy
@@ -72,27 +76,142 @@ if import_libraries == 1:
     from joblib import Parallel, delayed
     import multiprocessing
 
+    # SMB connection
+    from smb.SMBConnection import SMBConnection
+    import socket
+    import pathlib
+    import yaml
+    import os
+    import shutil
+
 
 class NASConnection():
     '''
-    Description for the class.
+    This class is intended to establish a connection between a Network-Attached storage and a local computer. The class allow the user to establish a connection to NAS, download specific files, and write back files to NAS.
+    This class doesn't allow the user to delete, modify or overwrite files in NAS.
+
+    To use this class you need to:
+    1) Use the university's network or use the two factor authentication to connect to the university's VPN.
+    2) You need to create a configuration yaml file, with the following format:
+
+    user:
+        username: name_of_the_user_in_the_nas_server
+        password: user_password_in_the_nas_server 
+        remote_address : ip or name for the nas server
+        domain: domain for the nas server
     
     Parameters
     --  --  --  --  -- 
 
-    parameter: bool, optional
+    ,: bool, optional
         parameter description. The default is True. 
+
+    path_to_config_file : str, Pathlib obj
+        The path in the local computer that containts the config file.
+    share_name : str
+        Name of the share partition to access in NAS. The default is 'share'.
     '''
-    def __init__(self,argument):
-        pass
-    def connect():
-        pass
-    def close():
-        pass
-    def read():
-        pass
-    def write():
-        pass
+    def __init__(self,path_to_config_file,share_name = 'share'):
+        # Loading credentials
+        conf = yaml.safe_load(open(str(path_to_config_file)))
+        usr = conf['user']['username']
+        pwd = conf['user']['password']
+        remote_address = conf['user']['remote_address']
+        domain = conf['user']['domain']
+        # LOCAL NAME
+        local_name = socket.gethostbyname(socket.gethostname())
+        # SERVER NAME
+        self.share_name = share_name
+        self.server_name, alias, addresslist = socket.gethostbyaddr(remote_address)
+        # Deffining the connection to NAS
+        self.conn = SMBConnection(username=usr, password=pwd, domain=domain, my_name=local_name, remote_name=self.server_name, is_direct_tcp=True)
+    def connect_to_server(self,timeout=60):
+        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        if is_connected == True:
+            print('Connection established')
+        else:
+            print('Connection failed')
+        return self.conn
+        
+    def copy_files(self, remote_folder_path, local_folder_path, timeout=60):
+        '''
+        This method downloads the tif files from NAS to a temp folder in the local computer
+
+        Parameters
+        --  --  --  --  -- 
+
+        remote_folder_path : str, Pathlib obj
+            The path in the remote folder to download
+        local_folder_path : str, Pathlib obj
+            The path in the local computer where the files will be copied
+        timeout : int, optional
+            seconds to establish connection. The default is 60.
+        '''
+        # Connecting to NAS
+        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        if is_connected == True:
+            print('Connection established')
+        else:
+            print('Connection failed')
+        # Converting the paths to a Pathlib object
+        if type(local_folder_path) == str:
+            local_folder_path = pathlib.Path(local_folder_path)
+        if type(remote_folder_path)==str:
+            remote_folder_path = pathlib.Path(remote_folder_path)
+        # Creating a temporal folder in path
+        if  not str(local_folder_path)[-4:] ==  'temp':
+            local_folder_path = pathlib.Path(local_folder_path).joinpath('temp')
+        # Making the local directory
+        if os.path.exists(str(local_folder_path)):
+            shutil.rmtree(local_folder_path)
+        os.makedirs(str(local_folder_path))
+        
+        # Iterate in the folder to download all tif files
+        list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
+        for file in list_dir:
+            if (file.filename not in ['.', '..']) and ('.tif' in file.filename) :
+                print ('File Downloaded :', file.filename)
+                fileobj = open(file.filename,'wb')
+                self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj)
+                # moving files in the local computer
+                shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
+        print(pathlib.Path().absolute())
+    
+    def write_files_to_NAS(self, file_to_write_to_NAS, remote_folder_path,  timeout=60):
+        '''
+        This method writes files from a local computer to NAS 
+
+        Parameters
+        --  --  --  --  -- 
+
+        remote_folder_path : str, Pathlib obj
+            The path in the remote folder to download
+        local_folder_path : str, Pathlib obj
+            The path in the local computer where the files will be copied
+        timeout : int, optional
+            seconds to establish connection. The default is 60.
+        '''
+        # Connecting to NAS
+        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        if is_connected == True:
+            print('Connection established')
+        else:
+            print('Connection failed')
+        # Converting the paths to a Pathlib object
+        if type(file_to_write_to_NAS) == str:
+            file_to_write_to_NAS = pathlib.Path(file_to_write_to_NAS)
+
+        if type(remote_folder_path)==str:
+            remote_folder_path = pathlib.Path(remote_folder_path)
+
+        # checks that the file doesn't exist on NAS. If it exist it will create a new name as follows original_name__1
+        # Iterate in the folder to download all tif files
+        list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
+        list_all_files_in_NAS = [file.filename for file in list_dir]
+
+        if str(file_to_write_to_NAS.name) not in list_all_files_in_NAS:
+            pass
+                #self.conn.storeFile(self.share_name, ,path,file)
     
 
 class ReadImages():

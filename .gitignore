@@ -3,7 +3,7 @@
 # Ignore folders
 Output/
 .ipynb_checkpoints
-__pycache__/
+__pycache__
 .vscode
 temp/
 tests/
@@ -12,4 +12,6 @@ merged
 ms2_cy5_20210518
 GAPDH_Exon_Cy5
 dataBases/
-dataBases
+*.yml
+config
+**/[C]onfig*
