@@ -12,7 +12,6 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
 
 
-
 import_libraries = 1
 if import_libraries == 1:
     # importing Big-FISH
@@ -212,10 +211,7 @@ class NASConnection():
             with open(str(local_file_to_send_to_NAS), 'rb') as file_obj:
                 self.conn.storeFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name) ) ,  file_obj )
                 print ('The file was uploaded to NAS in location:', str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name))  )
-    
-    
-    
-    
+      
 
 class ReadImages():
     '''
