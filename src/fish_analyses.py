@@ -12,7 +12,6 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
 
 
-
 import_libraries = 1
 if import_libraries == 1:
     # importing Big-FISH
@@ -89,11 +88,9 @@ class NASConnection():
     '''
     This class is intended to establish a connection between a Network-Attached storage and a local computer. The class allow the user to establish a connection to NAS, download specific files, and write back files to NAS.
     This class doesn't allow the user to delete, modify or overwrite files in NAS.
-
     To use this class you need to:
     1) Use the university's network or use the two factor authentication to connect to the university's VPN.
     2) You need to create a configuration yaml file, with the following format:
-
     user:
         username: name_of_the_user_in_the_nas_server
         password: user_password_in_the_nas_server 
@@ -102,10 +99,8 @@ class NASConnection():
     
     Parameters
     --  --  --  --  -- 
-
     ,: bool, optional
         parameter description. The default is True. 
-
     path_to_config_file : str, Pathlib obj
         The path in the local computer that containts the config file.
     share_name : str
@@ -136,10 +131,8 @@ class NASConnection():
     def copy_files(self, remote_folder_path, local_folder_path, timeout=60):
         '''
         This method downloads the tif files from NAS to a temp folder in the local computer
-
         Parameters
         --  --  --  --  -- 
-
         remote_folder_path : str, Pathlib obj
             The path in the remote folder to download
         local_folder_path : str, Pathlib obj
@@ -177,13 +170,11 @@ class NASConnection():
                 shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
         print(pathlib.Path().absolute())
     
-    def write_files_to_NAS(self, file_to_write_to_NAS, remote_folder_path,  timeout=60):
+    def write_files_to_NAS(self, local_file_to_send_to_NAS, remote_folder_path,  timeout=60):
         '''
         This method writes files from a local computer to NAS 
-
         Parameters
         --  --  --  --  -- 
-
         remote_folder_path : str, Pathlib obj
             The path in the remote folder to download
         local_folder_path : str, Pathlib obj
@@ -198,8 +189,8 @@ class NASConnection():
         else:
             print('Connection failed')
         # Converting the paths to a Pathlib object
-        if type(file_to_write_to_NAS) == str:
-            file_to_write_to_NAS = pathlib.Path(file_to_write_to_NAS)
+        if type(local_file_to_send_to_NAS) == str:
+            local_file_to_send_to_NAS = pathlib.Path(local_file_to_send_to_NAS)
 
         if type(remote_folder_path)==str:
             remote_folder_path = pathlib.Path(remote_folder_path)
@@ -208,11 +199,11 @@ class NASConnection():
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
         list_all_files_in_NAS = [file.filename for file in list_dir]
-
-        if str(file_to_write_to_NAS.name) not in list_all_files_in_NAS:
-            pass
-                #self.conn.storeFile(self.share_name, ,path,file)
-    
+        if str(local_file_to_send_to_NAS.name) not in list_all_files_in_NAS:
+            with open(str(local_file_to_send_to_NAS), 'rb') as file_obj:
+                self.conn.storeFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name) ) ,  file_obj )
+                print ('The file was uploaded to NAS in location:', str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name))  )
+      
 
 class ReadImages():
     '''
@@ -220,7 +211,6 @@ class ReadImages():
     
     Parameters
     --  --  --  --  -- 
-
     directory: str or PosixPath
         Directory containing the images to merge.
     '''    
@@ -228,11 +218,10 @@ class ReadImages():
         if type(directory)== pathlib.PosixPath:
             self.directory = directory
         else:
-            self.directory = pathlib.Path(directory)
+            self.directory = Path(directory)
     def read(self):
         '''
         Method takes all the videos in the folder and merge those with similar names.
-
         Returns
         --  --  -- -
         list_images : List of NumPy arrays. 
@@ -257,7 +246,6 @@ class MergeChannels():
     
     Parameters
     --  --  --  --  -- 
-
     directory: str or PosixPath
         Directory containing the images to merge.
     substring_to_detect_in_file_name: str
@@ -269,14 +257,13 @@ class MergeChannels():
         if type(directory)== pathlib.PosixPath:
             self.directory = directory
         else:
-            self.directory = pathlib.Path(directory)
+            self.directory = Path(directory)
         self.substring_to_detect_in_file_name = substring_to_detect_in_file_name
         self.save_figure=save_figure
     
     def merge(self):
         '''
         Method takes all the videos in the folder and merge those with similar names.
-
         Returns
         --  --  -- -
         list_file_names : List of strings 
@@ -311,7 +298,6 @@ class MergeChannels():
 class RemoveExtrema():
     '''
     This class is intended to remove extreme values from a video. The format of the video must be [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
-
     Parameters
     --  --  --  --  -- 
     video : NumPy array
@@ -336,7 +322,6 @@ class RemoveExtrema():
     def remove_outliers(self):
         '''
         This method normalizes the values of a video by removing extreme values.
-
         Returns
         --  --  -- -
         normalized_video : np.uint16
@@ -389,7 +374,6 @@ class RemoveExtrema():
 class Cellpose():
     '''
     This class is intended to detect cells by image masking using **Cellpose** . The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
-
     Parameters
     --  --  --  --  -- 
     video : NumPy array
@@ -420,7 +404,6 @@ class Cellpose():
     def calculate_masks(self):
         '''
         This method performs the process of image masking using **Cellpose**.
-
         Returns
         --  --  -- -
         selected_masks : List of NumPy arrays
@@ -514,7 +497,6 @@ class Cellpose():
 class CellSegmentation():
     '''
     This class is intended to detect cells in FISH images using **Cellpose**. The class uses optimization to generate the meta-parameters used by cellpose. This class segments the nucleus and cytosol for every cell detected in the image.
-
     Parameters
     --  --  --  --  -- 
     video : NumPy array
@@ -554,7 +536,6 @@ class CellSegmentation():
     def calculate_masks(self):
         '''
         This method performs the process of cell detection for FISH images using **Cellpose**.
-
         Returns
         --  --  -- -
         list_masks_complete_cells : List of NumPy arrays or a single NumPy array
@@ -811,7 +792,6 @@ class CellSegmentation():
 class SpotDetection():
     '''
     This class is intended to detect spots in FISH images using Big-FISH Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
-
     Parameters
     --  --  --  --  -- 
     The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
@@ -850,14 +830,12 @@ class SpotDetection():
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using Big-FISH Copyright © 2020, Arthur Imbert.
-
         Returns
         --  --  -- -
         clusterDectionCSV : np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
             One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
         spotDectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
             Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, value is -1.
-
         '''
         rna=self.image[:,:,:,self.FISH_channel]
         # Calculating Sigma with  the parameters for the PSF.
@@ -908,7 +886,6 @@ class DataProcessing():
     
     Parameters
     --  --  --  --  -- 
-
     spotDectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
             One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
     clusterDectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
@@ -933,7 +910,6 @@ class DataProcessing():
     def get_dataframe(self):
         '''
         This method extracts data from the class SpotDetection and return the data as a dataframe.
-
         Returns
         --  --  -- -
         dataframe,  : Pandas dataframe
@@ -1061,7 +1037,6 @@ class Utilities ():
     
     Parameters
     --  --  --  --  -- 
-
     parameter: bool, optional
         parameter description. The default is True. 
     '''
@@ -1075,7 +1050,6 @@ class Metadata():
     
     Parameters
     --  --  --  --  -- 
-
     parameter: bool, optional
         parameter description. The default is True. 
     '''
@@ -1089,12 +1063,10 @@ class PlotImages():
     
     Parameters
     --  --  --  --  -- 
-
     image: NumPy array
         Array of images with dimensions [Z, Y, X, C].
     figsize : tuple with figure size, optional.
         Tuple with format (x_size, y_size). the default is (8.5, 5).
-
     '''
     def __init__(self,image,figsize=(8.5, 5)):
         self.image = image
