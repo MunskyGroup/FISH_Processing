@@ -872,10 +872,10 @@ class SpotDetection():
                             spots=[spots_post_decomposition, clusters[:, :3]], 
                             shape=["circle", "polygon"], 
                             radius=[radius_yx, radius_yx*2], 
-                            color=["red", "blue"],
+                            color=["red", "yellow"],
                             linewidth=[1, 2], 
                             fill=[False, True], 
-                            framesize=(8.5, 5), 
+                            framesize=(20, 20), 
                             contrast=True)
         return [spotDectionCSV, clusterDectionCSV]
 
