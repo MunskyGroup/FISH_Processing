@@ -218,7 +218,7 @@ class ReadImages():
         if type(directory)== pathlib.PosixPath:
             self.directory = directory
         else:
-            self.directory = Path(directory)
+            self.directory = pathlib.Path(directory)
     def read(self):
         '''
         Method takes all the videos in the folder and merge those with similar names.
@@ -257,7 +257,7 @@ class MergeChannels():
         if type(directory)== pathlib.PosixPath:
             self.directory = directory
         else:
-            self.directory = Path(directory)
+            self.directory = pathlib.Path(directory)
         self.substring_to_detect_in_file_name = substring_to_detect_in_file_name
         self.save_figure=save_figure
     
