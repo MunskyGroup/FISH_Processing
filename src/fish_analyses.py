@@ -12,6 +12,7 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
 
 
+
 import_libraries = 1
 if import_libraries == 1:
     # importing Big-FISH
@@ -176,7 +177,7 @@ class NASConnection():
                 shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
         print(pathlib.Path().absolute())
     
-    def write_files_to_NAS(self, local_file_to_send_to_NAS, remote_folder_path,  timeout=60):
+    def write_files_to_NAS(self, file_to_write_to_NAS, remote_folder_path,  timeout=60):
         '''
         This method writes files from a local computer to NAS 
 
@@ -197,8 +198,8 @@ class NASConnection():
         else:
             print('Connection failed')
         # Converting the paths to a Pathlib object
-        if type(local_file_to_send_to_NAS) == str:
-            local_file_to_send_to_NAS = pathlib.Path(local_file_to_send_to_NAS)
+        if type(file_to_write_to_NAS) == str:
+            file_to_write_to_NAS = pathlib.Path(file_to_write_to_NAS)
 
         if type(remote_folder_path)==str:
             remote_folder_path = pathlib.Path(remote_folder_path)
@@ -207,11 +208,11 @@ class NASConnection():
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
         list_all_files_in_NAS = [file.filename for file in list_dir]
-        if str(local_file_to_send_to_NAS.name) not in list_all_files_in_NAS:
-            with open(str(local_file_to_send_to_NAS), 'rb') as file_obj:
-                self.conn.storeFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name) ) ,  file_obj )
-                print ('The file was uploaded to NAS in location:', str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name))  )
-      
+
+        if str(file_to_write_to_NAS.name) not in list_all_files_in_NAS:
+            pass
+                #self.conn.storeFile(self.share_name, ,path,file)
+    
 
 class ReadImages():
     '''
