@@ -887,17 +887,21 @@ class SpotDetection():
         clusterDectionCSV = clusters
         ## PLOTTING
         if self.show_plot == True:
-            image_2D = stack.focus_projection(rna, proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
-            #image_2D = stack.rescale(image_2D, channel_to_stretch=0,stretching_percentile=95)
+            plot.plot_elbow(rna, voxel_size_z=self.voxel_size_z, voxel_size_yx=self.voxel_size_yx, psf_z=self.psf_z, psf_yx=self.psf_yx)
+            plt.show()
+            #image_2D = stack.focus_projection(rna, proportion=0.5, neighborhood_size=5, method='max') # maximum projection 
+            image_2D =stack.maximum_projection(rna)
+            #image_2D = stack.rescale(image_2D, channel_to_stretch=0,stretching_percentile=99)
             plot.plot_detection(image_2D, 
                             spots=[spots_post_decomposition, clusters[:, :3]], 
                             shape=["circle", "polygon"], 
                             radius=[radius_yx, radius_yx*2], 
-                            color=["red", "blue"],
+                            color=["red", "yellow"],
                             linewidth=[1, 2], 
                             fill=[False, True], 
-                            framesize=(8.5, 5), 
+                            framesize=(30, 20),
                             contrast=True)
+            plt.show()
         return [spotDectionCSV, clusterDectionCSV]
 
 
