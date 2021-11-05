@@ -512,11 +512,11 @@ class CellSegmentation():
     diamter_nucleus : float, optional
         Average nucleus size in pixels. The default is 100.
     remove_fragmented_cells: bool, optional
-        If true, it removes masks  in the border of the image. The default is 0.
+        If true, it removes masks  in the border of the image. The default is False.
     show_plot : bool, optional
-        If true, it shows a plot with the detected masks. The default is 1.
+        If true, it shows a plot with the detected masks. The default is True.
     '''
-    def __init__(self, video:np.ndarray, channel_with_cytosol = None, channel_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, remove_fragmented_cells:bool=0, show_plot: bool = 1):
+    def __init__(self, video:np.ndarray, channel_with_cytosol = None, channel_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, remove_fragmented_cells:bool=False, show_plot: bool = True):
         self.video = video
         self.selected_z_slice = selected_z_slice
         self.channel_with_cytosol = channel_with_cytosol
@@ -826,7 +826,6 @@ class SpotDetection():
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plot = show_plot
 
-
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using Big-FISH Copyright © 2020, Arthur Imbert.
@@ -866,17 +865,22 @@ class SpotDetection():
         clusterDectionCSV = clusters
         ## PLOTTING
         if self.show_plot == True:
-            image_2D = stack.focus_projection(rna, proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
-            #image_2D = stack.rescale(image_2D, channel_to_stretch=0,stretching_percentile=95)
+            plot.plot_elbow(rna, voxel_size_z=self.voxel_size_z, voxel_size_yx=self.voxel_size_yx, psf_z=self.psf_z, psf_yx=self.psf_yx)
+            plt.show()
+            #image_2D = stack.focus_projection(rna, proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
+            image_2D = stack.maximum_projection(rna)
+            image_2D = stack.rescale(image_2D, channel_to_stretch=0,stretching_percentile=99)
             plot.plot_detection(image_2D, 
                             spots=[spots_post_decomposition, clusters[:, :3]], 
                             shape=["circle", "polygon"], 
                             radius=[radius_yx, radius_yx*2], 
                             color=["red", "yellow"],
-                            linewidth=[1, 2], 
-                            fill=[False, True], 
+                            linewidth=[1, 2.5], 
+                            fill=[False, False], 
                             framesize=(20, 20), 
-                            contrast=True)
+                            contrast=True,
+                            rescale=True)
+            plt.show()
         return [spotDectionCSV, clusterDectionCSV]
 
 
@@ -913,7 +917,7 @@ class DataProcessing():
         Returns
         --  --  -- -
         dataframe,  : Pandas dataframe
-            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size.
+            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
         '''
     
         def mask_selector(mask,calculate_centroid= True):
@@ -926,7 +930,7 @@ class DataProcessing():
                 centroid_y,centroid_x = 0,0
             return  mask_area, centroid_y, centroid_x
 
-        def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, cell_counter =0 ):
+        def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0 ):
             # spotDectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus
@@ -954,19 +958,29 @@ class DataProcessing():
             spot_idx_nuc = np.arange(num_ts,             num_ts + num_nuc                                       ,1 )
             spot_idx_cyt = np.arange(num_ts + num_nuc,   num_ts + num_nuc + num_cyt  ,1 )
             spot_idx = np.concatenate((spot_idx_ts,  spot_idx_nuc, spot_idx_cyt ))
+            
             # Populating arrays
-            array_ts[:,8:11] = ts[:,:3] # populating coord 
-            array_ts[:,11] = 1          # is_nuc
-            array_ts[:,12] = 1          # is_cluster
-            array_ts[:,13] =  ts[:,3]   # cluster_size
-            array_spots_nuc[:,8:11] = spots_nuc[:,:3] # populating coord 
-            array_spots_nuc[:,11] = 1                 # is_nuc
-            array_spots_nuc[:,12] = 0                 # is_cluster
-            array_spots_nuc[:,13] = 0                 # cluster_size
-            array_spots_cytosol_only[:,8:11] = spots_cytosol_only[:,:3] # populating coord 
-            array_spots_cytosol_only[:,11] = 0                 # is_nuc
-            array_spots_cytosol_only[:,12] = 0                 # is_cluster
-            array_spots_cytosol_only[:,13] =  0                # cluster_size
+            array_ts[:,8:11] = ts[:,:3]         # populating coord 
+            array_ts[:,11] = 1                  # is_nuc
+            array_ts[:,12] = 1                  # is_cluster
+            array_ts[:,13] =  ts[:,3]           # cluster_size
+            array_ts[:,14] = spot_type          # spot_type
+            array_ts[:,15] = is_cell_in_border  # is_cell_fragmented
+            
+            array_spots_nuc[:,8:11] = spots_nuc[:,:3]   # populating coord 
+            array_spots_nuc[:,11] = 1                   # is_nuc
+            array_spots_nuc[:,12] = 0                   # is_cluster
+            array_spots_nuc[:,13] = 0                   # cluster_size
+            array_spots_nuc[:,14] =  spot_type          # spot_type
+            array_spots_nuc[:,15] =  is_cell_in_border  # is_cell_fragmented
+            
+            array_spots_cytosol_only[:,8:11] = spots_cytosol_only[:,:3]    # populating coord 
+            array_spots_cytosol_only[:,11] = 0                             # is_nuc
+            array_spots_cytosol_only[:,12] = 0                             # is_cluster
+            array_spots_cytosol_only[:,13] =  0                            # cluster_size
+            array_spots_cytosol_only[:,14] =  spot_type                    # spot_type
+            array_spots_cytosol_only[:,15] =  is_cell_in_border            # is_cell_fragmented
+            
             # concatenate array
             array_complete = np.vstack((array_ts, array_spots_nuc, array_spots_cytosol_only))
             
@@ -987,9 +1001,10 @@ class DataProcessing():
             array_complete[:,5] = nuc_area       #'nuc_area_px'
             array_complete[:,6] = cyto_area      # cyto_area_px
             array_complete[:,7] = cell_area      #'cell_area_px'
-            # df = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
+            
+            # df = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
-            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int}
+            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
             df = df.astype(new_dtypes)
             return df
 
@@ -1000,7 +1015,7 @@ class DataProcessing():
             counter_total_cells = np.amax( self.dataframe['cell_id'].values[0]) +1
             counter_image =  np.amax( self.dataframe['image_id'].values[0]) +1
         else:
-            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size'])
+            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
             counter_image = 0 
             counter_total_cells = 0
 
@@ -1013,7 +1028,10 @@ class DataProcessing():
             nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
             cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei[id_cell],calculate_centroid=False)
             cell_area, _, _                          = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=False)
+            tested =  self.masks_nuclei[id_cell]
+            is_cell_in_border =  np.any( np.concatenate( ( tested[:,0],tested[:,-1],tested[0,:],tested[-1,:] ) ) )   
             
+            spot_type =0
             # Data extraction
             new_dataframe = data_to_df(new_dataframe, 
                                 self.spotDectionCSV, 
@@ -1026,6 +1044,8 @@ class DataProcessing():
                                 centroid_y = nuc_centroid_y, 
                                 centroid_x = nuc_centroid_x,
                                 image_counter=counter_image,
+                                is_cell_in_border = is_cell_in_border,
+                                spot_type = spot_type,
                                 cell_counter =counter_total_cells)
             counter_total_cells +=1
         return new_dataframe
