@@ -900,16 +900,22 @@ class DataProcessing():
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    spot_type : int, optional
+        integer indicates the type of spot if more than one channel are used for quantification. The default is zero.
     dataframe : Pandas dataframe or None.
-        Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size. The default is None.
+        Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented. The default is None.
+    number_cells_in_channel : int or None
+        Number of cells in channel. This number is used only to reset the counter of number of cells.
     '''
-    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei,dataframe =None):
+    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei,spot_type=0,dataframe =None,number_cells_in_channel=None):
         self.spotDectionCSV=spotDectionCSV 
         self.clusterDectionCSV=clusterDectionCSV
         self.masks_complete_cells=masks_complete_cells
         self.masks_nuclei=masks_nuclei
         self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
         self.dataframe=dataframe
+        self.spot_type = spot_type
+        self.number_cells_in_channel = number_cells_in_channel
 
     def get_dataframe(self):
         '''
@@ -1008,13 +1014,16 @@ class DataProcessing():
             df = df.astype(new_dtypes)
             return df
 
-
         # Initializing Dataframe
-        if not ( self.dataframe is None):
+        if (not ( self.dataframe is None))   and  ( self.number_cells_in_channel is None): # IF the dataframe exist and not reset for multi-channel fish is passed
             new_dataframe = self.dataframe
             counter_total_cells = np.amax( self.dataframe['cell_id'].values[0]) +1
             counter_image =  np.amax( self.dataframe['image_id'].values[0]) +1
-        else:
+        elif (not ( self.dataframe is None)) and (not (self.number_cells_in_channel is None)):    # IF dataframe exist and reset is passed
+            new_dataframe = self.dataframe
+            counter_total_cells = np.amax( self.dataframe['cell_id'].values[0]) -self.number_cells_in_channel +1 # restarting the counter for the number of cells
+            counter_image =  np.amax( self.dataframe['image_id'].values[0])                                 # restarting the counter for the image
+        else: # IF the dataframe does not exist.
             new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
             counter_image = 0 
             counter_total_cells = 0
@@ -1028,10 +1037,9 @@ class DataProcessing():
             nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
             cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei[id_cell],calculate_centroid=False)
             cell_area, _, _                          = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=False)
-            tested =  self.masks_nuclei[id_cell]
-            is_cell_in_border =  np.any( np.concatenate( ( tested[:,0],tested[:,-1],tested[0,:],tested[-1,:] ) ) )   
+            tested_mask =  self.masks_nuclei[id_cell]
+            is_cell_in_border =  np.any( np.concatenate( ( tested_mask[:,0],tested_mask[:,-1],tested_mask[0,:],tested_mask[-1,:] ) ) )   
             
-            spot_type =0
             # Data extraction
             new_dataframe = data_to_df(new_dataframe, 
                                 self.spotDectionCSV, 
@@ -1045,10 +1053,81 @@ class DataProcessing():
                                 centroid_x = nuc_centroid_x,
                                 image_counter=counter_image,
                                 is_cell_in_border = is_cell_in_border,
-                                spot_type = spot_type,
+                                spot_type = self.spot_type ,
                                 cell_counter =counter_total_cells)
             counter_total_cells +=1
         return new_dataframe
+
+
+
+class SpotDetectionComplete():
+    '''
+    This class is intended to detect spots in FISH images using Big-FISH Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
+    This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
+    
+    Parameters
+    --  --  --  --  -- 
+    The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    image : NumPy array
+        Array of images with dimensions [Z, Y, X, C] .
+    FISH_channels : int, or List
+        List of channels with FISH spots that are used for the quantification
+    voxel_size_z : int, optional
+        Height of a voxel, along the z axis, in nanometers. The default is 300.
+    voxel_size_yx : int, optional
+        Size of a voxel on the yx plan in nanometers. The default is 150.
+    psf_z : int, optional
+        Theoretical size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
+    psf_yx : int, optional
+        Theoretical size of the PSF emitted by a spot in the yx plan in nanometers.
+    cluster_radius : int, optional
+        Maximum distance between two samples for one to be considered as in the neighborhood of the other. Radius expressed in nanometer.
+    minimum_spots_cluster : int, optional
+        Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
+    
+    masks_complete_cells : List of NumPy arrays or a single NumPy array
+            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    masks_nuclei: List of NumPy arrays or a single NumPy array
+            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
+            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    show_plot : bool, optional
+        If True shows a 2D maximum projection of the image and the detected spots. The default is False
+    '''
+    
+    def __init__(self,image,  FISH_channels , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, show_plot=True):
+
+        self.image = image
+        self.masks_complete_cells=masks_complete_cells
+        self.masks_nuclei=masks_nuclei
+        self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei        
+
+        self.FISH_channels = FISH_channels
+        self.voxel_size_z = voxel_size_z
+        self.voxel_size_yx = voxel_size_yx
+        self.psf_z = psf_z
+        self.psf_yx = psf_yx
+        self.cluster_radius = cluster_radius
+        self.minimum_spots_cluster = minimum_spots_cluster
+        self.show_plot = show_plot
+        
+        # converting FISH channels to a list
+        if not (type(FISH_channels) is list):
+            self.list_FISH_channels = [FISH_channels]
+        else:
+            self.list_FISH_channels = FISH_channels
+
+    def get_dataframe(self):
+        for i in range(0,len(self.list_FISH_channels)):
+            print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
+            if i ==0:
+                dataframe_FISH = None
+                number_cells_in_channel = None
+            [spotDectionCSV, clusterDectionCSV] = SpotDetection(self.image, self.list_FISH_channels[i], voxel_size_z = self.voxel_size_z,voxel_size_yx = self.voxel_size_yx,psf_z = self.psf_z, psf_yx = self.psf_yx,cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot).detect()
+            dataframe_FISH = DataProcessing(spotDectionCSV, clusterDectionCSV,self.masks_complete_cells, self.masks_nuclei, self.masks_cytosol_no_nuclei, dataframe =dataframe_FISH,number_cells_in_channel=number_cells_in_channel,spot_type=i).get_dataframe()
+            # reset counter for image and cell number
+            number_cells_in_channel = len(self.masks_nuclei)
+        return dataframe_FISH
 
 
 class Utilities ():
