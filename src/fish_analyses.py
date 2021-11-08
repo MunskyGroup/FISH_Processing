@@ -1223,7 +1223,7 @@ class PipelineFISH():
                 dataframe = None
             print('ORIGINAL IMAGE')
             PlotImages(self.list_images[i],figsize=(15, 10) ).plot()
-            print('CELL SEGMENTATIONn')
+            print('CELL SEGMENTATION')
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus,diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
             print('SPOT DETECTION')
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH, voxel_size_z = self.voxel_size_z,voxel_size_yx = self.voxel_size_yx,psf_z = self.psf_z, psf_yx = self.psf_yx,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i,show_plot=self.show_plot).get_dataframe()
