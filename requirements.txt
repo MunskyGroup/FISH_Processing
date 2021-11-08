@@ -7,3 +7,4 @@ tifffile==2020.9.3
 cellpose==0.6.5
 ipykernel==5.5.6
 scikit-image==0.14.2
+pyfiglet==0.7

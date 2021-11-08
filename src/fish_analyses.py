@@ -31,6 +31,9 @@ if import_libraries == 1:
     from scipy import ndimage
     import glob
     import tifffile
+    
+    import pyfiglet
+
 
     from cellpose import models
 
@@ -1218,7 +1221,8 @@ class PipelineFISH():
         
     def run(self):
         for i in range (0, self.number_images ):
-            print('PROCESSING IMAGE: ', str(i))
+            print( pyfiglet.figlet_format('PROCESSING   IMAGE   :   '+ str(i) ) )
+            #print('PROCESSING IMAGE: ', str(i))
             if i ==0:
                 dataframe = None
             PlotImages(self.list_images[i],figsize=(8.5, 5) ).plot()
