@@ -879,7 +879,7 @@ class BigFISH():
             #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-            for i in range(0, rna.shape[0]):
+            for i in range(0, 5):#rna.shape[0]):
                 print('Z-Slice: ', str(i))
                 image_2D = rna[i,:,:]
                 # spots=[spots_post_decomposition , clusters[:, :3]],
