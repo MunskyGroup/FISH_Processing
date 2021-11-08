@@ -741,7 +741,7 @@ class CellSegmentation():
 
         if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
-                _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (20, 10))
+                _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
                 im = convert_to_int8(video_normalized[ :, :, 0:3])
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
@@ -885,7 +885,7 @@ class BigFISH():
                                 spots=[spots_to_plot, clusters_to_plot[:, :3]], 
                                 shape=["circle", "polygon"], 
                                 radius=[radius_yx, radius_yx*2], 
-                                color=["red", "yellow"],
+                                color=["red", "blue"],
                                 linewidth=[1, 2.5], 
                                 fill=[False, False], 
                                 framesize=(12, 8), 
@@ -1221,8 +1221,11 @@ class PipelineFISH():
             #print('PROCESSING IMAGE: ', str(i))
             if i ==0:
                 dataframe = None
-            PlotImages(self.list_images[i],figsize=(8.5, 5) ).plot()
+            print('ORIGINAL IMAGE')
+            PlotImages(self.list_images[i],figsize=(15, 10) ).plot()
+            print('CELL SEGMENTATION')
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus,diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
+            print('SPOT DETECTIONn')
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH, voxel_size_z = self.voxel_size_z,voxel_size_yx = self.voxel_size_yx,psf_z = self.psf_z, psf_yx = self.psf_yx,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i,show_plot=self.show_plot).get_dataframe()
             dataframe = dataframe_FISH
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
