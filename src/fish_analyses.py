@@ -483,7 +483,7 @@ class Cellpose():
             #selected_conditions = np.argwhere(evaluated_metric_for_masks==evaluated_metric_for_masks.max())
             selected_masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = selected_conditions, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             #selected_masks[0, :] = 0;selected_masks[:, 0] = 0;selected_masks[selected_masks.shape[0]-1, :] = 0;selected_masks[:, selected_masks.shape[1]-1] = 0#This line of code ensures that the corners are zeros.
-            selected_masks[0:5, :] = 0;selected_masks[:, 0:5] = 0;selected_masks[selected_masks.shape[0]-5:selected_masks.shape[0]-1, :] = 0; selected_masks[:, selected_masks.shape[1]-5: selected_masks.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
+            #selected_masks[0:5, :] = 0;selected_masks[:, 0:5] = 0;selected_masks[selected_masks.shape[0]-5:selected_masks.shape[0]-1, :] = 0; selected_masks[:, selected_masks.shape[1]-5: selected_masks.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
 
         else:
             selected_masks = None
@@ -587,7 +587,7 @@ class CellSegmentation():
             image = np.asarray(np.round(imf), 'uint8')
             return image
         
-        #image_8bit = convert_to_int8(image)
+        
         
         # function that determines if the nucleus is in the cytosol
         def is_nucleus_in_cytosol(mask_nucleus, mask_cyto):
@@ -674,22 +674,15 @@ class CellSegmentation():
         else:
             video_normalized = self.video # [YXC]       
         
-        def function_to_find_masks (video):
-            # Cellpose
-            #try:
+        def function_to_find_masks (video):                
             if not (self.channels_with_cytosol is None):
                 masks_cyto = Cellpose(video[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
                 if self.remove_fragmented_cells ==1:
                     masks_cyto= remove_fragmented(masks_cyto)
-            
             if not (self.channels_with_nucleus is None):
                 masks_nuclei = Cellpose(video[:, :, self.channels_with_nucleus],  diameter = self.diamter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
                 if self.remove_fragmented_cells ==1:
                     masks_nuclei= remove_fragmented(masks_nuclei)
-            
-            #except:
-            #    masks_cyto = None
-            #    masks_nuclei = None
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 # Implementation
                 list_separated_masks_nuclei = separate_masks(masks_nuclei)
@@ -719,6 +712,7 @@ class CellSegmentation():
                     list_masks_cytosol_no_nuclei = []
                     index_paired_masks =[]
                     masks_cyto = None
+            
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
 
         # Section of the code that optimizes to find the maximum number of index_paired_masks
@@ -741,6 +735,11 @@ class CellSegmentation():
         video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
         list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
 
+        # This functions makes zeros the border of the mask, it is used only for plotting.
+        def remove_boder(img,px_to_remove = 5):
+            img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
+            return img
+
         if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (20, 10))
@@ -753,8 +752,11 @@ class CellSegmentation():
                 axes[2].set(title = 'Nuclei mask')
                 axes[3].imshow(im)
                 for i in range(0, index_paired_masks.shape[0]):
-                    contuour_n = find_contours(list_masks_nuclei[i], 0.5)
-                    contuour_c = find_contours(list_masks_complete_cells[i], 0.5)
+                    # Removing the borders just for plotting
+                    temp_nucleus_mask= remove_boder(list_masks_nuclei[i])
+                    temp_complete_mask = remove_boder(list_masks_complete_cells[i])
+                    contuour_n = find_contours(temp_nucleus_mask, 0.5)
+                    contuour_c = find_contours(temp_complete_mask, 0.5)
                     axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'yellow') # mask nucleus
                     axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'yellow') # mask cytosol
                     axes[3].set(title = 'Paired masks')
@@ -864,33 +866,33 @@ class BigFISH():
         if self.show_plot == True:
             plot.plot_elbow(rna, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
             plt.show()
-            selected_slice = 5
+            #selected_slice = 5
             #values, counts = np.unique(spots_post_decomposition[:,0], return_counts=True)
             #ind = np.argmax(counts)
             #selected_slice = np.argmax(values[ind])
-            
             #counts = np.bincount(spots_post_decomposition[:,0][spots_post_decomposition[:,0]>0])
             #counts = np.bincount(clusters[:,0][clusters[:,0]>0])
             #selected_slice = np.argmax(counts)
-            
             #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-            image_2D = rna[selected_slice,:,:]
-            # spots=[spots_post_decomposition , clusters[:, :3]],
-            spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==selected_slice ]
-            clusters_to_plot = clusters[clusters[:,0]==selected_slice ]  
-            plot.plot_detection(image_2D, 
-                            spots=[spots_to_plot, clusters_to_plot[:, :3]], 
-                            shape=["circle", "polygon"], 
-                            radius=[radius_yx, radius_yx*2], 
-                            color=["red", "yellow"],
-                            linewidth=[1, 2.5], 
-                            fill=[False, False], 
-                            framesize=(15, 10), 
-                            contrast=True,
-                            rescale=True)
-            plt.show()
+            for i in range(0, rna.shape[0]):
+                print('Z-Slice: ', str(i))
+                image_2D = rna[i,:,:]
+                # spots=[spots_post_decomposition , clusters[:, :3]],
+                spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                clusters_to_plot = clusters[clusters[:,0]==i ]  
+                plot.plot_detection(image_2D, 
+                                spots=[spots_to_plot, clusters_to_plot[:, :3]], 
+                                shape=["circle", "polygon"], 
+                                radius=[radius_yx, radius_yx*2], 
+                                color=["red", "yellow"],
+                                linewidth=[1, 2.5], 
+                                fill=[False, False], 
+                                framesize=(12, 8), 
+                                contrast=True,
+                                rescale=True)
+                plt.show()
         return [spotDectionCSV, clusterDectionCSV]
 
 
