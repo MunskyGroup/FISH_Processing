@@ -589,9 +589,6 @@ class CellSegmentation():
             imf *= 255./(imax-imin)
             image = np.asarray(np.round(imf), 'uint8')
             return image
-        
-        
-        
         # function that determines if the nucleus is in the cytosol
         def is_nucleus_in_cytosol(mask_nucleus, mask_cyto):
             nucleusInCell = []
@@ -715,7 +712,6 @@ class CellSegmentation():
                     list_masks_cytosol_no_nuclei = []
                     index_paired_masks =[]
                     masks_cyto = None
-            
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
 
         # Section of the code that optimizes to find the maximum number of index_paired_masks
@@ -727,10 +723,10 @@ class CellSegmentation():
                 list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (video_temp)
                 list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
             array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
-            print('arr',array_number_paired_masks)
-            print('amax',np.argmax(array_number_paired_masks))
+            #print('arr',array_number_paired_masks)
+            #print('amax',np.argmax(array_number_paired_masks))
             selected_threshold = self.tested_thresholds[np.argmax(array_number_paired_masks)]
-            print('sel',selected_threshold)
+            #print('sel',selected_threshold)
         else:
             selected_threshold = 0
         # Running the mask selection once a threshold is obtained
@@ -739,7 +735,7 @@ class CellSegmentation():
         list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
 
         # This functions makes zeros the border of the mask, it is used only for plotting.
-        def remove_boder(img,px_to_remove = 5):
+        def remove_border(img,px_to_remove = 5):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
 
@@ -756,8 +752,8 @@ class CellSegmentation():
                 axes[3].imshow(im)
                 for i in range(0, index_paired_masks.shape[0]):
                     # Removing the borders just for plotting
-                    temp_nucleus_mask= remove_boder(list_masks_nuclei[i])
-                    temp_complete_mask = remove_boder(list_masks_complete_cells[i])
+                    temp_nucleus_mask= remove_border(list_masks_nuclei[i])
+                    temp_complete_mask = remove_border(list_masks_complete_cells[i])
                     contuour_n = find_contours(temp_nucleus_mask, 0.5)
                     contuour_c = find_contours(temp_complete_mask, 0.5)
                     axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'yellow') # mask nucleus
@@ -879,7 +875,7 @@ class BigFISH():
             #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-            for i in range(0, 5):#rna.shape[0]):
+            for i in range(0, 4):#rna.shape[0]):
                 print('Z-Slice: ', str(i))
                 image_2D = rna[i,:,:]
                 # spots=[spots_post_decomposition , clusters[:, :3]],
