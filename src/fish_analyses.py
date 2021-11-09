@@ -1195,10 +1195,8 @@ class Metadata():
               fd.write('\n Time: ' + str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute) )
               fd.write('\n Operative System: ' + sys.platform )
               fd.write('\n hostname: ' + socket.gethostname() + '\n')
-              
               fd.write('#' * (number_spaces_pound_sign) ) 
               fd.write('\n#       PARAMETERS USED  ')
-              
               fd.write('\n    channels_with_cytosol: ' + str(self.channels_with_cytosol) )
               fd.write('\n    channels_with_nucleus: ' + str(self.channels_with_nucleus) )
               fd.write('\n    channels_with_FISH: ' + str(self.channels_with_FISH) )
@@ -1216,17 +1214,14 @@ class Metadata():
               fd.write('\n Folder name: ' + str(self.data_dir.name)  )
               # for loop for all the images.
               fd.write('\n Images in path :'  )
-              
               for img_name in self.list_files_names:
                 fd.write('\n    '+ img_name)
               fd.write('\n')  
-              
               fd.write('#' * (number_spaces_pound_sign)) 
               fd.write('\n       REPRODUCIBILITY ')
               fd.write('\n Platform: \n')
               fd.write('    Python: ' + str(platform.python_version()) )
               fd.write('\n Dependancies: ')
-
               # iterating for all modules
               for module_name in installed_modules:
                 if any(module_name[0:4] in s for s in important_modules):
@@ -1297,7 +1292,7 @@ class PipelineFISH():
         
     def run(self):
         for i in range (0, self.number_images ):
-            print( pyfiglet.figlet_format('PROCESSING   IMAGE   :   '+ str(i) ) )
+            print( pyfiglet.figlet_format('PROCESSING IMAGE : '+ str(i) ) )
             #print('PROCESSING IMAGE: ', str(i))
             if i ==0:
                 dataframe = None
