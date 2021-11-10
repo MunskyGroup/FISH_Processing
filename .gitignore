@@ -18,3 +18,4 @@ config
 metadata_*
 dataframe.ccsv
 temp_*
+~$*
