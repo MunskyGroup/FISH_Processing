@@ -2,13 +2,6 @@
 
 Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
-
-
-
-
-
-
-
 ## Description
 
 This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish) and [Cellpose](https://github.com/MouseLand/cellpose).
@@ -26,7 +19,7 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 ```
 * To install GPU for Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```
-    conda install pytorch cudatoolkit=10.2 -c pytorch
+    conda install pytorch cudatoolkit=10.2 -c pytorch -y
 ```
 * To install CPU for Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```

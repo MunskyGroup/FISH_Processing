@@ -32,28 +32,16 @@ if import_libraries == 1:
     import glob
     import tifffile
     import pyfiglet
-    
     import sys
     import datetime
     import getpass
     import pkg_resources
     import platform
-
-
     from cellpose import models
-
-    # importing tensor flow
     import os; from os import listdir; from os.path import isfile, join
-    # to remove tensorflow warnings
-    #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-    #import tensorflow as tf
-    #tf.get_logger().setLevel('ERROR')
-    #from tensorflow.python.util import deprecation
-    #deprecation._PRINT_DEPRECATION_WARNINGS = False
     import warnings
     warnings.filterwarnings('ignore', category=DeprecationWarning)
     warnings.filterwarnings('ignore', category=FutureWarning)
-    
     # Skimage
     from skimage import img_as_float64, img_as_uint
     from skimage.filters.rank import entropy
@@ -66,22 +54,18 @@ if import_libraries == 1:
     from skimage.transform import warp
     from skimage import transform
     from skimage.filters import gaussian
-    
     from skimage.draw import polygon_perimeter
     from skimage.restoration import denoise_nl_means, estimate_sigma, denoise_wavelet
     from skimage.morphology import square, dilation
     from skimage.io import imread
     from scipy.ndimage import gaussian_laplace
     from scipy import ndimage
-
     # Plotting
     import matplotlib.pyplot as plt
     import matplotlib.path as mpltPath
     from matplotlib import gridspec
-    
     from joblib import Parallel, delayed
     import multiprocessing
-
     # SMB connection
     from smb.SMBConnection import SMBConnection
     import socket
@@ -158,10 +142,10 @@ class NASConnection():
         if type(remote_folder_path)==str:
             remote_folder_path = pathlib.Path(remote_folder_path)
         # Creating a temporal folder in path
-        if  not str(local_folder_path)[-4:] ==  'temp':
-            local_folder_path = pathlib.Path(local_folder_path).joinpath('temp')
+        #if  not str(local_folder_path)[0:5] ==  'temp_':
+        #    local_folder_path = pathlib.Path(local_folder_path).joinpath('temp_' + local_folder_path.name )
         # Making the local directory
-        if os.path.exists(str(local_folder_path)):
+        if (os.path.exists(local_folder_path))  and  (str(local_folder_path.name)[0:5] ==  'temp_'):
             shutil.rmtree(local_folder_path)
         os.makedirs(str(local_folder_path))
         
@@ -174,7 +158,7 @@ class NASConnection():
                 self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj)
                 # moving files in the local computer
                 shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
-        print(pathlib.Path().absolute())
+        print('Files downloaded to: ' + str(local_folder_path))
     
     def write_files_to_NAS(self, local_file_to_send_to_NAS, remote_folder_path,  timeout=60):
         '''
@@ -1135,7 +1119,6 @@ class SpotDetection():
     
     
 
-
 class Utilities ():
     '''
     Description for the class.
@@ -1172,7 +1155,13 @@ class Metadata():
         self.psf_z = psf_z
         self.psf_yx = psf_yx
         self.minimum_spots_cluster = minimum_spots_cluster
-        self.filename = './metadata_'+ str(data_dir.name) +'.txt'
+        
+        if  not str(data_dir.name)[0:5] ==  'temp_':
+            self.filename = './metadata_'+ str(data_dir.name) +'.txt'
+        else:
+            self.filename = './metadata_'+ str(data_dir.name[5:]) +'.txt'
+
+        #self.filename = './metadata.txt'
         self.data_dir = data_dir
         
     def write_metadata(self):
@@ -1185,18 +1174,18 @@ class Metadata():
         elif sys.platform == 'win32':
           os.system('echo , > ' + filename)
           
-      number_spaces_pound_sign = 65
+      number_spaces_pound_sign = 75
       def write_data_in_file(filename):
           with open(filename, 'w') as fd:
               fd.write('#' * (number_spaces_pound_sign)) 
-              fd.write('\n#       AUTHOR INFORMATION  ')
-              fd.write('\n Author: ' + getpass.getuser())
-              fd.write('\n Created at: ' + datetime.datetime.today().strftime('%d %b %Y'))
-              fd.write('\n Time: ' + str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute) )
-              fd.write('\n Operative System: ' + sys.platform )
-              fd.write('\n hostname: ' + socket.gethostname() + '\n')
+              fd.write('\nAUTHOR INFORMATION  ')
+              fd.write('\n    Author: ' + getpass.getuser())
+              fd.write('\n    Created at: ' + datetime.datetime.today().strftime('%d %b %Y'))
+              fd.write('\n    Time: ' + str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute) )
+              fd.write('\n    Operative System: ' + sys.platform )
+              fd.write('\n    Hostname: ' + socket.gethostname() + '\n')
               fd.write('#' * (number_spaces_pound_sign) ) 
-              fd.write('\n#       PARAMETERS USED  ')
+              fd.write('\nPARAMETERS USED  ')
               fd.write('\n    channels_with_cytosol: ' + str(self.channels_with_cytosol) )
               fd.write('\n    channels_with_nucleus: ' + str(self.channels_with_nucleus) )
               fd.write('\n    channels_with_FISH: ' + str(self.channels_with_FISH) )
@@ -1209,23 +1198,23 @@ class Metadata():
               fd.write('\n    minimum_spots_cluster: ' + str(self.minimum_spots_cluster) )
               fd.write('\n') 
               fd.write('#' * (number_spaces_pound_sign) ) 
-              fd.write('\n#       FILES AND DIRECTORIES USED ')
-              fd.write('\n Directory path: ' + str(self.data_dir) )
-              fd.write('\n Folder name: ' + str(self.data_dir.name)  )
+              fd.write('\nFILES AND DIRECTORIES USED ')
+              fd.write('\n    Directory path: ' + str(self.data_dir) )
+              fd.write('\n    Folder name: ' + str(self.data_dir.name)  )
               # for loop for all the images.
-              fd.write('\n Images in path :'  )
+              fd.write('\n    Images in directory :'  )
               for img_name in self.list_files_names:
-                fd.write('\n    '+ img_name)
+                fd.write('\n        '+ img_name)
               fd.write('\n')  
               fd.write('#' * (number_spaces_pound_sign)) 
-              fd.write('\n       REPRODUCIBILITY ')
-              fd.write('\n Platform: \n')
-              fd.write('    Python: ' + str(platform.python_version()) )
-              fd.write('\n Dependancies: ')
+              fd.write('\nREPRODUCIBILITY ')
+              fd.write('\n    Platform: \n')
+              fd.write('        Python: ' + str(platform.python_version()) )
+              fd.write('\n    Dependancies: ')
               # iterating for all modules
               for module_name in installed_modules:
                 if any(module_name[0:4] in s for s in important_modules):
-                  fd.write('\n    '+ module_name)
+                  fd.write('\n        '+ module_name)
               fd.write('\n') 
               fd.write('#' * (number_spaces_pound_sign) ) 
       create_data_file(self.filename)
@@ -1271,7 +1260,7 @@ class PipelineFISH():
     parameter: bool, optional
         parameter description. The default is True. 
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, voxel_size_z, voxel_size_yx, psf_z, psf_yx, minimum_spots_cluster,show_plot=True,create_metadata=True):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, voxel_size_z, voxel_size_yx, psf_z, psf_yx, minimum_spots_cluster,show_plot=True,create_metadata=True,save_dataframe=True):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -1289,11 +1278,11 @@ class PipelineFISH():
         self.CLUSTER_RADIUS = 500
         self.create_metadata = create_metadata
         self.data_dir = data_dir
+        self.save_dataframe = save_dataframe
         
     def run(self):
         for i in range (0, self.number_images ):
             print( pyfiglet.figlet_format('PROCESSING IMAGE : '+ str(i) ) )
-            #print('PROCESSING IMAGE: ', str(i))
             if i ==0:
                 dataframe = None
             print('ORIGINAL IMAGE')
@@ -1304,6 +1293,14 @@ class PipelineFISH():
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH, voxel_size_z = self.voxel_size_z,voxel_size_yx = self.voxel_size_yx,psf_z = self.psf_z, psf_yx = self.psf_yx,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i,show_plot=self.show_plot).get_dataframe()
             dataframe = dataframe_FISH
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
+        
+        if self.save_dataframe == True:
+            #dataframe.to_csv('dataframe_' + self.data_dir.name +'.csv')
+            if  not str(self.data_dir.name)[0:5] ==  'temp_':
+                dataframe.to_csv('dataframe_' + self.data_dir.name +'.csv')
+            else:
+                dataframe.to_csv('dataframe_' + self.data_dir.name[5:] +'.csv')
+
         if self.create_metadata == True:
             Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx, self.minimum_spots_cluster).write_metadata()
         return dataframe

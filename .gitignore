@@ -16,3 +16,5 @@ dataBases/
 config
 **/[C]onfig*
 metadata_*
+dataframe.ccsv
+temp_*
