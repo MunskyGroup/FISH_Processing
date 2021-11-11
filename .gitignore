@@ -19,3 +19,4 @@ metadata_*
 dataframe.ccsv
 temp_*
 ~$*
+dataframe_*
