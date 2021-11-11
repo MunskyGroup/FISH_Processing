@@ -12,7 +12,8 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 
 ## Colab implementation
 
- * Implementation in Colab [![Open In Colab](https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
+ * Implementation in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
+
 
 ## Installation
 
