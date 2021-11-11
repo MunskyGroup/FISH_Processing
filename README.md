@@ -10,6 +10,10 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/code_architecture.png alt="drawing" width="1200"/>
 
+## Colab implementation
+
+ * Implementation in Colab [![Open In Colab](https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
+
 ## Installation
 
 * To create a virtual environment navigate to the location of the requirements file, and use:
