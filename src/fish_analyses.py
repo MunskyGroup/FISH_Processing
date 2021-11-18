@@ -226,7 +226,10 @@ class ReadImages():
         path_files = [ str(self.directory.joinpath(f).resolve()) for f in list_files_names ] # creating the complete path for each file
         number_files = len(path_files)
         list_images = [imread(f) for f in path_files]
-        return list_images, path_files, list_files_names, number_files
+
+        list_images_unit16 = [img.astype(np.uint16) for img in list_images  ]
+
+        return list_images_unit16, path_files, list_files_names, number_files
 
 
 class MergeChannels():
@@ -657,7 +660,8 @@ class CellSegmentation():
         
         ##### IMPLEMENTATION #####
         if len(self.video.shape) > 3:  # [ZYXC]
-            video_normalized = np.mean(self.video[2:-2,:,:,:],axis=0)    # taking the mean value
+            video_normalized = np.mean(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
+            #video_normalized = self.video[self.video.shape[0]//2,:,:,:] 
         else:
             video_normalized = self.video # [YXC]       
         
@@ -722,7 +726,7 @@ class CellSegmentation():
         list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
 
         # This functions makes zeros the border of the mask, it is used only for plotting.
-        def remove_border(img,px_to_remove = 5):
+        def remove_border(img,px_to_remove = 10):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
 
@@ -862,7 +866,7 @@ class BigFISH():
             #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-            for i in range(0, 4):#rna.shape[0]):
+            for i in range(0, 7): # rna.shape[0]):
                 print('Z-Slice: ', str(i))
                 image_2D = rna[i,:,:]
                 # spots=[spots_post_decomposition , clusters[:, :3]],
@@ -1282,7 +1286,7 @@ class PipelineFISH():
         
     def run(self):
         for i in range (0, self.number_images ):
-            print( pyfiglet.figlet_format('PROCESSING IMAGE : '+ str(i) ) )
+            print( pyfiglet.figlet_format('PROCESSING  IMAGE : '+ str(i) ) )
             if i ==0:
                 dataframe = None
             print('ORIGINAL IMAGE')
