@@ -1086,24 +1086,30 @@ class SpotDetection():
         Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented. The default is None.
     image_counter : int, optional
         counter for the number of images in the folder. The default is zero.
+    list_voxels : List of tupples or None
+        list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
+    list_psfs : List of tuples or None
+        list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+    
     show_plot : bool, optional
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
     '''
-    def __init__(self,image,  FISH_channels , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, show_plot=True):
+    def __init__(self,image,  FISH_channels , cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=None, list_psfs=None, show_plot=True):
         self.image = image
         self.masks_complete_cells=masks_complete_cells
         self.masks_nuclei=masks_nuclei
         self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei        
         self.FISH_channels = FISH_channels
-        self.voxel_size_z = voxel_size_z
-        self.voxel_size_yx = voxel_size_yx
-        self.psf_z = psf_z
-        self.psf_yx = psf_yx
+        
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
         self.dataframe = dataframe
         self.image_counter = image_counter
         self.show_plot = show_plot
+        
+        self.list_voxels = list_voxels
+        self.list_psfs = list_psfs
+        
         # converting FISH channels to a list
         if not (type(FISH_channels) is list):
             self.list_FISH_channels = [FISH_channels]
@@ -1115,7 +1121,13 @@ class SpotDetection():
             if (i ==0):
                 dataframe_FISH = self.dataframe 
                 reset_cell_counter = False
-            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = self.voxel_size_z,voxel_size_yx = self.voxel_size_yx,psf_z = self.psf_z, psf_yx = self.psf_yx,cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot).detect()
+            
+            voxel_size_z = self.list_voxels[i][0]
+            voxel_size_yx = self.list_voxels[i][1]
+            psf_z = self.list_psfs[i][0] 
+            psf_yx = self.list_psfs[i][1]
+            
+            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot).detect()
             dataframe_FISH = DataProcessing(spotDectionCSV, clusterDectionCSV, self.masks_complete_cells, self.masks_nuclei, self.masks_cytosol_no_nuclei, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
@@ -1263,20 +1275,29 @@ class PipelineFISH():
     --  --  --  --  -- 
     parameter: bool, optional
         parameter description. The default is True. 
+        
+    list_voxels : List of lists or None
+        list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
+    list_psfs : List of lists or None
+        list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, voxel_size_z, voxel_size_yx, psf_z, psf_yx, minimum_spots_cluster,show_plot=True,create_metadata=True,save_dataframe=True):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster=None,show_plot=True,list_voxels=None, list_psfs=None,create_metadata=True,save_dataframe=True):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.channels_with_FISH = channels_with_FISH
         self.diamter_nucleus = diamter_nucleus
         self.diameter_cytosol = diameter_cytosol
-        #self.microscope_px_to_nm = microscope_px_to_nm
-        #self.microscope_psf = microscope_psf
-        self.voxel_size_z = voxel_size_z
-        self.voxel_size_yx = voxel_size_yx 
-        self.psf_z = psf_z
-        self.psf_yx = psf_yx
+        
+        
+        self.list_voxels = list_voxels
+        self.list_psfs = list_psfs        
+        
+        #self.voxel_size_z = voxel_size_z
+        #self.voxel_size_yx = voxel_size_yx 
+        #self.psf_z = psf_z
+        #self.psf_yx = psf_yx
+        
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plot = show_plot
         self.CLUSTER_RADIUS = 500
@@ -1294,7 +1315,7 @@ class PipelineFISH():
             print('CELL SEGMENTATION')
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus,diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
             print('SPOT DETECTION')
-            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH, voxel_size_z = self.voxel_size_z,voxel_size_yx = self.voxel_size_yx,psf_z = self.psf_z, psf_yx = self.psf_yx,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i,show_plot=self.show_plot).get_dataframe()
+            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot).get_dataframe()
             dataframe = dataframe_FISH
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         
