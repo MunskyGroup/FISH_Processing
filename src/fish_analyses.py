@@ -664,7 +664,6 @@ class CellSegmentation():
             #video_normalized = self.video[self.video.shape[0]//2,:,:,:] 
         else:
             video_normalized = self.video # [YXC]       
-        
         def function_to_find_masks (video):                
             if not (self.channels_with_cytosol is None):
                 masks_cyto = Cellpose(video[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
@@ -1307,10 +1306,12 @@ class PipelineFISH():
     list_psfs : List of lists or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
+        
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
+        
         self.channels_with_FISH = channels_with_FISH
         self.diamter_nucleus = diamter_nucleus
         self.diameter_cytosol = diameter_cytosol
