@@ -57,6 +57,7 @@ if import_libraries == 1:
     from skimage.draw import polygon_perimeter
     from skimage.restoration import denoise_nl_means, estimate_sigma, denoise_wavelet
     from skimage.morphology import square, dilation
+    from skimage.filters import laplace
     from skimage.io import imread
     from scipy.ndimage import gaussian_laplace
     from scipy import ndimage
@@ -578,6 +579,10 @@ class CellSegmentation():
             imf = np.array(image, 'float32')
             imf *= 255./(imax-imin)
             image = np.asarray(np.round(imf), 'uint8')
+            # padding with zeros the channel dimenssion.
+            while image.shape[2]<3:
+                zeros_plane = np.zeros_like(image[:,:,0])
+                image = np.concatenate((image,zeros_plane[:,:,np.newaxis]),axis=2)
             return image
         # function that determines if the nucleus is in the cytosol
         def is_nucleus_in_cytosol(mask_nucleus, mask_cyto):
@@ -660,8 +665,17 @@ class CellSegmentation():
         
         ##### IMPLEMENTATION #####
         if len(self.video.shape) > 3:  # [ZYXC]
-            video_normalized = np.mean(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
+            rescaled_video = stack.rescale(self.video[:,:,:,:], channel_to_stretch=None, stretching_percentile=99.5)
+            num_channels = self.video.shape[3]
+            video_normalized = np.zeros_like(self.video[0,:,:,:])
+            for i in range (0, num_channels):
+                video_normalized[:,:,i] = stack.focus_projection(rescaled_video[:,:,:,i], proportion=0.2, neighborhood_size=5, method='median') # maximum projection
+                video_normalized[:,:,i] = stack.gaussian_filter(video_normalized[:,:,i],sigma=3)  
+                #video_normalized[:,:,i] = stack.remove_background_mean(video_normalized[:,:,i], kernel_shape='disk', kernel_size=50)
+
+            #video_normalized = stack.focus_projection(self.video[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
             #video_normalized = self.video[self.video.shape[0]//2,:,:,:] 
+            #video_normalized = np.mean(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
             video_normalized = self.video # [YXC]       
         def function_to_find_masks (video):                
@@ -747,8 +761,8 @@ class CellSegmentation():
                     temp_complete_mask = remove_border(list_masks_complete_cells[i])
                     contuour_n = find_contours(temp_nucleus_mask, 0.5)
                     contuour_c = find_contours(temp_complete_mask, 0.5)
-                    axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'yellow') # mask nucleus
-                    axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'yellow') # mask cytosol
+                    axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'blue') # mask nucleus
+                    axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red') # mask cytosol
                     axes[3].set(title = 'Paired masks')
                 plt.show()
         else:
@@ -837,8 +851,9 @@ class BigFISH():
         ## SPOT DETECTION
         try:
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
+            rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filte
         except:
-            rna_filtered = rna #stack.gaussian_filter(rna, sigma) # Gaussian filter
+            rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
         #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
         #rna_log = stack.log_filter(rna_gaussian, sigma) # LoG filter
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
@@ -862,7 +877,7 @@ class BigFISH():
         ## PLOTTING
         if self.show_plot == True:
             try:
-                plot.plot_elbow(rna, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
+                plot.plot_elbow(rna_filtered, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
                 plt.show()
             except:
                 pass
@@ -876,20 +891,20 @@ class BigFISH():
             #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-            for i in range(0, 7): # rna.shape[0]):
+            for i in range(5, 8): # rna.shape[0]):
                 print('Z-Slice: ', str(i))
                 image_2D = rna[i,:,:]
-                #image_2D = stack.log_filter(image_2D, sigma=1)
-                image_2D = stack.gaussian_filter(image_2D, sigma=1)
+                image_2D = stack.log_filter(image_2D, sigma=1.5)
+                image_2D = stack.gaussian_filter(image_2D, sigma=1.5)
                 #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-                # spots=[spots_post_decomposition , clusters[:, :3]],
-                spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-                if i > 0 and i<rna.shape[0]:
-                    clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+1) ] 
-                    #spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
+                #spots=[spots_post_decomposition , clusters[:, :3]],
+                #spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                if i > 1 and i<rna.shape[0]-1:
+                    clusters_to_plot = clusters[(clusters[:,0]>=i-2) & (clusters[:,0]<=i+2) ] 
+                    spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
-                    #spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                    spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
 
                 #clusters_to_plot = clusters 
                 plot.plot_detection(image_2D, 
@@ -1286,10 +1301,14 @@ class PlotImages():
         '''
         number_channels = self.image.shape[3]
         fig, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
+        rescaled_video = stack.rescale(self.image[:,:,:,:], channel_to_stretch=None, stretching_percentile=99)
         for i in range (0,number_channels ):
-            #img_2D = stack.focus_projection(self.image[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
-            img_2D = np.amax(self.image[:,:,:,i],axis=0)
-            img_2D = stack.gaussian_filter(img_2D,sigma=1)
+            #temp_img = RemoveExtrema(self.image[:,:,:,i],min_percentile=1, max_percentile=95).remove_outliers() 
+            img_2D = stack.focus_projection(rescaled_video[3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') # maximum projection 
+            #img_2D=difference_of_gaussians(img_2D,low_sigma=1, high_sigma=10)
+            #img_2D = stack.remove_background_mean(img_2D, kernel_shape='disk', kernel_size=50)
+            #img_2D = np.amax(temp_img,axis=0)
+            img_2D = stack.gaussian_filter(img_2D,sigma=2)
             axes[i].imshow( img_2D ,cmap='viridis') 
             axes[i].set_title('Channel_'+str(i))
         plt.show()
@@ -1347,6 +1366,7 @@ class PipelineFISH():
             if i ==0:
                 dataframe = None
             print('ORIGINAL IMAGE')
+            print(self.list_files_names[i])
             PlotImages(self.list_images[i],figsize=(15, 10) ).plot()
             print('CELL SEGMENTATION')
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus,diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
