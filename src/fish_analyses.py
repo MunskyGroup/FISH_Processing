@@ -1284,7 +1284,8 @@ class PlotImages():
         number_channels = self.image.shape[3]
         fig, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
         for i in range (0,number_channels ):
-            img_2D = stack.focus_projection(self.image[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
+            #img_2D = stack.focus_projection(self.image[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
+            img_2D = np.amax(self.image[:,:,:,i],axis=0)
             img_2D = stack.gaussian_filter(img_2D,sigma=1)
             axes[i].imshow( img_2D ,cmap='viridis') 
             axes[i].set_title('Channel_'+str(i))
