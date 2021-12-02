@@ -732,7 +732,8 @@ class CellSegmentation():
         if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                im = convert_to_int8(video_normalized[ :, :, 0:3])
+                n_channels = np.amin(3, video_normalized.shape[2])
+                im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
                 axes[1].imshow(masks_cyto)
@@ -753,8 +754,9 @@ class CellSegmentation():
         else:
             if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
                 if self.show_plot == 1:
+                    n_channels = np.amin(3, video_normalized.shape[2])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = convert_to_int8(video_normalized[ :, :, 0:3])
+                    im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
                     axes[1].imshow(masks_cyto)
