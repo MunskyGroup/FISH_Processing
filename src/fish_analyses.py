@@ -747,7 +747,7 @@ class CellSegmentation():
             if self.show_plot == 1:
                 n_channels = np.amin([3, video_normalized.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
+                im = convert_to_int8(video_normalized[ :, :, 0:n_channels])                    
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
                 axes[1].imshow(masks_cyto)
