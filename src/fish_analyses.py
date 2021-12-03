@@ -383,7 +383,7 @@ class Cellpose():
     selection_method : str, optional
         Option to use the optimization algorithm to maximize the number of cells or maximize the size options are 'max_area' or 'max_cells' or 'max_cells_and_area'. The default is 'max_cells_and_area'.
     '''
-    def __init__(self, video:np.ndarray, num_iterations:int = 5, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, video:np.ndarray, num_iterations:int = 10, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.video = video
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
@@ -665,17 +665,18 @@ class CellSegmentation():
         
         ##### IMPLEMENTATION #####
         if len(self.video.shape) > 3:  # [ZYXC]
-            rescaled_video = stack.rescale(self.video[:,:,:,:], channel_to_stretch=None, stretching_percentile=99.5)
-            num_channels = self.video.shape[3]
-            video_normalized = np.zeros_like(self.video[0,:,:,:])
-            for i in range (0, num_channels):
-                video_normalized[:,:,i] = stack.focus_projection(rescaled_video[:,:,:,i], proportion=0.2, neighborhood_size=5, method='median') # maximum projection
-                video_normalized[:,:,i] = stack.gaussian_filter(video_normalized[:,:,i],sigma=3)  
-                #video_normalized[:,:,i] = stack.remove_background_mean(video_normalized[:,:,i], kernel_shape='disk', kernel_size=50)
+            #video_normalized = stack.focus_projection(self.video, proportion=0.2, neighborhood_size=7, method='median')
+            #rescaled_video = stack.rescale(self.video[:,:,:,:], channel_to_stretch=None, stretching_percentile=99.5)
+            #num_channels = self.video.shape[3]
+            #video_normalized = np.zeros_like(self.video[0,:,:,:])
+            #for i in range (0, num_channels):
+            #    video_normalized[:,:,i] = stack.focus_projection(self.video[:,:,:,i], proportion=0.5, neighborhood_size=5, method='max') # maximum projection
+            #    video_normalized[:,:,i] = stack.gaussian_filter(video_normalized[:,:,i],sigma=1)  
+            #    #video_normalized[:,:,i] = stack.remove_background_mean(video_normalized[:,:,i], kernel_shape='disk', kernel_size=50)
 
             #video_normalized = stack.focus_projection(self.video[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
             #video_normalized = self.video[self.video.shape[0]//2,:,:,:] 
-            #video_normalized = np.mean(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
+            video_normalized = np.amax(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
             video_normalized = self.video # [YXC]       
         def function_to_find_masks (video):                
@@ -737,6 +738,15 @@ class CellSegmentation():
         video_copy = video_normalized.copy()
         video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
         list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
+
+
+        # Optimization based on slice
+
+
+
+
+
+
 
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 10):
@@ -1369,7 +1379,7 @@ class PipelineFISH():
             print(self.list_files_names[i])
             PlotImages(self.list_images[i],figsize=(15, 10) ).plot()
             print('CELL SEGMENTATION')
-            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus,diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
             print('SPOT DETECTION')
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot).get_dataframe()
             dataframe = dataframe_FISH
