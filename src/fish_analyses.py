@@ -522,7 +522,7 @@ class CellSegmentation():
         self.tested_thresholds = np.round(np.linspace(0, 3, self.NUMBER_OPTIMIZATION_VALUES), 0)
         self.remove_fragmented_cells = remove_fragmented_cells
         model_test = models.Cellpose(gpu=True, model_type='cyto')
-        self.optimization_segmentation_method = 'intensity_segmentation'  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', None
+        self.optimization_segmentation_method = 'z_slice_segmentation'  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', None
         if model_test.gpu ==0:
             self.NUMBER_OF_CORES = multiprocessing.cpu_count()
         else:
@@ -745,7 +745,6 @@ class CellSegmentation():
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 for idx, idx_value in enumerate(list_idx):
-                    video_copy = video_normalized.copy()
                     list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (self.video[idx_value,:,:,:])
                     list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
                 array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
