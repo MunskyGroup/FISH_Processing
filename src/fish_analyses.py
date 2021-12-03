@@ -510,7 +510,7 @@ class CellSegmentation():
     show_plot : bool, optional
         If true, it shows a plot with the detected masks. The default is True.
     '''
-    def __init__(self, video:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, remove_fragmented_cells:bool=False, show_plot: bool = True):
+    def __init__(self, video:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, optimization_segmentation_method=None, remove_fragmented_cells:bool=False, show_plot: bool = True):
         self.video = video
         self.selected_z_slice = selected_z_slice
         self.channels_with_cytosol = channels_with_cytosol
@@ -518,10 +518,11 @@ class CellSegmentation():
         self.diameter_cytosol = diameter_cytosol
         self.diamter_nucleus = diamter_nucleus
         self.show_plot = show_plot
-        NUMBER_TESTED_THRESHOLDS = 4
-        self.tested_thresholds = np.round(np.linspace(0, 3, NUMBER_TESTED_THRESHOLDS), 0)
+        self.NUMBER_OPTIMIZATION_VALUES= 5
+        self.tested_thresholds = np.round(np.linspace(0, 3, self.NUMBER_OPTIMIZATION_VALUES), 0)
         self.remove_fragmented_cells = remove_fragmented_cells
         model_test = models.Cellpose(gpu=True, model_type='cyto')
+        self.optimization_segmentation_method = 'intensity_segmentation'  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', None
         if model_test.gpu ==0:
             self.NUMBER_OF_CORES = multiprocessing.cpu_count()
         else:
@@ -673,7 +674,6 @@ class CellSegmentation():
             #    video_normalized[:,:,i] = stack.focus_projection(self.video[:,:,:,i], proportion=0.5, neighborhood_size=5, method='max') # maximum projection
             #    video_normalized[:,:,i] = stack.gaussian_filter(video_normalized[:,:,i],sigma=1)  
             #    #video_normalized[:,:,i] = stack.remove_background_mean(video_normalized[:,:,i], kernel_shape='disk', kernel_size=50)
-
             #video_normalized = stack.focus_projection(self.video[:,:,:,i], proportion=0.7, neighborhood_size=7, method='max') # maximum projection 
             #video_normalized = self.video[self.video.shape[0]//2,:,:,:] 
             video_normalized = np.amax(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
@@ -719,34 +719,44 @@ class CellSegmentation():
                     masks_cyto = None
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
 
-        # Section of the code that optimizes to find the maximum number of index_paired_masks
-        if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-            list_sotring_number_paired_masks = []
-            for idx, threshold in enumerate(self.tested_thresholds):
-                video_copy = video_normalized.copy()
-                video_temp = RemoveExtrema(video_copy,min_percentile=threshold, max_percentile=100-threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-                list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (video_temp)
-                list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
-            array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
-            #print('arr',array_number_paired_masks)
-            #print('amax',np.argmax(array_number_paired_masks))
-            selected_threshold = self.tested_thresholds[np.argmax(array_number_paired_masks)]
-            #print('sel',selected_threshold)
+        # OPTIMIZATION METHODS FOR SEGMENTATION
+        if self.optimization_segmentation_method == 'intensity_segmentation':
+            # Intensity Based Optimization to find the maximum number of index_paired_masks. 
+            if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+                list_sotring_number_paired_masks = []
+                for idx, threshold in enumerate(self.tested_thresholds):
+                    video_copy = video_normalized.copy()
+                    video_temp = RemoveExtrema(video_copy,min_percentile=threshold, max_percentile=100-threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
+                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (video_temp)
+                    list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
+                array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
+                selected_threshold = self.tested_thresholds[np.argmax(array_number_paired_masks)]
+            else:
+                selected_threshold = 0
+            # Running the mask selection once a threshold is obtained
+            video_copy = video_normalized.copy()
+            video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
+        elif self.optimization_segmentation_method == 'z_slice_segmentation':
+            # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
+            number_z_slices = self.video.shape[0]
+            list_idx = np.round(np.linspace(3, number_z_slices-3, 4), 0).astype(int)  
+            # Optimization based on slice
+            if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+                list_sotring_number_paired_masks = []
+                for idx, idx_value in enumerate(list_idx):
+                    video_copy = video_normalized.copy()
+                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (self.video[idx_value,:,:,:])
+                    list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
+                array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
+                selected_threshold = list_idx[np.argmax(array_number_paired_masks)]
+            else:
+                selected_threshold = list_idx[0]
+            # Running the mask selection once a threshold is obtained
+            video_copy = video_normalized.copy()
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (self.video[selected_threshold,:,:,:])
         else:
-            selected_threshold = 0
-        # Running the mask selection once a threshold is obtained
-        video_copy = video_normalized.copy()
-        video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-        list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
-
-
-        # Optimization based on slice
-
-
-
-
-
-
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_normalized)
 
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 10):
