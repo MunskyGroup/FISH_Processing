@@ -740,7 +740,7 @@ class CellSegmentation():
         elif self.optimization_segmentation_method == 'z_slice_segmentation':
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.video.shape[0]
-            list_idx = np.round(np.linspace(3, number_z_slices-3, 4), 0).astype(int)  
+            list_idx = np.round(np.linspace(3, number_z_slices-3, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
