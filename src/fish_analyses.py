@@ -1368,7 +1368,7 @@ class PipelineFISH():
     list_psfs : List of lists or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True,data_frame_name =None):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         
         self.channels_with_cytosol = channels_with_cytosol
@@ -1377,6 +1377,7 @@ class PipelineFISH():
         self.channels_with_FISH = channels_with_FISH
         self.diamter_nucleus = diamter_nucleus
         self.diameter_cytosol = diameter_cytosol
+        self.data_frame_name = data_frame_name
         
         if type(list_voxels[0]) != list:
             self.list_voxels = [list_voxels]
@@ -1415,11 +1416,16 @@ class PipelineFISH():
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         
         if self.save_dataframe == True:
-            #dataframe.to_csv('dataframe_' + self.data_dir.name +'.csv')
-            if  not str(self.data_dir.name)[0:5] ==  'temp_':
-                dataframe.to_csv('dataframe_' + self.data_dir.name +'.csv')
+
+            if not(self.data_frame_name is None):
+                file_data_frame_name = self.data_frame_name
             else:
-                dataframe.to_csv('dataframe_' + self.data_dir.name[5:] +'.csv')
+                file_data_frame_name = self.data_dir.name
+
+            if  not str(file_data_frame_name)[0:5] ==  'temp_':
+                dataframe.to_csv('dataframe_' + file_data_frame_name +'.csv')
+            else:
+                dataframe.to_csv('dataframe_' + file_data_frame_name[5:] +'.csv')
 
         if self.create_metadata == True:
             Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs).write_metadata()
