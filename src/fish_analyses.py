@@ -65,6 +65,8 @@ if import_libraries == 1:
     import matplotlib.pyplot as plt
     import matplotlib.path as mpltPath
     from matplotlib import gridspec
+    plt.style.use('ggplot')  # ggplot  #default
+
     from joblib import Parallel, delayed
     import multiprocessing
     # SMB connection
@@ -73,6 +75,7 @@ if import_libraries == 1:
     import pathlib
     import yaml
     import shutil
+    
 
 
 class NASConnection():
