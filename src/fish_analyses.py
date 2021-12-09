@@ -277,7 +277,7 @@ class MergeChannels():
         save_to_path = self.directory.joinpath('merged')
         for _, _, files in os.walk(self.directory):
             for file in files:
-                if ending_string.match(file):
+                if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
                     prefix = file.rpartition('_')[0]  # stores a string with the first part of the file name before the last underscore character in the file name string.
                     list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif'))
                     list_file_names.append(prefix)
@@ -943,7 +943,9 @@ class BigFISH():
                 #spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 if i > 1 and i<rna.shape[0]-1:
                     clusters_to_plot = clusters[(clusters[:,0]>=i-2) & (clusters[:,0]<=i+2) ] 
-                    spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
+                    #spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
+                    spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
@@ -960,6 +962,7 @@ class BigFISH():
                                 contrast=True,
                                 rescale=True)
                 plt.show()
+                del spots_to_plot, clusters_to_plot
         return [spotDectionCSV, clusterDectionCSV]
 
 
