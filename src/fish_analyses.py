@@ -278,12 +278,13 @@ class MergeChannels():
         for _, _, files in os.walk(self.directory):
             for file in files:
                 if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
-                    prefix = file.rpartition('_')[0]  # stores a string with the first part of the file name before the last underscore character in the file name string.
+                    prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
                     list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif'))
-                    list_file_names.append(prefix)
-                    merged_img = np.concatenate([ imread(list_files_per_image[i])[..., np.newaxis] for i,_ in enumerate(list_files_per_image)],axis=-1).astype('uint16')
-                    list_merged_images.append(merged_img) 
-                    if self.save_figure ==1:
+                    if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
+                        list_file_names.append(prefix)
+                        merged_img = np.concatenate([ imread(list_files_per_image[i])[..., np.newaxis] for i,_ in enumerate(list_files_per_image)],axis=-1).astype('uint16')
+                        list_merged_images.append(merged_img) 
+                    if self.save_figure ==1 and len(list_files_per_image)>1:
                         if not os.path.exists(str(save_to_path)):
                             os.makedirs(str(save_to_path))
                         tifffile.imsave(str(save_to_path.joinpath(prefix+'_merged'+'.tif')), merged_img, metadata={'axes': 'ZYXC'})
