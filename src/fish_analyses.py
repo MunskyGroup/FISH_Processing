@@ -230,9 +230,8 @@ class ReadImages():
         path_files = [ str(self.directory.joinpath(f).resolve()) for f in list_files_names ] # creating the complete path for each file
         number_files = len(path_files)
         list_images = [imread(f) for f in path_files]
-
-        list_images_unit16 = [img.astype(np.uint16) for img in list_images  ]
-
+        list_images_rm = [RemoveExtrema(im,min_percentile=0.01, max_percentile=99.9).remove_outliers()  for im in list_images]
+        list_images_unit16 = [img.astype(np.uint16) for img in list_images_rm  ]
         return list_images_unit16, path_files, list_files_names, number_files
 
 
@@ -892,11 +891,13 @@ class BigFISH():
         sigma_z, sigma_yx, sigma_yx = stack.get_sigma(self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx)
         sigma = (sigma_z, sigma_yx, sigma_yx)
         ## SPOT DETECTION
+        #rna_filtered = stack.log_filter(rna, sigma) # LoG filter
         try:
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
-            rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filte
-        except:
-            rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
+            rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filter
+        except ValueError:
+            print('Error during the log filter calculation, try using larger parameters values for the psf')
+        #    rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
         #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
         #rna_log = stack.log_filter(rna_gaussian, sigma) # LoG filter
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
@@ -923,7 +924,7 @@ class BigFISH():
                 plot.plot_elbow(rna_filtered, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
                 plt.show()
             except:
-                pass
+                print('not  showing elbow plot')
             #selected_slice = 5
             #values, counts = np.unique(spots_post_decomposition[:,0], return_counts=True)
             #ind = np.argmax(counts)
@@ -934,23 +935,23 @@ class BigFISH():
             #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-            for i in range(5, 8): # rna.shape[0]):
+            central_slice = rna.shape[0]//2
+            for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
                 print('Z-Slice: ', str(i))
-                image_2D = rna[i,:,:]
-                image_2D = stack.log_filter(image_2D, sigma=1.5)
-                image_2D = stack.gaussian_filter(image_2D, sigma=1.5)
+                image_2D = rna_filtered[i,:,:]
+                #image_2D = stack.log_filter(image_2D, sigma=1.5)
+                #image_2D = stack.gaussian_filter(image_2D, sigma=1.5)
                 #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
                 #spots=[spots_post_decomposition , clusters[:, :3]],
                 #spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 if i > 1 and i<rna.shape[0]-1:
-                    clusters_to_plot = clusters[(clusters[:,0]>=i-2) & (clusters[:,0]<=i+2) ] 
+                    clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
+                    #clusters_to_plot = clusters[clusters[:,0]==i]
                     #spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-
                 #clusters_to_plot = clusters 
                 plot.plot_detection(image_2D, 
                                 spots=[spots_to_plot, clusters_to_plot[:, :3]], 
@@ -1359,7 +1360,14 @@ class PlotImages():
             axes[i].set_title('Channel_'+str(i))
         plt.show()
         return 
-    
+
+
+
+
+
+
+
+
     
 class PipelineFISH():
     '''
@@ -1375,16 +1383,16 @@ class PipelineFISH():
     list_psfs : List of lists or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True,data_frame_name =None):
-        self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True,data_frame_name =None,optimization_segmentation_method='z_slice_segmentation'):
         
+        self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
-        
         self.channels_with_FISH = channels_with_FISH
         self.diamter_nucleus = diamter_nucleus
         self.diameter_cytosol = diameter_cytosol
         self.data_frame_name = data_frame_name
+        self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         
         if type(list_voxels[0]) != list:
             self.list_voxels = [list_voxels]
@@ -1416,7 +1424,7 @@ class PipelineFISH():
             print(self.list_files_names[i])
             PlotImages(self.list_images[i],figsize=(15, 10) ).plot()
             print('CELL SEGMENTATION')
-            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot).calculate_masks() 
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method).calculate_masks() 
             print('SPOT DETECTION')
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot).get_dataframe()
             dataframe = dataframe_FISH
