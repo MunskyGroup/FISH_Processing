@@ -740,23 +740,27 @@ class CellSegmentation():
             video_copy = video_normalized.copy()
             video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
+        
         elif self.optimization_segmentation_method == 'z_slice_segmentation':
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.video.shape[0]
-            list_idx = np.round(np.linspace(3, number_z_slices-3, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
+            list_idx = np.round(np.linspace(4, number_z_slices-4, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 for idx, idx_value in enumerate(list_idx):
-                    test_video_optimization = stack.gaussian_filter(self.video[idx_value,:,:,:],sigma=2)  
+                    #test_video_optimization = stack.gaussian_filter(self.video[idx_value,:,:,:],sigma=1)  
+                    test_video_optimization = np.amax(self.video[idx_value-3:idx_value+3,:,:,:],axis=0)  
                     list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_video_optimization)
-                    list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
+                    metric = (len(list_masks_cytosol_no_nuclei) *  np.count_nonzero(np.asarray(list_masks_cytosol_no_nuclei) )  )
+                    list_sotring_number_paired_masks.append(metric)
                 array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
                 selected_threshold = list_idx[np.argmax(array_number_paired_masks)]
             else:
                 selected_threshold = list_idx[0]
             # Running the mask selection once a threshold is obtained
-            test_video_optimization = stack.gaussian_filter(self.video[selected_threshold,:,:,:],sigma=2)
+            #test_video_optimization = stack.gaussian_filter(self.video[selected_threshold,:,:,:],sigma=1)
+            test_video_optimization = np.amax(self.video[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
         
         elif self.optimization_segmentation_method == 'gaussian_filter_segmentation':
