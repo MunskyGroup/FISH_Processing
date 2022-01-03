@@ -3,6 +3,10 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+# package requirements
+with open("requirements.txt", encoding='utf-8') as f:
+    requirements = [l.strip() for l in f.readlines() if l]
+
 setup(
     name = "FISH_processing",
     version = "0.0.0",
@@ -16,7 +20,7 @@ setup(
     url = "https://github.com/MunskyGroup/FISH_Processing",
     package_dir ={'':'src'},
     packages=find_packages(where="src"),
-    install_requires=['big-fish == 0.5.0','pysmb 1.2.7'],
+    install_requires=requirements,
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
