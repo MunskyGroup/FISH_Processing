@@ -518,8 +518,6 @@ class CellSegmentation():
         else:
             self.NUMBER_OF_CORES = 1
         self.image_name = image_name
-        
-        
 
     def calculate_masks(self):
         '''
@@ -855,7 +853,7 @@ class BigFISH():
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
     
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None):
         self.image = image
         self.FISH_channel = FISH_channel
         self.voxel_size_z = voxel_size_z
@@ -865,6 +863,7 @@ class BigFISH():
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plot = show_plot
+        self.image_name=image_name
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using Big-FISH Copyright © 2020, Arthur Imbert.
@@ -943,6 +942,10 @@ class BigFISH():
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 #clusters_to_plot = clusters 
+                if not(self.image_name is None) and (i==central_slice): # saving only the central slice
+                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel)
+                else:
+                    path_output = None 
                 plot.plot_detection(image_2D, 
                                 spots=[spots_to_plot, clusters_to_plot[:, :3]], 
                                 shape=["circle", "polygon"], 
@@ -952,7 +955,8 @@ class BigFISH():
                                 fill=[False, False], 
                                 framesize=(15, 10), 
                                 contrast=True,
-                                rescale=True)
+                                rescale=True,
+                                path_output = path_output)
                 plt.show()
                 del spots_to_plot, clusters_to_plot
         return [spotDectionCSV, clusterDectionCSV]
@@ -1162,7 +1166,7 @@ class SpotDetection():
     show_plot : bool, optional
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
     '''
-    def __init__(self,image,  FISH_channels , cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True):
+    def __init__(self,image,  FISH_channels , cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None):
         self.image = image
         self.masks_complete_cells=masks_complete_cells
         self.masks_nuclei=masks_nuclei
@@ -1186,6 +1190,7 @@ class SpotDetection():
             self.list_FISH_channels = [FISH_channels]
         else:
             self.list_FISH_channels = FISH_channels
+        self.image_name = image_name
     def get_dataframe(self):
         for i in range(0,len(self.list_FISH_channels)):
             print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
@@ -1196,7 +1201,7 @@ class SpotDetection():
             voxel_size_yx = self.list_voxels[i][1]
             psf_z = self.list_psfs[i][0] 
             psf_yx = self.list_psfs[i][1]
-            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot).detect()
+            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name).detect()
             dataframe_FISH = DataProcessing(spotDectionCSV, clusterDectionCSV, self.masks_complete_cells, self.masks_nuclei, self.masks_cytosol_no_nuclei, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
@@ -1377,8 +1382,8 @@ class PipelineFISH():
         self.show_plot = show_plot
         self.CLUSTER_RADIUS = 500
         self.data_dir = data_dir
-        if not(self.file_name_str is None):
-            self.name_for_files = self.file_name_str
+        if not(file_name_str is None):
+            self.name_for_files = file_name_str
         else:
             self.name_for_files = self.data_dir.name
         
@@ -1395,13 +1400,14 @@ class PipelineFISH():
                 dataframe = None
             print('ORIGINAL IMAGE')
             print(self.list_files_names[i])
-            temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'original_' + self.list_files_names[i] +'.png' )
+            temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + self.list_files_names[i][:-4] +'.png' )
             PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name ).plot()
             print('CELL SEGMENTATION')
-            temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'segmentation_' + self.list_files_names[i] +'.png' )
+            temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + self.list_files_names[i][:-4] +'.png' )
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
             print('SPOT DETECTION')
-            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot).get_dataframe()
+            temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + self.list_files_names[i][:-4] )
+            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name).get_dataframe()
             dataframe = dataframe_FISH
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         
