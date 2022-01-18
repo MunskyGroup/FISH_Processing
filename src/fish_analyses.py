@@ -278,7 +278,7 @@ class MergeChannels():
             for file in files:
                 if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
                     prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
-                    list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif'))
+                    list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif')) # List of files that match the pattern 'file_prefix_C*.tif'
                     if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
                         list_file_names.append(prefix)
                         merged_img = np.concatenate([ imread(list_files_per_image[i])[..., np.newaxis] for i,_ in enumerate(list_files_per_image)],axis=-1).astype('uint16')
@@ -1236,7 +1236,7 @@ class Metadata():
     parameter: bool, optional
         parameter description. The default is True. 
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=None, list_psfs=None):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=None, list_psfs=None,file_name_str=None):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -1245,16 +1245,20 @@ class Metadata():
         self.diameter_cytosol = diameter_cytosol
         self.list_voxels = list_voxels
         self.list_psfs = list_psfs
+        self.file_name_str=file_name_str
         #self.voxel_size_z = voxel_size_z
         #self.voxel_size_yx = voxel_size_yx 
         #self.psf_z = psf_z
         #self.psf_yx = psf_yx
         self.minimum_spots_cluster = minimum_spots_cluster
         
-        if  not str(data_dir.name)[0:5] ==  'temp_':
+        if  (not str(data_dir.name)[0:5] ==  'temp_') and (self.file_name_str is None):
             self.filename = './metadata_'+ str(data_dir.name) +'.txt'
+        elif not(self.file_name_str is None):
+            self.filename = './metadata_'+ str(file_name_str) +'.txt'
         else:
             self.filename = './metadata_'+ str(data_dir.name[5:]) +'.txt'
+
 
         #self.filename = './metadata.txt'
         self.data_dir = data_dir
@@ -1338,6 +1342,7 @@ class PlotImages():
         '''
         This function plots all the channels for the original image.
         '''
+        print(self.image.shape)
         number_channels = self.image.shape[3]
         fig, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
         rescaled_video = stack.rescale(self.image[:,:,:,:], channel_to_stretch=None, stretching_percentile=99)
@@ -1375,7 +1380,7 @@ class PipelineFISH():
     list_psfs : List of lists or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True,data_frame_name =None,optimization_segmentation_method='z_slice_segmentation'):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],create_metadata=True,save_dataframe=True,file_name_str =None,optimization_segmentation_method='z_slice_segmentation'):
         
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
@@ -1383,7 +1388,7 @@ class PipelineFISH():
         self.channels_with_FISH = channels_with_FISH
         self.diamter_nucleus = diamter_nucleus
         self.diameter_cytosol = diameter_cytosol
-        self.data_frame_name = data_frame_name
+        self.file_name_str = file_name_str
         self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         
         if type(list_voxels[0]) != list:
@@ -1424,16 +1429,16 @@ class PipelineFISH():
         
         if self.save_dataframe == True:
 
-            if not(self.data_frame_name is None):
-                file_data_frame_name = self.data_frame_name
+            if not(self.file_name_str is None):
+                file_name_df = self.file_name_str
             else:
-                file_data_frame_name = self.data_dir.name
+                file_name_df = self.data_dir.name
 
-            if  not str(file_data_frame_name)[0:5] ==  'temp_':
-                dataframe.to_csv('dataframe_' + file_data_frame_name +'.csv')
+            if  not str(file_name_df)[0:5] ==  'temp_':
+                dataframe.to_csv('dataframe_' + file_name_df +'.csv')
             else:
-                dataframe.to_csv('dataframe_' + file_data_frame_name[5:] +'.csv')
+                dataframe.to_csv('dataframe_' + file_name_df[5:] +'.csv')
 
         if self.create_metadata == True:
-            Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs).write_metadata()
+            Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.file_name_str).write_metadata()
         return dataframe

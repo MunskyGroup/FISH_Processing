@@ -53,7 +53,7 @@ Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for 
  Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
 
 ## Licenses for dependencies
-- License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert. All rights reserved.
 
+- License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert. All rights reserved.
 
 - License for [Cellpose](https://github.com/MouseLand/cellpose): BSD 3-Clause Copyright © 2020 Howard Hughes Medical Institute. 
