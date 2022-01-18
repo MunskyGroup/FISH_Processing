@@ -75,7 +75,8 @@ if import_libraries == 1:
     import pathlib
     import yaml
     import shutil
-    
+    # To create PDF report
+    from fpdf import FPDF
 
 
 class NASConnection():
@@ -1363,15 +1364,55 @@ class ReportPDF():
         Directory to place the report.
 
     '''    
-    def __init__(directory_results,substring_to_detect_in_file_name, ):
-        self.directory_results = directory_results
-        self.substring_to_detect_in_file_name = substring_to_detect_in_file_name
-        self.file_name = file_name
-        self.folder_output = folder_output
+    def __init__(self,directory, channels_with_FISH):
+        self.directory = directory
+        self.channels_with_FISH = channels_with_FISH
+    
     def create_report(self):
-        pass
-        
-        
+        pdf = FPDF()
+        WIDTH = 210
+        HEIGHT = 297
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 14)
+        # code that reads the main file names
+        list_files_names =[]
+        substring_to_detect_in_file_name = 'ori_'               # prefix 'ori_' means original image 
+        ending_string = re.compile(substring_to_detect_in_file_name)  # for faster search in the file
+        for _, _, files in os.walk(self.directory):
+            for file in files:
+                if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
+                    file_name = file.rpartition('.')[0]         # getting the file name and removing extention
+                    list_files_names.append(file_name[4:])      # removing the prefix from the file name.
+        list_files_names.sort()
+        # Main loop that reads each image and makes the pdf
+        for i,temp_file_name in enumerate(list_files_names):
+            pdf.cell(w=0, h=10, txt='Original image: ' + temp_file_name,ln =2,align = 'L')
+            # code that returns the path of the original image
+            temp_original_img_name = pathlib.Path().absolute().joinpath( self.directory, 'ori_' + temp_file_name +'.png' )
+            pdf.image(str(temp_original_img_name), x=0, y=20, w=WIDTH-25)
+            # creating some space
+            for text_idx in range(0, 12):
+                pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
+            pdf.cell(w=0, h=10, txt='Cell segmentation: ' + temp_file_name,ln =1,align = 'L')
+            # code that returns the path of the segmented image
+            temp_segmented_img_name = pathlib.Path().absolute().joinpath( self.directory, 'seg_' + temp_file_name +'.png' )
+            pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-25)
+            pdf.add_page()
+            for id_channel, channel in enumerate(self.channels_with_FISH):
+                temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel)+'.png' )
+                if id_channel ==0: 
+                    pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
+                    pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)
+                else: 
+                    for j in range(0, 12):
+                        pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
+                    pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L')
+                    pdf.image(str(temp_seg_name), x=0, y=HEIGHT/2, w=WIDTH-25)
+                    pdf.add_page()
+                if len(self.channels_with_FISH)==1:
+                    pdf.add_page()
+        pdf_name =  'pdf_report_' + self.directory.name[13:] + '.pdf'
+        pdf.output(pdf_name, 'F')
 
 
 class PipelineFISH():
@@ -1443,7 +1484,11 @@ class PipelineFISH():
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
         else:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')
+        
         # Creating the metadata
         Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files).write_metadata()
+        
         # Creating a PDF report
+        ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH).create_report()
+
         return dataframe
