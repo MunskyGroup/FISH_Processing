@@ -790,7 +790,7 @@ class CellSegmentation():
                     axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red') # mask cytosol
                     axes[3].set(title = 'Paired masks')
                 if not(self.image_name is None):
-                    plt.savefig(self.image_name)
+                    plt.savefig(self.image_name,bbox_inches='tight')
                 plt.show()
         else:
             if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
@@ -803,7 +803,7 @@ class CellSegmentation():
                     axes[1].imshow(masks_cyto)
                     axes[1].set(title = 'Cytosol mask')
                     if not(self.image_name is None):
-                        plt.savefig(self.image_name)
+                        plt.savefig(self.image_name,bbox_inches='tight')
                     plt.show()
             if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 if self.show_plot == 1:
@@ -815,7 +815,7 @@ class CellSegmentation():
                     axes[1].imshow(masks_nuclei)
                     axes[1].set(title = 'Nuclei mask')
                     if not(self.image_name is None):
-                        plt.savefig(self.image_name)
+                        plt.savefig(self.image_name,bbox_inches='tight')
                     plt.show()
             print('No paired masks were detected for this image')
 
@@ -1343,11 +1343,37 @@ class PlotImages():
             img_2D = stack.gaussian_filter(img_2D,sigma=2)
             axes[i].imshow( img_2D ,cmap='viridis') 
             axes[i].set_title('Channel_'+str(i))
-        plt.savefig(self.image_name)
+        plt.savefig(self.image_name,bbox_inches='tight')
         plt.show()
         return 
 
+class ReportPDF():
+    '''
+    This class intended to create a PDF report including the images generated during the pipeline.
     
+    Parameters
+    --  --  --  --  -- 
+    directory_results: str or PosixPath
+        Directory containing the images to include in the report.
+    substring_to_detect_in_file_name: str
+        String with the prefix to detect in the files names. 
+    file_name: str
+        Name of the report. 
+    folder_output: str or PosixPath
+        Directory to place the report.
+
+    '''    
+    def __init__(directory_results,substring_to_detect_in_file_name, ):
+        self.directory_results = directory_results
+        self.substring_to_detect_in_file_name = substring_to_detect_in_file_name
+        self.file_name = file_name
+        self.folder_output = folder_output
+    def create_report(self):
+        pass
+        
+        
+
+
 class PipelineFISH():
     '''
     This class is intended to perform complete FISH analyses including cell segmentation and spot detection.
@@ -1389,7 +1415,7 @@ class PipelineFISH():
         
     def run(self):
         # temp_results_images
-        temp_folder_name = str('temp_imgs_'+ self.name_for_files)
+        temp_folder_name = str('temp_results_'+ self.name_for_files)
         if not os.path.exists(temp_folder_name):
             os.makedirs(temp_folder_name)
         
@@ -1400,13 +1426,14 @@ class PipelineFISH():
                 dataframe = None
             print('ORIGINAL IMAGE')
             print(self.list_files_names[i])
-            temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + self.list_files_names[i][:-4] +'.png' )
+            temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
+            temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
             PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name ).plot()
             print('CELL SEGMENTATION')
-            temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + self.list_files_names[i][:-4] +'.png' )
+            temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
             print('SPOT DETECTION')
-            temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + self.list_files_names[i][:-4] )
+            temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name).get_dataframe()
             dataframe = dataframe_FISH
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
