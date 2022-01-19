@@ -31,15 +31,16 @@ desktop_path = pathlib.Path.home()/'Desktop'
 # Connection to munsky-nas
 path_to_config_file = desktop_path.joinpath('config.yml')
 share_name = 'share'
-remote_folder_path = pathlib.Path('Test','test_dir')
+#remote_folder_path = pathlib.Path('Test','test_dir')
 #remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex')
 #remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex')
 #remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex')
-#remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex')
+remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex')
 
 # Download data from NAS
 remote_folder_path = remote_folder_path
 local_folder_path = pathlib.Path().absolute().joinpath('temp_' + remote_folder_path.name)
+
 fa.NASConnection(path_to_config_file,share_name = share_name).copy_files(remote_folder_path, local_folder_path,timeout=120)
 
 # Parameters for the code
@@ -62,7 +63,7 @@ list_psfs = [ [psf_z_1, psf_yx_1] ]
 # Cluster Detection
 minimum_spots_cluster = 2                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
 show_plots=True                          # Flag to display plots
-merge_images = 0
+merge_images = 1
 
 # Detecting if images need to be merged
 if merge_images == 1:
@@ -143,13 +144,10 @@ shutil.make_archive(str('analysis_'+ remote_folder_path.name),'zip',pathlib.Path
 local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name)+'.zip')
 fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, remote_folder_path)
 
-
-
-temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + remote_folder_path.name)
-
-# delete local files
+# Delete local files
 shutil.rmtree(local_folder_path)
+temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + remote_folder_path.name)
 shutil.rmtree(temp_results_folder_name)
-
 #shutil.rmtree(str('analysis_'+ remote_folder_path.name))
+os.remove('out.txt')
 os.remove(pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name)+'.zip'))

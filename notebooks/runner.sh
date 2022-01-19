@@ -13,4 +13,4 @@
 
 # python3 ./data_ml_bash.py total_number_of_spots simulation_time  ke_gene_0 ke_gene_1 ki_gene_0 ke_gene_1  >> out.txt
 # python3 ./data_ml_bash.py 5000 3000 10 10 0.03 0.03 >> out.txt
-python3 ./pipeline_executable.py >> out.txt
+nohup python3 ./pipeline_executable.py >> out.txt
