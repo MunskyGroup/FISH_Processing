@@ -15,8 +15,8 @@ conda activate FISH_processing
 # Read them in the python file using: sys.argv. This return a list of strings. 
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 # Make sure to convert str to the desired data types.
-folder_complete_path='Test/test_dir'
-#folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex'
+#folder_complete_path='Test/test_dir'
+folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex'
 #folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex'
 #folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex'
 #folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex'
