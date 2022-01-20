@@ -18,6 +18,19 @@ import shutil
 import os
 warnings.filterwarnings("ignore")
 
+
+############################
+
+######################################
+## User passed arguments
+remote_folder = sys.argv[1]
+merge_images = int(sys.argv[2])
+
+diamter_nucleus = 120                    # approximate nucleus size in pixels
+diameter_cytosol = 220 #250              # approximate cytosol size in pixels
+psf_z_1 = 330      #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx_1 = 110     #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+
 # Deffining directories
 current_dir = pathlib.Path().absolute()
 fa_dir = current_dir.parents[0].joinpath('src')
@@ -31,11 +44,13 @@ desktop_path = pathlib.Path.home()/'Desktop'
 # Connection to munsky-nas
 path_to_config_file = desktop_path.joinpath('config.yml')
 share_name = 'share'
+
 #remote_folder_path = pathlib.Path('Test','test_dir')
 #remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex')
 #remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex')
 #remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex')
-remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex')
+#remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex')
+remote_folder_path = pathlib.Path(remote_folder)
 
 # Download data from NAS
 remote_folder_path = remote_folder_path
@@ -48,13 +63,9 @@ data_dir = local_folder_path     # path to a folder with images.
 channels_with_cytosol = [1,2]            # list or int indicating the channels where the cytosol is detectable
 channels_with_nucleus = 0                # list or int indicating the channels where the nucleus is detectable
 channels_with_FISH = [1]               # list or int with the channels with FISH spots that are used for the quantification
-diamter_nucleus = 120                    # approximate nucleus size in pixels
-diameter_cytosol = 220 #250              # approximate cytosol size in pixels
 # Parameters for FISH detection
 voxel_size_z = 500                       # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx = 103                      # Microscope conversion px to nanometers in the xy axis.
-psf_z_1 = 330      #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx_1 = 110     #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 #psf_z_2 = 300      #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 #psf_yx_2 = 130     #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
@@ -63,7 +74,7 @@ list_psfs = [ [psf_z_1, psf_yx_1] ]
 # Cluster Detection
 minimum_spots_cluster = 2                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
 show_plots=True                          # Flag to display plots
-merge_images = 1
+#merge_images = 1
 
 # Detecting if images need to be merged
 if merge_images == 1:
@@ -72,8 +83,6 @@ if merge_images == 1:
 
 # Running the pipeline
 dataframe_FISH = fa.PipelineFISH(data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=list_voxels, list_psfs=list_psfs ,show_plot=show_plots,file_name_str=remote_folder_path.name).run()
-
-
 
 # Number of cells
 spot_type_selected = 0
