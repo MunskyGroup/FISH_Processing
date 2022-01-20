@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Oct 04 03:01:24 2021
+Created on Mon Jan 19 00:00:00 2022
 
-@author: luisub
+@author: luis_aguilera
 """
 
 # Importing libraries
@@ -18,18 +18,14 @@ import shutil
 import os
 warnings.filterwarnings("ignore")
 
-
-############################
-
 ######################################
 ## User passed arguments
 remote_folder = sys.argv[1]
-merge_images = int(sys.argv[2])
-
-diamter_nucleus = 120                    # approximate nucleus size in pixels
-diameter_cytosol = 220 #250              # approximate cytosol size in pixels
-psf_z_1 = 330      #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx_1 = 110     #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+send_data_to_NAS = int(sys.argv[2])
+diamter_nucleus = int(sys.argv[3])                      # approximate nucleus size in pixels
+diameter_cytosol = int(sys.argv[4])  #250                # approximate cytosol size in pixels
+psf_z_1 = int(sys.argv[5])       #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx_1 = int(sys.argv[6])      #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
 # Deffining directories
 current_dir = pathlib.Path().absolute()
@@ -44,18 +40,14 @@ desktop_path = pathlib.Path.home()/'Desktop'
 # Connection to munsky-nas
 path_to_config_file = desktop_path.joinpath('config.yml')
 share_name = 'share'
-
-#remote_folder_path = pathlib.Path('Test','test_dir')
-#remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex')
-#remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex')
-#remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex')
-#remote_folder_path = pathlib.Path('smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex')
 remote_folder_path = pathlib.Path(remote_folder)
+name_final_folder = (remote_folder_path.name +'___nuc_' + str(diamter_nucleus) +
+                '__cyto_' + str(diameter_cytosol) +
+                '__psfz_' + str(psf_z_1) +
+                '__psfyx_' + str(psf_yx_1) )
 
 # Download data from NAS
-remote_folder_path = remote_folder_path
 local_folder_path = pathlib.Path().absolute().joinpath('temp_' + remote_folder_path.name)
-
 fa.NASConnection(path_to_config_file,share_name = share_name).copy_files(remote_folder_path, local_folder_path,timeout=120)
 
 # Parameters for the code
@@ -74,10 +66,10 @@ list_psfs = [ [psf_z_1, psf_yx_1] ]
 # Cluster Detection
 minimum_spots_cluster = 2                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
 show_plots=True                          # Flag to display plots
-#merge_images = 1
 
 # Detecting if images need to be merged
-if merge_images == 1:
+is_needed_to_merge_images = fa.MergeChannels(data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).checking_images()
+if is_needed_to_merge_images == True:
     list_file_names, list_images, number_images, output_to_path = fa.MergeChannels(data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).merge()
     data_dir = data_dir.joinpath('merged')
 
@@ -134,29 +126,29 @@ plot_probability_distribution(number_of_TS_per_cell ,  numBins=20, title='Number
 plt.savefig('plots_'+remote_folder_path.name+'.png')
 plt.show()
 
-
 # Saving results
-if not os.path.exists(str('analysis_'+ remote_folder_path.name)):
-    os.makedirs(str('analysis_'+ remote_folder_path.name))
+if not os.path.exists(str('analysis_'+ name_final_folder)):
+    os.makedirs(str('analysis_'+ name_final_folder))
 #figure_path 
-pathlib.Path().absolute().joinpath('plots_'+ remote_folder_path.name +'.png').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name),'plots_'+ remote_folder_path.name +'.png'))
+pathlib.Path().absolute().joinpath('plots_'+ remote_folder_path.name +'.png').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'plots_'+ remote_folder_path.name +'.png'))
 #metadata_path
-pathlib.Path().absolute().joinpath('metadata_'+ remote_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name),'metadata_'+ remote_folder_path.name +'.txt'))
+pathlib.Path().absolute().joinpath('metadata_'+ remote_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'metadata_'+ remote_folder_path.name +'.txt'))
 #dataframe_path 
-pathlib.Path().absolute().joinpath('dataframe_' + remote_folder_path.name +'.csv').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name),'dataframe_'+ remote_folder_path.name +'.csv'))
+pathlib.Path().absolute().joinpath('dataframe_' + remote_folder_path.name +'.csv').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'dataframe_'+ remote_folder_path.name +'.csv'))
 #pdf_path 
-pathlib.Path().absolute().joinpath('pdf_report_' + remote_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name),'pdf_report_'+ remote_folder_path.name +'.pdf'))
+pathlib.Path().absolute().joinpath('pdf_report_' + remote_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'pdf_report_'+ remote_folder_path.name +'.pdf'))
 # making a zip file
-shutil.make_archive(str('analysis_'+ remote_folder_path.name),'zip',pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name)))
+shutil.make_archive(str('analysis_'+ name_final_folder),'zip', pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)))
 
 # Writing data to NAS
-local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name)+'.zip')
-fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, remote_folder_path)
+if send_data_to_NAS == 1:
+  local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)+'.zip')
+  fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, remote_folder_path)
 
 # Delete local files
 shutil.rmtree(local_folder_path)
 temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + remote_folder_path.name)
 shutil.rmtree(temp_results_folder_name)
-#shutil.rmtree(str('analysis_'+ remote_folder_path.name))
+#shutil.rmtree(str('analysis_'+ name_final_folder))
 os.remove('out.txt')
-os.remove(pathlib.Path().absolute().joinpath(str('analysis_'+ remote_folder_path.name)+'.zip'))
+#os.remove(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)+'.zip'))

@@ -257,6 +257,30 @@ class MergeChannels():
             self.directory = pathlib.Path(directory)
         self.substring_to_detect_in_file_name = substring_to_detect_in_file_name
         self.save_figure=save_figure
+
+    def checking_images(self):
+        '''
+        Method takes all the videos in the folder and merge those with similar names.
+        Returns
+        --  --  -- -
+        list_file_names : List of strings 
+            List with strings of names.
+        list_merged_images : List of NumPy arrays. 
+            List of NumPy arrays with format np.uint16 and dimensions [Z, Y, X, C].
+        number_files : int. 
+            Number of merged images in the folder.
+        '''
+        # This function 
+        ending_string = re.compile(self.substring_to_detect_in_file_name)  # detecting files ending in _C0.tif
+        for _, _, files in os.walk(self.directory):
+            for file in files:
+                if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
+                    prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
+                    list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif')) # List of files that match the pattern 'file_prefix_C*.tif'
+                    if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
+                        return True
+                    else:
+                        return False
     
     def merge(self):
         '''

@@ -15,20 +15,27 @@ conda activate FISH_processing
 # Read them in the python file using: sys.argv. This return a list of strings. 
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 # Make sure to convert str to the desired data types.
-
-folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex'
-merge_images=0
+folder_complete_path='Test/test_dir'
+#folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex'
+#folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex'
+#folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex'
+#folder_complete_path='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex'
+send_data_to_NAS=0       # If data sent back to NAS use 1.
+diamter_nucleus=120      # approximate nucleus size in pixels
+diameter_cytosol=220     # approximate cytosol size in pixels
+psf_z=330                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=110               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
 # Batch script instructions:
 # https://www.baeldung.com/linux/use-command-line-arguments-in-bash-script 
 
 # ########### PYTHON PROGRAM #############################
-#nohup python3 ./pipeline_executable.py >> out.txt
-#nohup python3 ./test.py  $folder_complete_path $merge_images $merge_images  >> out.txt &
-nohup python3 ./pipeline_executable.py  $folder_complete_path $merge_images $merge_images  >> out.txt &
+nohup python3 ./pipeline_executable.py  $folder_complete_path $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt &
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: bash -i shell_script.sh
 
-
-# Create a complex string for the final file name including the parameters used. Use this for the final zip file.
+# TODO LIST
+# Create a runner function to test multiple parameters at the same time.
+# Improve the plotting. 
+# Create a new function to compare multiple and  plot multiple dataframes. 
