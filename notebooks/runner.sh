@@ -16,10 +16,15 @@ conda activate FISH_processing
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 # Make sure to convert str to the desired data types.
 #folder_complete_path='Test/test_dir'
-folder_complete_path_0='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex'
-folder_complete_path_1='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex'
-folder_complete_path_2='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex'
-folder_complete_path_3='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex'
+folder_complete_path_0='Test/test_dir'
+folder_complete_path_1='Test/test_dir'
+#folder_complete_path_2='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex'
+#folder_complete_path_3='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex'
+
+#folder_complete_path_0='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex'
+#folder_complete_path_1='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_1h_100nMDex'
+#folder_complete_path_2='smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_2h_100nMDex'
+#folder_complete_path_3='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPDH-Cy3_NFKBIA-Cy5_4h_100nMDex'
 send_data_to_NAS=0       # If data sent back to NAS use 1.
 diamter_nucleus=120      # approximate nucleus size in pixels
 diameter_cytosol=220     # approximate cytosol size in pixels
@@ -33,11 +38,11 @@ psf_z_2=250                # Theoretical size of the PSF emitted by a [rna] spot
 # ########### PYTHON PROGRAM #############################
 nohup python3 ./pipeline_executable.py  $folder_complete_path_0 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 wait
-nohup python3 ./pipeline_executable.py  $folder_complete_path_1 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-wait
-nohup python3 ./pipeline_executable.py  $folder_complete_path_2 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-wait
-nohup python3 ./pipeline_executable.py  $folder_complete_path_3 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
+nohup python3 ./pipeline_executable.py  $folder_complete_path_1 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z_2 $psf_yx >> out.txt
+#wait
+#nohup python3 ./pipeline_executable.py  $folder_complete_path_2 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
+#wait
+#nohup python3 ./pipeline_executable.py  $folder_complete_path_3 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: source runner.sh &
