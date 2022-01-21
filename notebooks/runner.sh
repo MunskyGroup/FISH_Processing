@@ -31,13 +31,13 @@ psf_z_2=250                # Theoretical size of the PSF emitted by a [rna] spot
 # https://www.baeldung.com/linux/use-command-line-arguments-in-bash-script 
 
 # ########### PYTHON PROGRAM #############################
-nohup python3 ./pipeline_executable.py  $folder_complete_path_0 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt &
+nohup python3 ./pipeline_executable.py  $folder_complete_path_0 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 wait
-nohup python3 ./pipeline_executable.py  $folder_complete_path_1 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt &
+nohup python3 ./pipeline_executable.py  $folder_complete_path_1 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 wait
-nohup python3 ./pipeline_executable.py  $folder_complete_path_2 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt &
+nohup python3 ./pipeline_executable.py  $folder_complete_path_2 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 wait
-nohup python3 ./pipeline_executable.py  $folder_complete_path_3 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt &
+nohup python3 ./pipeline_executable.py  $folder_complete_path_3 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: source runner.sh &
