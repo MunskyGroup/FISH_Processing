@@ -15,10 +15,8 @@ dataBases/
 *.yml
 config
 **/[C]onfig*
-metadata_*
-dataframe.ccsv
+dataframe.csv
 temp_*
 ~$*
-dataframe_*
 Figure_Distributions_*
 out.txt
