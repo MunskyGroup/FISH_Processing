@@ -26,7 +26,7 @@ send_data_to_NAS=0       # If data sent back to NAS use 1.
 diamter_nucleus=120      # approximate nucleus size in pixels
 diameter_cytosol=220     # approximate cytosol size in pixels
 psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=100               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
 # Batch script instructions:
 # https://www.baeldung.com/linux/use-command-line-arguments-in-bash-script 

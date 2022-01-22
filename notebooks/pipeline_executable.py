@@ -151,4 +151,4 @@ temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + 
 shutil.rmtree(temp_results_folder_name)
 #shutil.rmtree(str('analysis_'+ name_final_folder))
 #os.remove('out.txt')
-#os.remove(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)+'.zip'))
+os.remove(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)+'.zip'))
