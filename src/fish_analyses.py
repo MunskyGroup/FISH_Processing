@@ -908,10 +908,10 @@ class BigFISH():
         #rna_filtered = stack.log_filter(rna, sigma) # LoG filter
         try:
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
-            rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filter
+            #rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
-        #    rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
+            rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
         #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
         #rna_log = stack.log_filter(rna_gaussian, sigma) # LoG filter
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
