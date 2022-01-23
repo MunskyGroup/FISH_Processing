@@ -28,7 +28,7 @@ folder_complete_path_5='smFISH_images/Linda_smFISH_images/Confocal/20220117/GAPD
 send_data_to_NAS=0       # If data sent back to NAS use 1.
 diamter_nucleus=120      # approximate nucleus size in pixels
 diameter_cytosol=220     # approximate cytosol size in pixels
-psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
 # Batch script instructions:
