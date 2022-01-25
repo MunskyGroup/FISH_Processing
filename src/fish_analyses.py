@@ -905,15 +905,14 @@ class BigFISH():
         sigma_z, sigma_yx, sigma_yx = stack.get_sigma(self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx)
         sigma = (sigma_z, sigma_yx, sigma_yx)
         ## SPOT DETECTION
-        #rna_filtered = stack.log_filter(rna, sigma) # LoG filter
         try:
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
+            #rna_filtered = stack.remove_background_gaussian(rna_filtered, sigma)
             #rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
             rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
-        #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
-        #rna_log = stack.log_filter(rna_gaussian, sigma) # LoG filter
+            #rna_filtered = stack.remove_background_gaussian(rnarna, sigma)
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
         threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
