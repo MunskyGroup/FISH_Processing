@@ -1,0 +1,95 @@
+###########################################################################
+AUTHOR INFORMATION  
+    Author: luisub
+    Created at: 25 Jan 2022
+    Time: 17:14
+    Operative System: linux
+    Hostname: ets01302
+###########################################################################
+PARAMETERS USED  
+    channels_with_cytosol: [1, 2]
+    channels_with_nucleus: 0
+    channels_with_FISH: [1]
+    diamter_nucleus: 120
+    diameter_cytosol: 220
+    FISH parameters
+      For Channel 1
+        voxel_size_z: 500
+        voxel_size_yx: 103
+        psf_z: 350
+        psf_yx: 120
+    minimum_spots_cluster: 2
+###########################################################################
+FILES AND DIRECTORIES USED 
+    Directory path: /home/luisub/Desktop/FISH_Processing/notebooks/temp_GAPDH-Cy3_NFKBIA-Cy5_30min_100nMDex/merged
+    Folder name: merged
+    Images in directory :
+        ROI001_XY1643046456_Z00_T0_merged.tif
+        ROI002_XY1643046457_Z00_T0_merged.tif
+        ROI003_XY1643046458_Z00_T0_merged.tif
+        ROI004_XY1643046459_Z00_T0_merged.tif
+        ROI005_XY1643046460_Z00_T0_merged.tif
+        ROI006_XY1643046461_Z00_T0_merged.tif
+        ROI007_XY1643046462_Z00_T0_merged.tif
+        ROI008_XY1643046463_Z00_T0_merged.tif
+        ROI009_XY1643046464_Z00_T0_merged.tif
+        ROI010_XY1643046465_Z00_T0_merged.tif
+        ROI011_XY1643046466_Z00_T0_merged.tif
+        ROI012_XY1643046467_Z00_T0_merged.tif
+        ROI013_XY1643046468_Z00_T0_merged.tif
+        ROI014_XY1643046469_Z00_T0_merged.tif
+        ROI015_XY1643046470_Z00_T0_merged.tif
+        ROI016_XY1643046471_Z00_T0_merged.tif
+        ROI017_XY1643046472_Z00_T0_merged.tif
+        ROI018_XY1643046473_Z00_T0_merged.tif
+        ROI019_XY1643046474_Z00_T0_merged.tif
+        ROI020_XY1643046475_Z00_T0_merged.tif
+        ROI021_XY1643046476_Z00_T0_merged.tif
+        ROI022_XY1643046477_Z00_T0_merged.tif
+        ROI023_XY1643046478_Z00_T0_merged.tif
+        ROI024_XY1643046479_Z00_T0_merged.tif
+        ROI025_XY1643046480_Z00_T0_merged.tif
+        ROI026_XY1643046481_Z00_T0_merged.tif
+        ROI027_XY1643046482_Z00_T0_merged.tif
+        ROI028_XY1643046483_Z00_T0_merged.tif
+        ROI029_XY1643046484_Z00_T0_merged.tif
+        ROI030_XY1643046485_Z00_T0_merged.tif
+        ROI031_XY1643046486_Z00_T0_merged.tif
+        ROI032_XY1643046487_Z00_T0_merged.tif
+        ROI033_XY1643046488_Z00_T0_merged.tif
+        ROI034_XY1643046489_Z00_T0_merged.tif
+        ROI035_XY1643046490_Z00_T0_merged.tif
+###########################################################################
+REPRODUCIBILITY 
+    Platform: 
+        Python: 3.6.13
+    Dependancies: 
+        tqdm==4.62.3
+        torch==1.10.1
+        toolz==0.11.2
+        tifffile==2020.9.3
+        setuptools==58.0.4
+        scipy==1.4.1
+        scikit-learn==0.20.2
+        scikit-image==0.14.2
+        PyYAML==6.0
+        python-dateutil==2.8.2
+        pysmb==1.2.7
+        pyfiglet==0.8.post1
+        Pillow==8.4.0
+        pandas==0.24.0
+        opencv-python-headless==4.5.5.62
+        numpy==1.16.0
+        numba==0.53.1
+        natsort==8.0.2
+        matplotlib==3.0.2
+        llvmlite==0.36.0
+        jupyter-core==4.9.1
+        jupyter-client==7.1.1
+        joblib==1.1.0
+        ipython==7.16.3
+        ipython-genutils==0.2.0
+        ipykernel==5.5.6
+        cellpose==0.6.1
+        big-fish==0.5.0
+###########################################################################
