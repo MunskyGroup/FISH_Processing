@@ -1,12 +1,13 @@
+numpy == 1.16.0
 big-fish== 0.5.0
-pysmb== 1.2.7
-joblib==1.1.0
-tqdm==4.62.3
-pysmb==1.2.7
-tifffile==2020.9.3
 cellpose==0.6.1
-ipykernel==5.5.6
-scikit-image==0.14.2
-pyfiglet==0.8.post1
-fpdf==1.7.2
-seaborn==0.11.2
+pysmb>= 1.2.7
+joblib>=1.1.0
+tqdm>=4.62.3
+pysmb>=1.2.7
+tifffile>=2020.9.3
+ipykernel>=5.5.6
+scikit-image>=0.14.2
+pyfiglet>=0.8.post1
+fpdf>=1.7.2
+seaborn>=0.11.2
