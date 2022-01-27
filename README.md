@@ -19,7 +19,7 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 
 * To create a virtual environment navigate to the location of the requirements file, and use:
 ```bash
-    conda create -n FISH_processing python=3.8 -y
+    conda create -n FISH_processing python=3.6 -y
     source activate FISH_processing
 ```
 * To install GPU for Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
@@ -32,7 +32,7 @@ This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FI
 ```
 * To include the rest of requirements use:
 ```
-    pip install -r requirements.txt
+    pip install -r requirements.txt --no-cache-dir
 ```
 Additional steps to deactivate or remove the environment from the computer:
 * To deactivate the environment use

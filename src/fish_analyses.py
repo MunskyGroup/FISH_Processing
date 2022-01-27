@@ -15,9 +15,7 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 import_libraries = 1
 if import_libraries == 1:
     # importing Big-FISH
-    #import bigfish
     import bigfish.stack as stack
-    #import bigfish.segmentation as segmentation
     import bigfish.plot as plot
     import bigfish.detection as detection
     import pandas as pd
@@ -43,23 +41,8 @@ if import_libraries == 1:
     warnings.filterwarnings('ignore', category=DeprecationWarning)
     warnings.filterwarnings('ignore', category=FutureWarning)
     # Skimage
-    #from skimage import img_as_float64, img_as_uint
-    #from skimage.filters.rank import entropy
-    #from skimage.morphology import disk
-    #from skimage.filters import threshold_minimum
-    #from skimage.morphology import binary_closing
     from skimage.measure import find_contours
-    #from skimage.draw import polygon
-    #from skimage.util import random_noise
-    #from skimage.transform import warp
-    #from skimage import transform
-    #from skimage.filters import gaussian
-    #from skimage.draw import polygon_perimeter
-    #from skimage.restoration import denoise_nl_means, estimate_sigma, denoise_wavelet
-    #from skimage.morphology import square, dilation
-    #from skimage.filters import laplace
     from skimage.io import imread
-    #from scipy.ndimage import gaussian_laplace
     from scipy import ndimage
     # Plotting
     import matplotlib.pyplot as plt
@@ -350,7 +333,7 @@ class RemoveExtrema():
             Normalized video. Array with dimensions [T, Y, X, C] or image with format [Y, X].
         '''
         normalized_video = np.copy(self.video)
-        normalized_video = np.array(normalized_video, 'float32');
+        normalized_video = np.array(normalized_video, 'float32')
         # Normalization code for image with format [Y, X]
         if len(self.video.shape) == 2:
             number_timepoints = 1
