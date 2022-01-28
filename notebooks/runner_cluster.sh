@@ -6,12 +6,12 @@
 # ########### ACTIVATE ENV #############################
 # To load the env pass the specific location of the env and then activate it. 
 # If not sure about the env location use: source activate <<venv_name>>   echo $CONDA_PREFIX
-source /home/luisub/anaconda3/envs/FISH_processing
-conda activate FISH_processing
-
-#source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/
+#source /home/luisub/anaconda3/envs/FISH_processing
 #conda activate FISH_processing
-#python_path=/top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python3
+
+source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/
+conda activate FISH_processing
+python_path=/top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python3
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
