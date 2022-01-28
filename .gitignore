@@ -12,7 +12,6 @@ merged
 ms2_cy5_20210518
 GAPDH_Exon_Cy5
 dataBases/
-*.yml
 config
 **/[C]onfig*
 dataframe.csv

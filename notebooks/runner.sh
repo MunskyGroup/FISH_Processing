@@ -15,7 +15,13 @@
 # module load anaconda3
 # module load cuda/10.0/cuda
 
-#source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/activate
+############# Create env in cluster ###########
+
+############
+#source {path_to_anaconda}/anaconda3/etc/profile.d/conda.sh
+#conda activate /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
+
+#source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/
 #python_path=/top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python3
 #python_path ./simulation_tracking.py 20 40 >> out.txt
 
