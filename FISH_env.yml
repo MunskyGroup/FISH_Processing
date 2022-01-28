@@ -7,9 +7,8 @@ dependencies:
   - _openmp_mutex=4.5=1_gnu
   - blas=1.0=mkl
   - ca-certificates=2021.10.26=h06a4308_2
-  - certifi=2020.6.20=pyhd3eb1b0_3
+  - certifi=2021.10.8=py38h06a4308_2
   - cudatoolkit=10.2.89=hfd86e86_1
-  - dataclasses=0.8=pyh4f3eec9_6
   - intel-openmp=2022.0.1=h06a4308_3633
   - ld_impl_linux-64=2.35.1=h7274673_9
   - libffi=3.3=he6710b0_2
@@ -20,12 +19,12 @@ dependencies:
   - mkl=2022.0.1=h06a4308_117
   - ncurses=6.3=h7f8727e_2
   - openssl=1.1.1m=h7f8727e_0
-  - pip=21.2.2=py36h06a4308_0
-  - python=3.6.13=h12debd9_1
-  - pytorch=1.10.2=py3.6_cuda10.2_cudnn7.6.5_0
+  - pip=21.2.4=py38h06a4308_0
+  - python=3.8.12=h12debd9_0
+  - pytorch=1.10.2=py3.8_cuda10.2_cudnn7.6.5_0
   - pytorch-mutex=1.0=cuda
   - readline=8.1.2=h7f8727e_1
-  - setuptools=58.0.4=py36h06a4308_0
+  - setuptools=58.0.4=py38h06a4308_0
   - sqlite=3.37.0=hc218d9a_0
   - tk=8.6.11=h1ccaba5_0
   - typing_extensions=3.10.0.2=pyh06a4308_0
@@ -33,51 +32,70 @@ dependencies:
   - xz=5.2.5=h7b6447c_0
   - zlib=1.2.11=h7f8727e_4
   - pip:
+    - asttokens==2.0.5
     - backcall==0.2.0
-    - big-fish==0.5.0
-    - cellpose==0.6.1
-    - cloudpickle==2.0.0
-    - dask==2021.3.0
-    - decorator==4.4.2
+    - git+https://github.com/fish-quant/big-fish.git@develop
+    - black==21.12b0
+    - cellpose==1.0.0
+    - click==8.0.3
+    - cycler==0.11.0
+    - debugpy==1.5.1
+    - decorator==5.1.1
     - entrypoints==0.3
+    - executing==0.8.2
+    - fastremap==1.12.2
+    - fonttools==4.29.0
     - fpdf==1.7.2
-    - ipykernel==5.5.6
-    - ipython==7.16.3
-    - ipython-genutils==0.2.0
-    - jedi==0.17.2
+    - imageio==2.14.1
+    - ipykernel==6.7.0
+    - ipython==8.0.1
+    - jedi==0.18.1
     - joblib==1.1.0
     - jupyter-client==7.1.2
     - jupyter-core==4.9.1
-    - llvmlite==0.36.0
-    - matplotlib==3.0.2
-    - mrc==0.1.5
+    - kiwisolver==1.3.2
+    - llvmlite==0.38.0
+    - matplotlib==3.5.1
+    - matplotlib-inline==0.1.3
+    - mrc==0.2.0
+    - mypy-extensions==0.4.3
     - natsort==8.0.2
     - nest-asyncio==1.5.4
-    - networkx==2.5.1
-    - numba==0.53.1
-    - numpy==1.16.0
+    - networkx==2.6.3
+    - numba==0.55.1
+    - numpy==1.21.5
     - opencv-python-headless==4.5.5.62
-    - pandas==0.24.0
-    - parso==0.7.1
+    - packaging==21.3
+    - pandas==1.4.0
+    - parso==0.8.3
+    - pathspec==0.9.0
     - pexpect==4.8.0
     - pickleshare==0.7.5
+    - pillow==9.0.0
+    - platformdirs==2.4.1
     - prompt-toolkit==3.0.26
     - ptyprocess==0.7.0
+    - pure-eval==0.2.2
     - pyasn1==0.4.8
     - pyfiglet==0.8.post1
     - pygments==2.11.2
+    - pyparsing==3.0.7
     - pysmb==1.2.7
+    - python-dateutil==2.8.2
     - pytz==2021.3
-    - pywavelets==1.1.1
+    - pywavelets==1.2.0
     - pyyaml==6.0
     - pyzmq==22.3.0
-    - scikit-image==0.14.2
-    - scikit-learn==0.20.2
-    - scipy==1.4.1
+    - scikit-image==0.19.1
+    - scikit-learn==1.0.2
+    - scipy==1.7.3
     - seaborn==0.11.2
-    - tifffile==2020.9.3
-    - toolz==0.11.2
+    - six==1.16.0
+    - stack-data==0.1.4
+    - threadpoolctl==3.0.0
+    - tifffile==2021.11.2
+    - tomli==1.2.3
     - tornado==6.1
     - tqdm==4.62.3
-    - traitlets==4.3.3
+    - traitlets==5.1.1
     - wcwidth==0.2.5

@@ -46,8 +46,10 @@
 
 
 ##################################################################
-# --------------------- TO CREATE ENV FILE --------------------
-# To file with env from existing env.
+# --------------------- TO CREATE ENV FILE -----------------------
+# To export the env ----------------------------------------------
+# conda env export > FISH_env.yml
+# To file with env from existing env -----------------------------
 # conda env create -f FISH_env.yml
 ##################################################################
 
@@ -75,6 +77,12 @@
 # Make sure the sh file is executable. If not use: chmod 755 <<script_name.sh>>
 # source runner_cluster.sh &
 # conda run -n <my_awesome_environment> python my_awesome_app.py
+##################################################################
+
+
+##################################################################
+#    conda create -n FISH_processing python=3.8 -y
+#    source activate FISH_processing
 ##################################################################
 
 

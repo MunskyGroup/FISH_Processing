@@ -18,6 +18,7 @@ if import_libraries == 1:
     import bigfish.stack as stack
     import bigfish.plot as plot
     import bigfish.detection as detection
+    import bigfish.multistack as multistack
     import pandas as pd
     # importing libraries
     import pathlib
@@ -408,7 +409,6 @@ class Cellpose():
         self.optimization_parameter = np.round(np.linspace(self.minimumm_probability, self.maximum_probability, self.num_iterations), 2)
         #self.optimization_parameter = np.round(np.linspace( self.diameter ,self.diameter+50, self.num_iterations),0)
         #self.optimization_parameter = np.linspace(50,350,self.num_iterations)
-
     def calculate_masks(self):
         '''
         This method performs the process of image masking using **Cellpose**.
@@ -424,8 +424,8 @@ class Cellpose():
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                #masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold =  self.CELLPOSE_PROBABILITY , diameter = optimization_parameter, min_size = -1, channels = self.channels, progress = None)
-                masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+                #masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold =  self.CELLPOSE_PROBABILITY , diameter = optimization_parameter, min_size = -1, channels = self.channels, progress = None)
+                masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks =0
             n_masks = np.amax(masks)
@@ -441,16 +441,14 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = optimization_parameter, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None)
-                #masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = self.CELLPOSE_PROBABILITY , diameter =optimization_parameter, min_size = -1, channels = self.channels, progress = None)
+                masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks =0
             return np.amax(masks)
 
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
-                #masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold =  self.CELLPOSE_PROBABILITY , diameter = optimization_parameter, min_size = -1, channels = self.channels, progress = None)
+                masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks =0
             n_masks = np.amax(masks)
@@ -459,7 +457,9 @@ class Cellpose():
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
                     size_mask.append(np.sum(masks == nm)) # creating a list with the size of each mask
                 number_masks= np.amax(masks)
+                #metric = np.sum(np.asarray(size_mask)) * number_masks
                 metric = np.sum(np.asarray(size_mask)) * number_masks
+
                 return metric
             if n_masks == 1: # do nothing if only a single mask is detected per image.
                 return np.sum(masks == 1)
@@ -476,12 +476,10 @@ class Cellpose():
             evaluated_metric_for_masks = np.asarray(list_metrics_masks)
         if np.amax(evaluated_metric_for_masks) >0:
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
-            selected_masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
-            #selected_masks, _, _, _ = model.eval(self.video, normalize = True, cellprob_threshold = self.CELLPOSE_PROBABILITY , diameter = selected_conditions, min_size = -1, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         else:
             selected_masks = None
             print('No cells detected on the image')
-
         sys.stdout.close()
         sys.stdout = old_stdout
         return selected_masks
@@ -584,6 +582,7 @@ class CellSegmentation():
                 zeros_plane = np.zeros_like(image[:,:,0])
                 image = np.concatenate((image,zeros_plane[:,:,np.newaxis]),axis=2)
             return image
+        
         # function that determines if the nucleus is in the cytosol
         def is_nucleus_in_cytosol(mask_nucleus, mask_cyto):
             nucleusInCell = []
@@ -884,14 +883,15 @@ class BigFISH():
         '''
         rna=self.image[:,:,:,self.FISH_channel]
         # Calculating Sigma with  the parameters for the PSF.
-        (radius_z, radius_yx, radius_yx) = stack.get_radius(self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx)
-        sigma_z, sigma_yx, sigma_yx = stack.get_sigma(self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx)
-        sigma = (sigma_z, sigma_yx, sigma_yx)
+        spot_radius_px = detection.get_object_radius_pixel(
+            voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
+            object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), 
+            ndim=3)
+        sigma = spot_radius_px
+
         ## SPOT DETECTION
         try:
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
-            #rna_filtered = stack.remove_background_gaussian(rna_filtered, sigma)
-            #rna_filtered = stack.gaussian_filter(rna_filtered, sigma) # Gaussian filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
             rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
@@ -900,16 +900,18 @@ class BigFISH():
         threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
-        spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
-            rna, spots, 
-            self.voxel_size_z, self.voxel_size_yx, self.psf_z, self.psf_yx,
+        spots_post_decomposition, _, _ = detection.decompose_dense(
+            image=rna, spots=spots, 
+            voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
+            spot_radius=(self.psf_z, self.psf_yx, self.psf_yx),
             alpha=0.9,   # alpha impacts the number of spots per candidate region
             beta=1,      # beta impacts the number of candidate regions to decompose
             gamma=5)     # gamma the filtering step to denoise the image
         ### CLUSTER DETECTION
-        radius = self.cluster_radius
-        nb_min_spots = self.minimum_spots_cluster
-        spots_post_clustering, clusters = detection.detect_clusters(spots_post_decomposition, self.voxel_size_z, self.voxel_size_yx, radius, nb_min_spots)
+        
+        spots_post_clustering, clusters = detection.detect_clusters(spots_post_decomposition, 
+                                            voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
+                                             radius= self.cluster_radius, nb_min_spots = self.minimum_spots_cluster)
         # Saving results with new variable names
         spotDectionCSV = spots_post_clustering
         clusterDectionCSV = clusters
@@ -935,14 +937,9 @@ class BigFISH():
             for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
                 print('Z-Slice: ', str(i))
                 image_2D = rna_filtered[i,:,:]
-                #image_2D = stack.log_filter(image_2D, sigma=1.5)
-                #image_2D = stack.gaussian_filter(image_2D, sigma=1.5)
-                #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
-                #spots=[spots_post_decomposition , clusters[:, :3]],
-                #spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 if i > 1 and i<rna.shape[0]-1:
-                    clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
-                    #clusters_to_plot = clusters[clusters[:,0]==i]
+                    #clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
+                    clusters_to_plot = clusters[clusters[:,0]==i]
                     #spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 else:
@@ -956,7 +953,7 @@ class BigFISH():
                 plot.plot_detection(image_2D, 
                                 spots=[spots_to_plot, clusters_to_plot[:, :3]], 
                                 shape=["circle", "polygon"], 
-                                radius=[radius_yx*1.5, radius_yx*2.5], 
+                                radius=[3, 6], 
                                 color=["orangered", "blue"],
                                 linewidth=[1, 1], 
                                 fill=[False, False], 
@@ -1024,14 +1021,15 @@ class DataProcessing():
         def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0 ):
             # spotDectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDectionCSV   nc   x  [Z,Y,X,size,idx_foci]
+            
             # Removing TS from the image and calculating RNA in nucleus
-            spots_no_ts, _, ts = stack.remove_transcription_site(spotDectionCSV, clusterDectionCSV, mask_nuc, ndim=3)
+            spots_no_ts, _, ts = multistack.remove_transcription_site(spotDectionCSV, clusterDectionCSV, mask_nuc, ndim=3)
             #rna_out_ts      [Z,Y,X,idx_foci]         Coordinates of the detected RNAs with shape. One coordinate per dimension (zyx or yx coordinates) plus the index of the foci assigned to the RNA. If no foci was assigned, value is -1. RNAs from transcription sites are removed.
             #foci            [Z,Y,X,size, idx_foci]   One coordinate per dimension for the foci centroid (zyx or yx coordinates), the number of RNAs detected in the foci and its index.
             #ts              [Z,Y,X,size,idx_ts]      One coordinate per dimension for the transcription site centroid (zyx or yx coordinates), the number of RNAs detected in the transcription site and its index.
-            spots_nuc, _ = stack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
+            spots_nuc, _ = multistack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
             # Detecting spots in the nucleus
-            spots_cytosol_only, _ = stack.identify_objects_in_region(mask_cytosol_only, spotDectionCSV[:,:3], ndim=3)
+            spots_cytosol_only, _ = multistack.identify_objects_in_region(mask_cytosol_only, spotDectionCSV[:,:3], ndim=3)
             # coord_innp  Coordinates of the objects detected inside the region.
             # coord_outnp Coordinates of the objects detected outside the region.
             # ts                     n x [Z,Y,X,size,idx_ts]
