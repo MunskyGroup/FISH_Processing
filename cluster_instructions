@@ -1,0 +1,75 @@
+######################## CLUSTER INSTRUCTIONS #################################
+
+
+##################################################################
+# --------------------- CREATE ENV FROM FILE --------------------
+# ---------------------- LOAD MODULES --------------------------
+# module purge
+# module load anaconda3
+# module load cuda/10.0/cuda
+# --------------------- CLONE THE REPOSITORY ---------------------
+# git clone https://user_name@github.com/MunskyGroup/FISH_Processing.git
+# git clone https://<token>@github.com/MunskyGroup/FISH_Processing.git
+# --->this will as for your token
+# --------------------- CREATE ENVIRONMENT ---------------------
+# conda env create -f FISH_env.yml
+# ---------------------  TO CONFIGURE CONDA (1ST TIME ONLY)----
+# conda init tcsh
+# --->this will quiere to restart the terminal
+# --------------------- ACTIVATE ---------------------
+#  conda activate /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
+##################################################################
+
+
+##################################################################
+# -------------------------- OPTION 2 -------------------------
+# ---------------------- LOAD MODULES ---------------------
+# module purge
+# module load anaconda3
+# module load cuda/10.0/cuda
+# --------------------- CLONE THE REPOSITORY ---------------------
+# git clone https://user_name@github.com/MunskyGroup/FISH_Processing.git
+# --->this will as for your token
+# --------------------- CREATE ENVIRONMENT ---------------------
+# conda create -n FISH_processing python=3.6 -y
+# ---------------------  TO CONFIGURE CONDA (1ST TIME ONLY)----
+# conda init tcsh
+# --->this will quiere to restart the terminal
+# --------------------- ACTIVATE ---------------------
+#  conda activate /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
+# --------------------- MOVE TO THE CORRECT DIRECTORY ---------------------
+# cd FISH_Processing
+# conda install pytorch cudatoolkit=10.2 -c pytorch -y
+# pip install -r requirements.txt
+##################################################################
+
+
+##################################################################
+# --------------------- TO CREATE ENV FILE --------------------
+# To file with env from existing env.
+# conda env create -f FISH_env.yml
+##################################################################
+
+
+##################################################################
+# ------------------------- TO REMOVE ENV ------------------------
+# conda deactivate
+# conda env remove -n FISH_processing
+##################################################################
+
+
+##################################################################
+# ------------------------- BASH SCRIPT ------------------------
+# #!/bin/sh
+# env_path=/top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/
+# source $env_path
+# conda activate FISH_processing
+# $env_path/bin/python3 ./cluster_script.py
+##################################################################
+# If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
+
+
+# ########### TO EXECUTE RUN IN TERMINAL #########################
+# cd <<directory>>
+# source runner_cluster.sh &
+##################################################################
