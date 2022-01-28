@@ -2,8 +2,8 @@
 
 
 ##################################################################
-# --------------------- CREATE ENV FROM FILE --------------------
-# ---------------------- LOAD MODULES --------------------------
+# -------------------------- COPTION 1  --------------------------
+# ---------------------- LOAD MODULES ----------------------------
 # module purge
 # module load anaconda3
 # module load cuda/10.0/cuda
@@ -12,6 +12,7 @@
 # git clone https://<token>@github.com/MunskyGroup/FISH_Processing.git
 # --->this will as for your token
 # --------------------- CREATE ENVIRONMENT ---------------------
+# cd FISH_Processing 
 # conda env create -f FISH_env.yml
 # ---------------------  TO CONFIGURE CONDA (1ST TIME ONLY)----
 # conda init tcsh
@@ -66,10 +67,16 @@
 # conda activate FISH_processing
 # $env_path/bin/python3 ./cluster_script.py
 ##################################################################
-# If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
 
 
+##################################################################
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # cd <<directory>>
+# Make sure the sh file is executable. If not use: chmod 755 <<script_name.sh>>
 # source runner_cluster.sh &
+# conda run -n <my_awesome_environment> python my_awesome_app.py
 ##################################################################
+
+
+# https://projects.ncsu.edu/hpc/Software/Apps.php?app=Conda
+# https://python.plainenglish.io/eureka-i-finally-managed-to-activate-my-conda-environment-in-my-ci-pipeline-a8b578c21f03

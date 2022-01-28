@@ -18,7 +18,7 @@ conda activate FISH_processing
 #folder_complete_path_0='Test/test_dir'
 #folder_complete_path_1='Test/test_dir'
 
-#Declare a string array
+# Declare a string array
 folders=(\
 'Test/test_dir' \
 'Test/test_dir' \
@@ -37,27 +37,12 @@ diameter_cytosol=220     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
-# Batch script instructions:
-# https://www.baeldung.com/linux/use-command-line-arguments-in-bash-script 
-
 # ########### PYTHON PROGRAM #############################
-
 for folder in ${folders[*]}; do
      nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
      wait
 done
 conda deactivate
-#nohup python3 ./pipeline_executable.py  $folder_complete_path_0 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-#wait
-#nohup python3 ./pipeline_executable.py  $folder_complete_path_1 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-#wait
-#nohup python3 ./pipeline_executable.py  $folder_complete_path_2 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-#wait
-#nohup python3 ./pipeline_executable.py  $folder_complete_path_3 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-#wait
-#nohup python3 ./pipeline_executable.py  $folder_complete_path_4 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-#wait
-#nohup python3 ./pipeline_executable.py  $folder_complete_path_5 $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: source runner.sh &
