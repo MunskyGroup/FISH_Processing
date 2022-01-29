@@ -9,9 +9,8 @@
 #source /home/luisub/anaconda3/envs/FISH_processing
 #conda activate FISH_processing
 
-source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/
+source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
 conda activate FISH_processing
-python_path=/top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python3
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -19,21 +18,23 @@ python_path=/top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 
 # Declare a string array
-folders=('test') 
+folder="test"
+send_data_to_NAS="0"       # If data sent back to NAS use 1.
+diamter_nucleus="120"      # approximate nucleus size in pixels
+diameter_cytosol="220"     # approximate cytosol size in pixels
+psf_z="350"                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx="120"               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+send_data_to_NAS="0"
+nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
 
-send_data_to_NAS=0       # If data sent back to NAS use 1.
-diamter_nucleus=120      # approximate nucleus size in pixels
-diameter_cytosol=220     # approximate cytosol size in pixels
-psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
 # ########### PYTHON PROGRAM #############################
-for folder in ${folders[*]}; do
-     #nohup python3 ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-     nohup python_path ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-     wait
-done
+#for folder in ${folders[*]}; do
+#     #nohup python3 ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
+#     nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
+#     wait
+#done
 conda deactivate
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: source runner_cluster.sh &
+# run as: bash runner_cluster.sh &
