@@ -6,6 +6,15 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
 This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish) and [Cellpose](https://github.com/MouseLand/cellpose).
 
+## Please if you use this repository make sure to cite:
+
+- [Big-FISH](https://github.com/fish-quant/big-fish):
+Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
+
+- [Cellpose](https://github.com/MouseLand/cellpose):
+ Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
+
+
 ## Code architecture
 
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/code_architecture.png alt="drawing" width="1200"/>
@@ -44,13 +53,7 @@ Additional steps to deactivate or remove the environment from the computer:
     conda env remove -n FISH_processing
 ```
 
-## References for dependencies
 
-- [Big-FISH](https://github.com/fish-quant/big-fish):
-Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
-
-- [Cellpose](https://github.com/MouseLand/cellpose):
- Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
 
 ## Licenses for dependencies
 
