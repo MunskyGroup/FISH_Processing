@@ -20,12 +20,17 @@ warnings.filterwarnings("ignore")
 
 ######################################
 ## User passed arguments
-remote_folder = sys.argv[1]
-send_data_to_NAS = int(sys.argv[2])
+remote_folder = sys.argv[1]                             # Path to the remote Folder
+remote_folder.replace('\\', '/')                        # Converting backslash to forward slash if needed 
+send_data_to_NAS = int(sys.argv[2])                     # Flag to send data back to NAS
 diamter_nucleus = int(sys.argv[3])                      # approximate nucleus size in pixels
-diameter_cytosol = int(sys.argv[4])  #250                # approximate cytosol size in pixels
-psf_z_1 = int(sys.argv[5])       #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx_1 = int(sys.argv[6])      #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+diameter_cytosol = int(sys.argv[4])  #250               # approximate cytosol size in pixels
+psf_z_1 = int(sys.argv[5])       #350                   # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx_1 = int(sys.argv[6])      #150                   # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+nucleus_channel= int(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
+cyto_channel= int(sys.argv[8])                          # Channel to pass to python for cytosol segmentation
+FISH_channel= int(sys.argv[9])                          # Channel to pass to python for spot detection
+FISH_second_channel= int(sys.argv[10])                  # Channel to pass to python for spot detection
 
 # Deffining directories
 current_dir = pathlib.Path().absolute()
@@ -38,9 +43,11 @@ import fish_analyses as fa
 # Path to credentials
 desktop_path = pathlib.Path.home()/'Desktop'
 # Connection to munsky-nas
+#path_to_config_file = current_dir.parents[0].joinpath('config.yml')
 path_to_config_file = desktop_path.joinpath('config.yml')
 share_name = 'share'
 remote_folder_path = pathlib.Path(remote_folder)
+
 name_final_folder = (remote_folder_path.name +'___nuc_' + str(diamter_nucleus) +
                 '__cyto_' + str(diameter_cytosol) +
                 '__psfz_' + str(psf_z_1) +
@@ -52,14 +59,18 @@ fa.NASConnection(path_to_config_file,share_name = share_name).copy_files(remote_
 
 # Parameters for the code
 data_dir = local_folder_path     # path to a folder with images.
-channels_with_cytosol = [1,2]            # list or int indicating the channels where the cytosol is detectable
-channels_with_nucleus = 0                # list or int indicating the channels where the nucleus is detectable
-channels_with_FISH = [1]               # list or int with the channels with FISH spots that are used for the quantification
+channels_with_cytosol = [nucleus_channel,cyto_channel]            # list or int indicating the channels where the cytosol is detectable
+channels_with_nucleus = nucleus_channel                # list or int indicating the channels where the nucleus is detectable
+
+# Deffining FISH Channels
+if FISH_second_channel==0:
+  channels_with_FISH = [FISH_channel]               # list or int with the channels with FISH spots that are used for the quantification
+else:
+  channels_with_FISH = [FISH_channel,FISH_second_channel ]
+  
 # Parameters for FISH detection
 voxel_size_z = 500                       # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx = 103                      # Microscope conversion px to nanometers in the xy axis.
-#psf_z_2 = 300      #350                    # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-#psf_yx_2 = 130     #150                    # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 
 list_voxels = [ [voxel_size_z,voxel_size_yx  ]  ]
 list_psfs = [ [psf_z_1, psf_yx_1] ]
@@ -94,7 +105,6 @@ number_of_TS_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i
 ts_size =  dataframe_FISH.loc[   (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True)  & (dataframe_FISH['spot_type']==spot_type_selected)   ].cluster_size.values
 # Size of each cell
 cell_size = dataframe_FISH.loc[  (dataframe_FISH['spot_id']==0)  ].cell_area_px.values
-
 
 # Plotting intensity distributions
 plt.style.use('ggplot')  # ggplot  #default
@@ -137,6 +147,9 @@ pathlib.Path().absolute().joinpath('metadata_'+ remote_folder_path.name +'.txt')
 pathlib.Path().absolute().joinpath('dataframe_' + remote_folder_path.name +'.csv').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'dataframe_'+ remote_folder_path.name +'.csv'))
 #pdf_path 
 pathlib.Path().absolute().joinpath('pdf_report_' + remote_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'pdf_report_'+ remote_folder_path.name +'.pdf'))
+# copy output file
+shutil.copyfile(pathlib.Path().absolute().joinpath('output.txt'),    pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder), 'output.txt') )
+
 # making a zip file
 shutil.make_archive(str('analysis_'+ name_final_folder),'zip', pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)))
 
@@ -145,10 +158,15 @@ if send_data_to_NAS == 1:
   local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)+'.zip')
   fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, remote_folder_path)
 
+#Moving all results to "analyses" folder
+if not os.path.exists(str('analyses')):
+    os.makedirs(str('analyses'))
+pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)).rename(pathlib.Path().absolute().joinpath('analyses', str('analysis_'+ name_final_folder) ))
+# This line of code will replace the output file and place it on the specific directory. Notice that additional data is added after sending to NAS.
+shutil.move(pathlib.Path().absolute().joinpath('output.txt'),    pathlib.Path().absolute().joinpath('analyses',  str('analysis_'+ name_final_folder), 'output.txt' ) )
+
 # Delete local files
 shutil.rmtree(local_folder_path)
 temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + remote_folder_path.name)
 shutil.rmtree(temp_results_folder_name)
-#shutil.rmtree(str('analysis_'+ name_final_folder))
-#os.remove('out.txt')
 os.remove(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)+'.zip'))

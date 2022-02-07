@@ -25,16 +25,18 @@ diameter_cytosol="220"     # approximate cytosol size in pixels
 psf_z="350"                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx="120"               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 send_data_to_NAS="0"
-nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
+nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> output.txt
 
 
 # ########### PYTHON PROGRAM #############################
 #for folder in ${folders[*]}; do
-#     #nohup python3 ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
-#     nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> out.txt
+#     #nohup python3 ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> output.txt
+#     nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> output.txt
 #     wait
 #done
 conda deactivate
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: bash runner_cluster.sh &
+
+exit 0

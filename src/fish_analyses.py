@@ -289,9 +289,12 @@ class MergeChannels():
                     prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
                     list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif')) # List of files that match the pattern 'file_prefix_C*.tif'
                     if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
-                        list_file_names.append(prefix)
-                        merged_img = np.concatenate([ imread(list_files_per_image[i])[..., np.newaxis] for i,_ in enumerate(list_files_per_image)],axis=-1).astype('uint16')
-                        list_merged_images.append(merged_img) 
+                        try:
+                            list_file_names.append(prefix)
+                            merged_img = np.concatenate([ imread(list_files_per_image[i])[..., np.newaxis] for i,_ in enumerate(list_files_per_image)],axis=-1).astype('uint16')
+                            list_merged_images.append(merged_img) 
+                        except:
+                            print('A corrupted file was detected during the merge of the following files: \n', list_files_per_image,'\n')
                     if self.save_figure ==1 and len(list_files_per_image)>1:
                         if not os.path.exists(str(save_to_path)):
                             os.makedirs(str(save_to_path))
