@@ -6,7 +6,7 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
 This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish) and [Cellpose](https://github.com/MouseLand/cellpose).
 
-## Please if you use this repository make sure to cite:
+## If you use this repository make sure to cite:
 
 - [Big-FISH](https://github.com/fish-quant/big-fish):
 Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
@@ -28,7 +28,7 @@ Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for 
 
 * To create a virtual environment navigate to the location of the requirements file, and use:
 ```bash
-    conda create -n FISH_processing python=3.6 -y
+    conda create -n FISH_processing python=3.8 -y
     source activate FISH_processing
 ```
 * To install GPU for Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
@@ -52,8 +52,6 @@ Additional steps to deactivate or remove the environment from the computer:
 ```
     conda env remove -n FISH_processing
 ```
-
-
 
 ## Licenses for dependencies
 
