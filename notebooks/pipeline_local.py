@@ -78,7 +78,7 @@ if is_needed_to_merge_images == True:
     data_dir = data_dir.joinpath('merged')
 
 # Running the pipeline
-dataframe_FISH = fa.PipelineFISH(data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=list_voxels, list_psfs=list_psfs ,show_plot=show_plots,file_name_str=data_dir.name).run()
+dataframe_FISH,_,_,_ = fa.PipelineFISH(data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=list_voxels, list_psfs=list_psfs ,show_plot=show_plots,file_name_str=data_dir.name).run()
 
 # Number of cells
 spot_type_selected = 0

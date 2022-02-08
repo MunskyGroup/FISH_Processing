@@ -106,8 +106,69 @@ class NASConnection():
         else:
             print('Connection failed')
         return self.conn
-        
-    def copy_files(self, remote_folder_path, local_folder_path, timeout=60):
+
+    def read_files(self, remote_folder_path, timeout=60):
+        '''
+        This method reads all files from a NAS directory
+        Parameters
+        --  --  --  --  -- 
+        remote_folder_path : str, Pathlib obj
+            The path in the remote folder to download
+        timeout : int, optional
+            seconds to establish connection. The default is 60.
+        '''
+        # Connecting to NAS
+        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        if is_connected == True:
+            print('Connection established')
+        else:
+            print('Connection failed')
+        # Converting the paths to a Pathlib object
+        if type(remote_folder_path)==str:
+            remote_folder_path = pathlib.Path(remote_folder_path)
+        # Iterate in the folder to download all tif files
+        list_files =[]
+        list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
+        for file in list_dir:
+            list_files.append(file.filename)
+        return list_files
+
+    def download_file(self, remote_file_path, local_folder_path, timeout=60):
+        '''
+        This method download an specific file
+        Parameters
+        --  --  --  --  -- 
+        remote_file_path : str, Pathlib obj
+            The path in the remote file to download
+        local_folder_path : str, Pathlib obj
+            The path in the local computer where the files will be copied
+        timeout : int, optional
+            seconds to establish connection. The default is 60.
+        '''
+        # Connecting to NAS
+        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        if is_connected == True:
+            print('Connection established')
+        else:
+            print('Connection failed')
+        # Converting the paths to a Pathlib object
+        if type(local_folder_path) == str:
+            local_folder_path = pathlib.Path(local_folder_path)
+        if type(remote_file_path)==str:
+            remote_file_path = pathlib.Path(remote_file_path)
+        # Making the local directory
+        if not (os.path.exists(local_folder_path)) :
+            os.makedirs(str(local_folder_path))
+        filename = remote_file_path.name
+        fileobj = open(remote_file_path.name,'wb')
+        self.conn.retrieveFile(self.share_name, str(remote_file_path), fileobj)
+        fileobj.close()
+        # moving files in the local computer
+        shutil.move(pathlib.Path().absolute().joinpath(filename), local_folder_path.joinpath(filename))
+        print('Files downloaded to: ' + str(local_folder_path.joinpath(filename)))
+
+
+    def copy_files(self, remote_folder_path, local_folder_path, timeout=60, file_extension ='.tif'):
         '''
         This method downloads the tif files from NAS to a temp folder in the local computer
         Parameters
@@ -141,10 +202,11 @@ class NASConnection():
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
         for file in list_dir:
-            if (file.filename not in ['.', '..']) and ('.tif' in file.filename) :
+            if (file.filename not in ['.', '..']) and (file_extension in file.filename)  :
                 print ('File Downloaded :', file.filename)
                 fileobj = open(file.filename,'wb')
                 self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj)
+                fileobj.close()
                 # moving files in the local computer
                 shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
         print('Files downloaded to: ' + str(local_folder_path))
@@ -423,7 +485,7 @@ class Cellpose():
         # Next two lines suppressing output from cellpose
         old_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        model = models.Cellpose(gpu = 1, model_type = self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
+        model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -558,6 +620,25 @@ class CellSegmentation():
             else:
                 list_masks.append(masks)
             return list_masks
+
+        # This function is intended to merge masks in a single image
+        def merge_masks (list_masks):
+            n_masks = len(list_masks)
+            if not ( n_masks is None):
+                if n_masks > 1: # detecting if more than 1 mask are detected per cell
+                    base_image = np.zeros_like(list_masks[0])
+                    for nm in range (1, n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                        tested_mask = np.where(list_masks[nm] == 1, nm, 0)
+                        base_image = base_image + tested_mask
+                         # making zeros all elements outside each mask, and once all elements inside of each mask.
+                else:  # do nothing if only a single mask is detected per image.
+                    base_image = list_masks[0]
+            else:
+                base_image =[]
+            masks = base_image.astype(np.uint8)
+            return masks
+            
+
         # function that determines if a cell is in the border of the image
         def remove_fragmented(img_masks):
             img_masks_copy = np.copy(img_masks)
@@ -670,6 +751,13 @@ class CellSegmentation():
             video_normalized = np.amax(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
             video_normalized = self.video # [YXC]       
+        
+
+
+
+
+        
+        
         def function_to_find_masks (video):                
             if not (self.channels_with_cytosol is None):
                 masks_cyto = Cellpose(video[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
@@ -710,8 +798,12 @@ class CellSegmentation():
                     masks_cyto = None
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
 
+        
+        
+        
+        
         # OPTIMIZATION METHODS FOR SEGMENTATION
-        if self.optimization_segmentation_method == 'intensity_segmentation':
+        if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.video.shape) > 3):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 tested_thresholds = np.round(np.linspace(0, 3, self.NUMBER_OPTIMIZATION_VALUES), 0)
@@ -730,7 +822,10 @@ class CellSegmentation():
             video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
         
-        elif self.optimization_segmentation_method == 'z_slice_segmentation':
+
+
+
+        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.video.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.video.shape[0]
             list_idx = np.round(np.linspace(4, number_z_slices-4, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
@@ -748,11 +843,13 @@ class CellSegmentation():
             else:
                 selected_threshold = list_idx[0]
             # Running the mask selection once a threshold is obtained
-            #test_video_optimization = stack.gaussian_filter(self.video[selected_threshold,:,:,:],sigma=1)
             test_video_optimization = np.amax(self.video[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
         
-        elif self.optimization_segmentation_method == 'gaussian_filter_segmentation':
+
+
+
+        elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.video.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.video.shape[0]//2
             list_sigmas = np.round(np.linspace(0.5, 20, self.NUMBER_OPTIMIZATION_VALUES), 1) 
@@ -770,11 +867,20 @@ class CellSegmentation():
             # Running the mask selection once a threshold is obtained
             test_video_optimization = stack.gaussian_filter(self.video[half_z_slices,:,:,:],sigma=selected_threshold) 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
+        
+        
+        
         else:
+            # no optimization is applied if a 2D image is passed
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_normalized)
 
+        
+
+
+
+
         # This functions makes zeros the border of the mask, it is used only for plotting.
-        def remove_border(img,px_to_remove = 10):
+        def remove_border(img,px_to_remove = 5):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
 
@@ -796,8 +902,8 @@ class CellSegmentation():
                     temp_complete_mask = remove_border(list_masks_complete_cells[i])
                     contuour_n = find_contours(temp_nucleus_mask, 0.5)
                     contuour_c = find_contours(temp_complete_mask, 0.5)
-                    axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'blue') # mask nucleus
-                    axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red') # mask cytosol
+                    axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                    axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     axes[3].set(title = 'Paired masks')
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
@@ -834,7 +940,14 @@ class CellSegmentation():
 
         if (self.channels_with_nucleus is None):
             index_paired_masks = np.linspace(0, len(list_masks_complete_cells)-1, len(list_masks_complete_cells), dtype='int32')
-        return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks
+        
+        # generating a single image with all the masks for cyto and nuclei 
+        masks_cyto_single = merge_masks(list_masks_complete_cells)
+        masks_nuclei_single = merge_masks(list_masks_nuclei)
+        masks_cytosol_no_nuclei_single = merge_masks(list_masks_cytosol_no_nuclei)
+
+        # return values
+        return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto_single, masks_nuclei_single,masks_cytosol_no_nuclei_single
 
 
 class BigFISH():
@@ -1462,10 +1575,16 @@ class PipelineFISH():
             self.name_for_files = self.data_dir.name
         
     def run(self):
+        list_masks_complete_cells=[]
+        list_masks_nuclei=[]
+        list_masks_cytosol_no_nuclei=[]
+
         # temp_results_images
         temp_folder_name = str('temp_results_'+ self.name_for_files)
         if not os.path.exists(temp_folder_name):
             os.makedirs(temp_folder_name)
+
+
         
         # Running the pipeline.
         for i in range (0, self.number_images ):
@@ -1479,12 +1598,15 @@ class PipelineFISH():
             PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name ).plot()
             print('CELL SEGMENTATION')
             temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
-            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, _ = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, index_paired_masks, masks_cyto_single, masks_nuclei_single,masks_cytosol_no_nuclei_single = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
             print('SPOT DETECTION')
             temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name).get_dataframe()
             dataframe = dataframe_FISH
-            del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
+            list_masks_complete_cells.append(masks_cyto_single)
+            list_masks_nuclei.append(masks_nuclei_single)
+            list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei_single)
+            del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, index_paired_masks, masks_cyto_single, masks_nuclei_single,masks_cytosol_no_nuclei_single
         
         # Creating the dataframe        
         if  not str(self.name_for_files)[0:5] ==  'temp_':
@@ -1498,4 +1620,7 @@ class PipelineFISH():
         # Creating a PDF report
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH).create_report()
 
-        return dataframe
+        return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei
+
+
+
