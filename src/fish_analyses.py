@@ -752,12 +752,6 @@ class CellSegmentation():
         else:
             video_normalized = self.video # [YXC]       
         
-
-
-
-
-        
-        
         def function_to_find_masks (video):                
             if not (self.channels_with_cytosol is None):
                 masks_cyto = Cellpose(video[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
@@ -867,17 +861,9 @@ class CellSegmentation():
             # Running the mask selection once a threshold is obtained
             test_video_optimization = stack.gaussian_filter(self.video[half_z_slices,:,:,:],sigma=selected_threshold) 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
-        
-        
-        
         else:
             # no optimization is applied if a 2D image is passed
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_normalized)
-
-        
-
-
-
 
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 5):
@@ -1038,7 +1024,7 @@ class BigFISH():
                 plot.plot_elbow(rna_filtered, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
                 plt.show()
             except:
-                print('not  showing elbow plot')
+                print('not showing elbow plot')
             #selected_slice = 5
             #values, counts = np.unique(spots_post_decomposition[:,0], return_counts=True)
             #ind = np.argmax(counts)
@@ -1082,6 +1068,33 @@ class BigFISH():
         return [spotDectionCSV, clusterDectionCSV]
 
 
+class Intensity():
+    '''
+    This class is intended to calculate the average intensity in an spot and substract the intensity in background.
+    
+    Parameters
+    --  --  --  --  -- 
+    image : NumPy array
+        Array of images with dimensions [Z, Y, X, C] . 
+    dataframe : Pandas dataframe
+            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
+    '''
+    def __init__(self,image,dataframe,spot_size):
+        self.dataframe = dataframe
+        self.image = image
+        self.spot_size = spot_size
+
+    def get_intensity(self):
+        '''
+        This method extracts data from the class SpotDetection and return the data as a dataframe.
+        Returns
+        --  --  -- -
+        dataframe : Pandas dataframe
+            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
+        '''
+        pass
+
+
 class DataProcessing():
     '''
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
@@ -1122,7 +1135,7 @@ class DataProcessing():
         This method extracts data from the class SpotDetection and return the data as a dataframe.
         Returns
         --  --  -- -
-        dataframe,  : Pandas dataframe
+        dataframe : Pandas dataframe
             Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
         '''
         def mask_selector(mask,calculate_centroid= True):
