@@ -19,4 +19,5 @@ temp_*
 ~$*
 Figure_Distributions_*
 out.txt
+output.txt
 analyses/
