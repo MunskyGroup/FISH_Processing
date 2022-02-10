@@ -148,7 +148,7 @@ pathlib.Path().absolute().joinpath('dataframe_' + remote_folder_path.name +'.csv
 #pdf_path 
 pathlib.Path().absolute().joinpath('pdf_report_' + remote_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'pdf_report_'+ remote_folder_path.name +'.pdf'))
 # copy output file
-shutil.copyfile(pathlib.Path().absolute().joinpath('output.txt'),    pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder), 'output.txt') )
+#shutil.copyfile(pathlib.Path().absolute().joinpath('output.txt'),    pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder), 'output.txt') )
 
 # making a zip file
 shutil.make_archive(str('analysis_'+ name_final_folder),'zip', pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)))
@@ -163,7 +163,7 @@ if not os.path.exists(str('analyses')):
     os.makedirs(str('analyses'))
 pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)).rename(pathlib.Path().absolute().joinpath('analyses', str('analysis_'+ name_final_folder) ))
 # This line of code will replace the output file and place it on the specific directory. Notice that additional data is added after sending to NAS.
-shutil.move(pathlib.Path().absolute().joinpath('output.txt'),    pathlib.Path().absolute().joinpath('analyses',  str('analysis_'+ name_final_folder), 'output.txt' ) )
+#shutil.move(pathlib.Path().absolute().joinpath('output.txt'),    pathlib.Path().absolute().joinpath('analyses',  str('analysis_'+ name_final_folder), 'output.txt' ) )
 
 # Delete local files
 shutil.rmtree(local_folder_path)

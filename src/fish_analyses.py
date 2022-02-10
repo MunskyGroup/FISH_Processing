@@ -580,7 +580,7 @@ class CellSegmentation():
         self.diameter_cytosol = diameter_cytosol
         self.diamter_nucleus = diamter_nucleus
         self.show_plot = show_plot
-        self.NUMBER_OPTIMIZATION_VALUES= 10
+        self.NUMBER_OPTIMIZATION_VALUES= 5
         self.remove_fragmented_cells = remove_fragmented_cells
         model_test = models.Cellpose(gpu=True, model_type='cyto')
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
@@ -1036,7 +1036,8 @@ class BigFISH():
             #image_2D = stack.maximum_projection(rna)
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
             central_slice = rna.shape[0]//2
-            for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
+            #for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
+            for i in range(central_slice,central_slice+1):
                 print('Z-Slice: ', str(i))
                 image_2D = rna_filtered[i,:,:]
                 if i > 1 and i<rna.shape[0]-1:

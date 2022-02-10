@@ -101,8 +101,8 @@ list_TPL_Cy3=(\
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 diamter_nucleus=100      # approximate nucleus size in pixels
 diameter_cytosol=250     # approximate cytosol size in pixels
-psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel=0        # Channel to pass to python for nucleus segmentation
 cyto_channel=2           # Channel to pass to python for cytosol segmentation
 FISH_channel=1           # Channel to pass to python for spot detection
@@ -115,9 +115,12 @@ FISH_second_channel=0    # Channel to pass to python for spot detection in a sec
 
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_DUSP1_DEX[*]}; do
-     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt  &&
-     wait
+     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt
 done
+#for folder in ${list_DUSP1_DEX[*]}; do
+#     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt  &&
+#     wait
+#done
 ##########
 
 # Deactivating the environment
