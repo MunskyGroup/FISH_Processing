@@ -35,7 +35,25 @@ list_DUSP1_DEX=(\
 'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_20min' \
 'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_30min' \
 'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_40min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_50min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_60min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_90min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_120min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_150min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_180min' \
 )
+
+list_DUSP1_DEX2=(\
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_50min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_60min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_90min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_120min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_150min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_180min' \
+)
+
 
 
 list_IL=(\
@@ -100,7 +118,7 @@ list_TPL_Cy3=(\
 
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 diamter_nucleus=100      # approximate nucleus size in pixels
-diameter_cytosol=250     # approximate cytosol size in pixels
+diameter_cytosol=220     # approximate cytosol size in pixels
 psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel=0        # Channel to pass to python for nucleus segmentation
@@ -114,8 +132,14 @@ FISH_second_channel=0    # Channel to pass to python for spot detection in a sec
 #look for which has what effect on the output files (spot detection etc.)
 
 # ########### PYTHON PROGRAM #############################
+COUNTER=0
 for folder in ${list_DUSP1_DEX[*]}; do
-     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt
+     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt &
+     COUNTER=$((COUNTER+1))
+     val1=$(($COUNTER%4)) 
+     if [ $val1 -eq '0' ];then
+     wait
+     fi
 done
 #for folder in ${list_DUSP1_DEX[*]}; do
 #     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt  &&
