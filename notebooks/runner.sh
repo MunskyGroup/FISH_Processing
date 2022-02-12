@@ -188,5 +188,6 @@ conda deactivate
 # ls *temp_ out*
 # rm *.tif out*
 # rm -r temp_*
+# rm -r analysis_*
 
 exit 0

@@ -165,9 +165,16 @@ if send_data_to_NAS == 1:
 #Moving all results to "analyses" folder
 if not os.path.exists(str('analyses')):
     os.makedirs(str('analyses'))
-pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)).rename(pathlib.Path().absolute().joinpath('analyses', str('analysis_'+ name_final_folder) ))
+
+analysis_folder_name = str('analysis_'+ name_final_folder)
+final_dir_name =pathlib.Path().absolute().joinpath('analyses', analysis_folder_name)
+
+if os.path.exists(str(final_dir_name)):
+  shutil.rmtree(str(final_dir_name))
+
+pathlib.Path().absolute().joinpath(analysis_folder_name).rename(final_dir_name )
 # This line of code will replace the output file and place it on the specific directory. Notice that additional data is added after sending to NAS.
-shutil.move(pathlib.Path().absolute().joinpath(output_name),    pathlib.Path().absolute().joinpath('analyses',  str('analysis_'+ name_final_folder), output_name ) )
+shutil.move(pathlib.Path().absolute().joinpath(output_name),    final_dir_name.joinpath( output_name ) )
 
 # Delete local files
 shutil.rmtree(local_folder_path)
