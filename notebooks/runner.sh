@@ -23,14 +23,14 @@ export CUDA_VISIBLE_DEVICES=0,1
 # https://stackoverflow.com/questions/39649102/how-do-i-select-which-gpu-to-run-a-job-on
 
 # Declare a string array
+list_test=(\
+'Test/test_dir' \
+) 
+
+
 #list_dex=(\
-#'Test/test_dir' \
-#) 
-
-
-list_dex=(\
-'smFISH_images/Linda_smFISH_images/Confocal/20220124/GAPDH-Cy3_NFKBIA-Cy5_30min_100nMDex'
-)
+#'smFISH_images/Linda_smFISH_images/Confocal/20220124/GAPDH-Cy3_NFKBIA-Cy5_30min_100nMDex'
+#)
 
 
 list_DUSP1_DEX=(\
@@ -47,17 +47,6 @@ list_DUSP1_DEX=(\
 'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_150min' \
 'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_180min' \
 )
-
-list_DUSP1_DEX2=(\
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_50min' \
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_60min' \
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min' \
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_90min' \
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_120min' \
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_150min' \
-'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_180min' \
-)
-
 
 
 list_IL=(\
@@ -137,7 +126,9 @@ FISH_second_channel=0    # Channel to pass to python for spot detection in a sec
 
 
 #for folder in ${list_DUSP1_DEX[*]}; do
-#     nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel >> output.txt &
+     #folder_new="${folder//\\//}"
+     #output_name=''output__"${folder////__}"".txt"
+     #nohup python3 ./pipeline_executable.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_name >> $output_name &
 #done
 
 # var_new="${var//\\//}"
@@ -148,7 +139,7 @@ FISH_second_channel=0    # Channel to pass to python for spot detection in a sec
 
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
-for folder in ${list_DUSP1_DEX[*]}; do
+for folder in ${list_TPL_Cy3[*]}; do
      folder_new="${folder//\\//}"
      output_name=''output__"${folder////__}"".txt"
      nohup python3 ./pipeline_executable.py  $folder_new $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_name >> $output_name &

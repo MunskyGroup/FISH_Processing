@@ -36,13 +36,12 @@ sys.path.append(str(fa_dir))
 import fish_analyses as fa
 
 # Path to credentials
-desktop_path = pathlib.Path.home()/'Desktop'
+#desktop_path = pathlib.Path.home()/'Desktop'
 # Connection to munsky-nas
 #path_to_config_file = desktop_path.joinpath('config.yml')
 #share_name = 'share'
 #remote_folder_path = pathlib.Path(remote_folder)
 data_dir = current_dir.parents[0].joinpath('dataBases').joinpath(folder_name)
-
 
 name_final_folder = (data_dir.name +'___nuc_' + str(diamter_nucleus) +
                 '__cyto_' + str(diameter_cytosol) +
@@ -143,8 +142,6 @@ pathlib.Path().absolute().joinpath('dataframe_' + data_dir.name +'.csv').rename(
 pathlib.Path().absolute().joinpath('pdf_report_' + data_dir.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'pdf_report_'+ data_dir.name +'.pdf'))
 # making a zip file
 #shutil.make_archive(str('analysis_'+ name_final_folder),'zip', pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder)))
-
-
 
 # Delete local files
 #shutil.rmtree(local_folder_path)

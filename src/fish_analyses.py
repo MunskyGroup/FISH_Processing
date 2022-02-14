@@ -62,7 +62,7 @@ if import_libraries == 1:
     # To create PDF report
     from fpdf import FPDF
     #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    #os.environ["CUDA_VISIBLE_DEVICES"] = str(np.random.randint(0,2,1))
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" #str(np.random.randint(0,2,1))
 
 class NASConnection():
     '''
@@ -484,8 +484,8 @@ class Cellpose():
             List of NumPy arrays with values between 0 and the number of detected cells in the image, where a number larger than zero represents the masked area for each cell, and 0 represents the area where no cells are detected.
         '''
         # Next two lines suppressing output from cellpose
-        old_stdout = sys.stdout
-        sys.stdout = open(os.devnull, "w")
+        #old_stdout = sys.stdout
+        #sys.stdout = open(os.devnull, "w")
         model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
@@ -546,8 +546,8 @@ class Cellpose():
         else:
             selected_masks = None
             print('No cells detected on the image')
-        sys.stdout.close()
-        sys.stdout = old_stdout
+        #sys.stdout.close()
+        #sys.stdout = old_stdout
         return selected_masks
 
 

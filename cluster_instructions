@@ -32,7 +32,7 @@
 # git clone https://user_name@github.com/MunskyGroup/FISH_Processing.git
 # --->this will as for your token
 # --------------------- CREATE ENVIRONMENT ---------------------
-# conda create -n FISH_processing python=3.6 -y
+# conda create -n FISH_processing python=3.8 -y
 # ---------------------  TO CONFIGURE CONDA (1ST TIME ONLY)----
 # conda init tcsh
 # --->this will quiere to restart the terminal
@@ -49,7 +49,7 @@
 # --------------------- TO CREATE ENV FILE -----------------------
 # To export the env ----------------------------------------------
 # conda env export > FISH_env.yml
-# To file with env from existing env -----------------------------
+# To create a new env from the yml file use: ---------------------
 # conda env create -f FISH_env.yml
 ##################################################################
 

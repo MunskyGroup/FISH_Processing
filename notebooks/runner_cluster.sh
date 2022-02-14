@@ -1,4 +1,18 @@
 #!/bin/sh
+#$ -cwd                      # The cwd option is used so that the output files are saved in the directory in which the program resides
+#$ -N image_procesing        # Job name
+#$ -e err_ip.er              # Error file 
+#$ -o test_o.txt             # Output file
+#$ -q munsky-gpu.q@gpu12      # Selected node to run the code. Other option  is:   qsub -q gpu.q@gpu9
+
+module purge
+module load apps/anaconda3
+module load conda/10.2
+
+#source /home/students/luisub/.conda/envs/t0/bin/activate
+#/home/students/"$USER"/.conda/envs/rsnaped_env/bin/python3 ./simulation_tracking.py 20 40 >> out.txt
+#python simulation_tracking.py 20 40 >> out.txt
+
 
 # Bash script to run multiple python codes.
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
@@ -40,3 +54,6 @@ conda deactivate
 # run as: bash runner_cluster.sh &
 
 exit 0
+
+# qsub -cwd -q gpu.q@gpu9 submission_script.sh
+# https://www.engr.colostate.edu/ets/keck-detailed-job-guide/
