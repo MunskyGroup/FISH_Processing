@@ -42,7 +42,7 @@ The following instructions are intended to use the codes on the Keck Cluster.
 
 * Clone the repository to the cluster.
 ```
-git clone https://<token>@github.com/MunskyGroup/FISH_Processing.git
+git clone --depth 1 https://<token>@github.com/MunskyGroup/FISH_Processing.git
 ```
 * Move to the directory
 ```
