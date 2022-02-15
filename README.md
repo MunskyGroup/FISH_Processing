@@ -1,30 +1,22 @@
-# FISH_Processing with (FISH-quant v2) Big-FISH and Cellpose.
+# FISH processing repository.
 
 Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 
-## Description
+# Description
 
-This library is intended to analyze sm-FISH images using (FISH-quant v2) [Big-FISH](https://github.com/fish-quant/big-fish) and [Cellpose](https://github.com/MouseLand/cellpose).
+This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user to transfer data between a Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
 
-## If you use this repository, make sure to cite:
-
-- [Big-FISH](https://github.com/fish-quant/big-fish):
-Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
-
-- [Cellpose](https://github.com/MouseLand/cellpose):
- Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
-
-
-## Code architecture
+## Code overview and architecture
 
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/code_architecture.png alt="drawing" width="1200"/>
 
-## Colab implementation
+# Colab implementation
 
  * Implementation in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
 
+# Installation 
 
-## Installation
+## Installation on a local computer
 
 * To create a virtual environment, navigate to the location of the requirements file, and use:
 ```bash
@@ -43,33 +35,11 @@ Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for 
 ```
  pip install -r requirements.txt
 ```
-Additional steps to deactivate or remove the environment from the computer:
-* To deactivate the environment, use
-```
- conda deactivate
-```
-* To remove the environment use:
-```
- conda env remove -n FISH_processing
-```
 
-# Miscellaneous instructions:
-
-## Creating an environment file (yml) use:
-```
-conda env export > FISH_env.yml
-```
-
-## Installation on a Linux Cluster
+## Installation on the Keck-Cluster (Rocky Linux 8)
 
 The following instructions are intended to use the codes on the Keck Cluster.
 
-* First, you need to load some modules. These paths may change depending on the cluster. Please use module avail to see a complete list of modules
-```module avail```
-```
-module purge
-module load apps/anaconda3
-```
 * Clone the repository to the cluster.
 ```
 git clone https://<token>@github.com/MunskyGroup/FISH_Processing.git
@@ -80,7 +50,7 @@ cd FISH_Processing
 ```
 * Create an environment from this yml file.
 ```
-conda env create -f FISH_env.yml
+/opt/ohpc/pub/apps/anaconda3/bin/conda env create -f FISH_env.yml
 ```
 
 ###  If an error occurs while creating the environment from the yml file, try using the following instructions.
@@ -96,15 +66,36 @@ source ~/.bashrc
 * Then, activate the environment and manually install the dependencies.
 
 ```
-/opt/ohpc/pub/apps/anaconda3/bin/conda activate /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
+/opt/ohpc/pub/apps/anaconda3/bin/conda activate FISH_processing
 cd FISH_Processing
 /opt/ohpc/pub/apps/anaconda3/bin/conda install pytorch cudatoolkit=10.2 -c pytorch -y
 pip install -r requirements.txt
 ```
 
-## Licenses for dependencies
+## Miscellaneous instructions:
 
-- License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert. All rights reserved.
+Creating an environment file (yml) use:
+```
+conda env export > FISH_env.yml
+```
 
-- License for [Cellpose](https://github.com/MouseLand/cellpose): BSD 3-Clause Copyright © 2020 Howard Hughes Medical Institute. 
+Additional steps to deactivate or remove the environment from the computer:
 
+* To deactivate the environment, use
+```
+ conda deactivate
+```
+* To remove the environment use:
+```
+ conda env remove -n FISH_processing
+```
+
+# Licenses for dependencies
+
+## If you use this repository, make sure to cite:
+
+- [Big-FISH](https://github.com/fish-quant/big-fish):
+Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
+
+- [Cellpose](https://github.com/MouseLand/cellpose):
+ Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.

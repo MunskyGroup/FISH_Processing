@@ -1,59 +1,143 @@
 #!/bin/sh
-#$ -cwd                      # The cwd option is used so that the output files are saved in the directory in which the program resides
-#$ -N image_procesing        # Job name
-#$ -e err_ip.er              # Error file 
-#$ -o test_o.txt             # Output file
-#$ -q munsky-gpu.q@gpu12      # Selected node to run the code. Other option  is:   qsub -q gpu.q@gpu9
+#SBATCH --partition=all
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:4
 
-module purge
-module load apps/anaconda3
-module load conda/10.2
+# module purge
+module load gnu9/9.4.0 
+module load cudnn/8.3-10.2
 
-#source /home/students/luisub/.conda/envs/t0/bin/activate
-#/home/students/"$USER"/.conda/envs/rsnaped_env/bin/python3 ./simulation_tracking.py 20 40 >> out.txt
-#python simulation_tracking.py 20 40 >> out.txt
-
-
-# Bash script to run multiple python codes.
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
 
-# ########### ACTIVATE ENV #############################
-# To load the env pass the specific location of the env and then activate it. 
-# If not sure about the env location use: source activate <<venv_name>>   echo $CONDA_PREFIX
-#source /home/luisub/anaconda3/envs/FISH_processing
-#conda activate FISH_processing
+# LIST OF FOLDERS
+list_DUSP1_DEX=(\
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_0min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_10min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_20min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_30min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_40min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_50min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_60min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_90min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_120min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_150min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_180min' \
+)
 
-source /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing
-conda activate FISH_processing
+list_test=(\
+'Test/test_dir' \
+'Test/test_dir1' \
+) 
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
 # Read them in the python file using: sys.argv. This return a list of strings. 
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 
-# Declare a string array
-folder="test"
-send_data_to_NAS="0"       # If data sent back to NAS use 1.
-diamter_nucleus="120"      # approximate nucleus size in pixels
-diameter_cytosol="220"     # approximate cytosol size in pixels
-psf_z="350"                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx="120"               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-send_data_to_NAS="0"
-nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> output.txt
-
+send_data_to_NAS=1       # If data sent back to NAS use 1.
+diamter_nucleus=100      # approximate nucleus size in pixels
+diameter_cytosol=250     # approximate cytosol size in pixels
+psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+nucleus_channel=0        # Channel to pass to python for nucleus segmentation
+cyto_channel=2           # Channel to pass to python for cytosol segmentation
+FISH_channel=1           # Channel to pass to python for spot detection
+FISH_second_channel=0    # Channel to pass to python for spot detection in a second Channel, if 0 is ignored.
 
 # ########### PYTHON PROGRAM #############################
-#for folder in ${folders[*]}; do
-#     #nohup python3 ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> output.txt
-#     nohup /top/college/academic/ChemE/"$USER"/home/.conda/envs/FISH_processing/bin/python ./pipeline_local.py  $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx >> output.txt
-#     wait
-#done
-conda deactivate
+#COUNTER=0
+for folder in ${list_test[*]}; do
+     output_names=""output__"${folder////__}"".txt"
+     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_names >> $output_names &
+     wait
+done
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: bash runner_cluster.sh &
+# run as: sbatch runner_cluster_new.sh /dev/null 2>&1 & disown
 
 exit 0
 
-# qsub -cwd -q gpu.q@gpu9 submission_script.sh
-# https://www.engr.colostate.edu/ets/keck-detailed-job-guide/
+# ########### TO REMOVE SOME FILES #########################
+
+# To remove files
+# ls *.tif
+# rm -r temp_*
+# rm -r analysis_*
+# rm slurm* out* temp_* 
+
+# ########### SLURM COMMANDS #########################
+# scancel [jobid]
+# squeue -u [username]
+# squeue#!/bin/sh
+#SBATCH --partition=all
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:4
+
+# module purge
+module load gnu9/9.4.0 
+module load cudnn/8.3-10.2
+
+# If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
+
+# LIST OF FOLDERS
+list_DUSP1_DEX=(\
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_0min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_10min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_20min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_30min' \
+'smFISH_images/Eric_smFISH_images/20220126/DUSP1_Dex_40min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_50min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_60min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_90min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_120min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_150min' \
+'smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_180min' \
+)
+
+list_test=(\
+'Test/test_dir' \
+'Test/test_dir1' \
+) 
+
+# ########### PROGRAM ARGUMENTS #############################
+# If the program requieres positional arguments. 
+# Read them in the python file using: sys.argv. This return a list of strings. 
+# Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
+
+send_data_to_NAS=1       # If data sent back to NAS use 1.
+diamter_nucleus=100      # approximate nucleus size in pixels
+diameter_cytosol=250     # approximate cytosol size in pixels
+psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+nucleus_channel=0        # Channel to pass to python for nucleus segmentation
+cyto_channel=2           # Channel to pass to python for cytosol segmentation
+FISH_channel=1           # Channel to pass to python for spot detection
+FISH_second_channel=0    # Channel to pass to python for spot detection in a second Channel, if 0 is ignored.
+
+# ########### PYTHON PROGRAM #############################
+#COUNTER=0
+for folder in ${list_test[*]}; do
+     output_names=""output__"${folder////__}"".txt"
+     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_names >> $output_names &
+     wait
+done
+
+# ########### TO EXECUTE RUN IN TERMINAL #########################
+# run as: sbatch runner_cluster_new.sh /dev/null 2>&1 & disown
+
+exit 0
+
+# ########### TO REMOVE SOME FILES #########################
+
+# To remove files
+# ls *.tif
+# rm -r temp_*
+# rm -r analysis_*
+# rm -r slurm* out* temp_* error_file*
+
+# ########### SLURM COMMANDS #########################
+# scancel [jobid]
+# squeue -u [username]
+# squeue

@@ -25,6 +25,7 @@ export CUDA_VISIBLE_DEVICES=0,1
 # Declare a string array
 list_test=(\
 'Test/test_dir' \
+'Test/test_dir1' \
 ) 
 
 

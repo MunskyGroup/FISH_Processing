@@ -45,10 +45,12 @@ sys.path.append(str(fa_dir))
 import fish_analyses as fa
 
 # Path to credentials
-desktop_path = pathlib.Path.home()/'Desktop'
-# Connection to munsky-nas
-#path_to_config_file = current_dir.parents[0].joinpath('config.yml')
-path_to_config_file = desktop_path.joinpath('config.yml')
+try:
+  desktop_path = pathlib.Path.home()/'Desktop'
+  path_to_config_file = current_dir.parents[0].joinpath('config.yml')
+except:
+  path_to_config_file = desktop_path.joinpath('config.yml')
+  
 share_name = 'share'
 remote_folder_path = pathlib.Path(remote_folder)
 
