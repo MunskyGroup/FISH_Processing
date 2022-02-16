@@ -19,20 +19,20 @@ This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user
 ## Installation on a local computer
 
 * To create a virtual environment, navigate to the location of the requirements file, and use:
-```bash
+```sh
  conda create -n FISH_processing python=3.8 -y
  source activate FISH_processing
 ```
 * To install GPU for Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
-```
+```sh
  conda install pytorch cudatoolkit=10.2 -c pytorch -y
 ```
 * To install CPU for Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
-```
+```sh
  conda install pytorch -c pytorch
 ```
 * To include the rest of the requirements use:
-```
+```sh
  pip install -r requirements.txt
 ```
 
@@ -41,22 +41,22 @@ This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user
 The following instructions are intended to use the codes on the Keck Cluster.
 
 * Clone the repository to the cluster.
-```
+```sh
 git clone --depth 1 https://<token>@github.com/MunskyGroup/FISH_Processing.git
 ```
 * Move to the directory
-```
+```sh
 cd FISH_Processing 
 ```
 * Create an environment from this yml file.
-```
+```sh
 /opt/ohpc/pub/apps/anaconda3/bin/conda env create -f FISH_env.yml
 ```
 
 ###  If an error occurs while creating the environment from the yml file, try using the following instructions.
 
 * Create the environment
-```
+```sh
 /opt/ohpc/pub/apps/anaconda3/bin/conda init 
 /opt/ohpc/pub/apps/anaconda3/bin/conda create -n FISH_processing python=3.8 -y
 /opt/ohpc/pub/apps/anaconda3/bin/conda init bash
@@ -65,7 +65,7 @@ source ~/.bashrc
 
 * Then, activate the environment and manually install the dependencies.
 
-```
+```sh
 /opt/ohpc/pub/apps/anaconda3/bin/conda activate FISH_processing
 cd FISH_Processing
 /opt/ohpc/pub/apps/anaconda3/bin/conda install pytorch cudatoolkit=10.2 -c pytorch -y
@@ -75,18 +75,18 @@ pip install -r requirements.txt
 ## Miscellaneous instructions:
 
 Creating an environment file (yml) use:
-```
+```sh
 conda env export > FISH_env.yml
 ```
 
 Additional steps to deactivate or remove the environment from the computer:
 
 * To deactivate the environment, use
-```
+```sh
  conda deactivate
 ```
 * To remove the environment use:
-```
+```sh
  conda env remove -n FISH_processing
 ```
 
