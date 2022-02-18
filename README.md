@@ -44,6 +44,8 @@ The following instructions are intended to use the codes on the Keck Cluster.
 ```sh
 git clone --depth 1 https://<token>@github.com/MunskyGroup/FISH_Processing.git
 ```
+where `<token>` is your Github access token. 
+
 * Move to the directory
 ```sh
 cd FISH_Processing 
@@ -73,6 +75,15 @@ pip install -r requirements.txt
 ```
 
 ## Miscellaneous instructions:
+
+To login to the NAS, it is needed to provide a configuration YML file with the format:
+```yml
+    user:
+        username: user_name
+        password: user_password
+        remote_address : remote_ip_address
+        domain: remote_domain
+```
 
 Creating an environment file (yml) use:
 ```sh
