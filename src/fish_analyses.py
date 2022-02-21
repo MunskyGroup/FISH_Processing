@@ -64,7 +64,33 @@ if import_libraries == 1:
     #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" #str(np.random.randint(0,2,1))
 
+
+class Banner():
+    def __init__(self,show=True):
+        self.show = True
+    def print_banner(self):
+        if self.show == True:
+            print(" \n"
+                "FISH processing repository by : \n"
+                "Luis U. Aguilera, Joshua Cook, Tim Stasevich, and Brian Munsky. \n" 
+                "_____________________________________________________________  \n"      
+                "|                      ,#^^^^^^^%&&&                         | \n"
+                "|  .&.                 &.           ,&&&___                  | \n"
+                "|  &  &         ___&&&/                    (&&&&____         | \n"
+                "|  &    &,____#&                   .       #.       %&**,    | \n"
+                "|  /(                  &         ,%       &       %     ,&   | \n"
+                "|    &          &.                       %.      %&%     &*  | \n"
+                "|     &&         *         .%            &             &(    | \n"
+                "|   &                &(           ,#     .%             ,.&  | \n"
+                "|  &    _&&__#&.     &&           &.      ,&         ,%&     | \n"
+                "|  &  (%        #&,___                      (-***%&%^        | \n"
+                "|  & &                %&&&(,.      .*#&&&&&%.                | \n"
+                "|                          &    ,%%%%                        | \n"
+                "|___________________________/%%^_____________________________| \n" )
+
+
 class NASConnection():
+    
     '''
     This class is intended to establish a connection between a Network-Attached storage and a local computer. The class allow the user to establish a connection to NAS, download specific files, and write back files to NAS.
     This class doesn't allow the user to delete, modify or overwrite files in NAS.
@@ -1590,20 +1616,21 @@ class PipelineFISH():
             self.name_for_files = self.data_dir.name
         
     def run(self):
+        
+        # Printing banner
+        Banner(show=True).print_banner()
+        # Prealocating arrays
         list_masks_complete_cells=[]
         list_masks_nuclei=[]
         list_masks_cytosol_no_nuclei=[]
-
         # temp_results_images
         temp_folder_name = str('temp_results_'+ self.name_for_files)
         if not os.path.exists(temp_folder_name):
             os.makedirs(temp_folder_name)
-
-
         
         # Running the pipeline.
         for i in range (0, self.number_images ):
-            print( pyfiglet.figlet_format('PROCESSING  IMAGE : '+ str(i) ) )
+            print( pyfiglet.figlet_format('IMAGE : '+ str(i) ) )
             if i ==0:
                 dataframe = None
             print('ORIGINAL IMAGE')
