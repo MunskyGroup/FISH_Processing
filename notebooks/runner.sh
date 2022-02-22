@@ -100,6 +100,20 @@ list_TPL_Cy3=(\
 'smFISH_images/Eric_smFISH_images/20211117/MS2_Cy3_TPL_120min' \
 'smFISH_images/Eric_smFISH_images/20211117/MS2_Cy3_TPL_240min' \
 )
+
+list_ILB=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_WO_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_5min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_10min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_15min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_20min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_30min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_1h_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_2h_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_3h_10ng_mL_IL-1B_Rep2' \
+) 
+
+
 #list_dex=(\
 #'smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex' \
 #'smFISH_images/Linda_smFISH_images/Confocal/20220121/GAPDH-Cy3_NFKBIA-Cy5_5min_100nMDex' \
@@ -111,8 +125,8 @@ list_TPL_Cy3=(\
 #)
 
 send_data_to_NAS=1       # If data sent back to NAS use 1.
-diamter_nucleus=100      # approximate nucleus size in pixels
-diameter_cytosol=250     # approximate cytosol size in pixels
+diamter_nucleus=120      # approximate nucleus size in pixels
+diameter_cytosol=220     # approximate cytosol size in pixels
 psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel=0        # Channel to pass to python for nucleus segmentation
@@ -140,7 +154,7 @@ FISH_second_channel=0    # Channel to pass to python for spot detection in a sec
 
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
-for folder in ${list_TPL_Cy3[*]}; do
+for folder in ${list_ILB[*]}; do
      folder_new="${folder//\\//}"
      output_name=''output__"${folder////__}"".txt"
      nohup python3 ./pipeline_executable.py  $folder_new $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_name >> $output_name &
@@ -181,5 +195,6 @@ conda deactivate
 # rm *.tif out*
 # rm -r temp_*
 # rm -r analysis_*
+# rm slurm* output__* temp_* *.tif
 
 exit 0

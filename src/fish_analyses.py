@@ -347,7 +347,7 @@ class MergeChannels():
         ending_string = re.compile(self.substring_to_detect_in_file_name)  # detecting files ending in _C0.tif
         for _, _, files in os.walk(self.directory):
             for file in files:
-                if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
+                if ending_string.match(file) and file[0]!= '.' : # detecting a match in the end, not consider hidden files starting with '.'
                     prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
                     list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif')) # List of files that match the pattern 'file_prefix_C*.tif'
                     if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
@@ -376,7 +376,7 @@ class MergeChannels():
             for file in files:
                 if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
                     prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
-                    list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif')) # List of files that match the pattern 'file_prefix_C*.tif'
+                    list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif') ) # List of files that match the pattern 'file_prefix_C*.tif'
                     if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
                         try:
                             list_file_names.append(prefix)
@@ -1616,9 +1616,8 @@ class PipelineFISH():
             self.name_for_files = self.data_dir.name
         
     def run(self):
-        
         # Printing banner
-        Banner(show=True).print_banner()
+        #Banner(show=True).print_banner()
         # Prealocating arrays
         list_masks_complete_cells=[]
         list_masks_nuclei=[]

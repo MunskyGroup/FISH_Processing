@@ -36,6 +36,7 @@ FISH_channel= int(sys.argv[9])                          # Channel to pass to pyt
 FISH_second_channel= int(sys.argv[10])                  # Channel to pass to python for spot detection
 output_name = sys.argv[11]                              # Output file name
 
+
 # Deffining directories
 current_dir = pathlib.Path().absolute()
 fa_dir = current_dir.parents[0].joinpath('src')
@@ -44,14 +45,18 @@ fa_dir = current_dir.parents[0].joinpath('src')
 sys.path.append(str(fa_dir))
 import fish_analyses as fa
 
+# Printing banner
+fa.Banner(show=True).print_banner()
+
 # Path to credentials
-try:
-  desktop_path = pathlib.Path.home()/'Desktop'
-  path_to_config_file = current_dir.parents[0].joinpath('config.yml')
-except:
-  path_to_config_file = desktop_path.joinpath('config.yml')
+#try:
+#  path_to_config_file = current_dir.parents[0].joinpath('config.yml')
+#except:
+desktop_path = pathlib.Path.home()/'Desktop'
+path_to_config_file = desktop_path.joinpath('config.yml')
   
 share_name = 'share'
+
 remote_folder_path = pathlib.Path(remote_folder)
 
 name_final_folder = (remote_folder_path.name +'___nuc_' + str(diamter_nucleus) +

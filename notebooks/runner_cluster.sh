@@ -30,6 +30,20 @@ list_test=(\
 'Test/test_dir1' \
 ) 
 
+
+list_ILB=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_WO_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_5min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_10min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_15min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_20min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_30min_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_1h_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_2h_10ng_mL_IL-1B_Rep2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_3h_10ng_mL_IL-1B_Rep2' \
+) 
+
+
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
 # Read them in the python file using: sys.argv. This return a list of strings. 
@@ -47,14 +61,14 @@ FISH_second_channel=0    # Channel to pass to python for spot detection in a sec
 
 # ########### PYTHON PROGRAM #############################
 #COUNTER=0
-for folder in ${list_test[*]}; do
+for folder in ${list_ILB[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_names >> $output_names &
      wait
 done
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster_new.sh /dev/null 2>&1 & disown
+# run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown
 
 exit 0
 
@@ -69,7 +83,7 @@ exit 0
 # ########### SLURM COMMANDS #########################
 # scancel [jobid]
 # squeue -u [username]
-# squeue#!/bin/sh
+# squeue
 #SBATCH --partition=all
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:4
