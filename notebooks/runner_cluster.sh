@@ -66,7 +66,7 @@ nucleus_channel=0        # Channel to pass to python for nucleus segmentation
 cyto_channel=2           # Channel to pass to python for cytosol segmentation
 FISH_channel=1           # Channel to pass to python for spot detection
 FISH_second_channel=0    # Channel to pass to python for spot detection in a second Channel, if 0 is ignored.
-path_to_config_file="$HOME/FISH_Processing"
+path_to_config_file="$HOME/FISH_Processing/config.yml"
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_ILB_Rep1[*]}; do
      output_names=""output__"${folder////__}"".txt"
@@ -86,7 +86,7 @@ exit 0
 # ls *.tif
 # rm -r temp_*
 # rm -r analysis_*
-# rm slurm* out* temp_* 
+# rm -r slurm* out* temp_* 
 
 # ########### SLURM COMMANDS #########################
 # scancel [jobid]
