@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #SBATCH --partition=all
-#SBATCH --ntasks=1
+#SBATCH --ntasks=8
 #SBATCH --gres=gpu:4
 
 # module purge
@@ -30,8 +30,18 @@ list_test=(\
 'Test/test_dir1' \
 ) 
 
+list_ILB_Rep1=( \
+'smFISH_images/Linda_smFISH_images/Confocal/20220125/GAPDH-Cy3_NFKBIA-Cy5_WO_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220203/GAPDH-Cy3_NFKBIA-Cy5_5min_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220127/GAPDH-Cy3_NFKBIA-Cy5_10min_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220125/GAPDH-Cy3_NFKBIA-Cy5_15min_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220125/GAPDH-Cy3_NFKBIA-Cy5_20min_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220124/GAPDH-Cy3_NFKBIA-Cy5_30min_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220124/GAPDH-Cy3_NFKBIA-Cy5_1h_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220124/GAPDH-Cy3_NFKBIA-Cy5_2h_10ng_mL_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220124/GAPDH-Cy3_NFKBIA-Cy5_3h_10ng_mL_IL-1B' ) 
 
-list_ILB=(\
+list_ILB_Rep2=( \
 'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_WO_10ng_mL_IL-1B_Rep2' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_5min_10ng_mL_IL-1B_Rep2' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220209/GAPDH-Cy3_NFKBIA-Cy5_10min_10ng_mL_IL-1B_Rep2' \
@@ -40,9 +50,7 @@ list_ILB=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_30min_10ng_mL_IL-1B_Rep2' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_1h_10ng_mL_IL-1B_Rep2' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_2h_10ng_mL_IL-1B_Rep2' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_3h_10ng_mL_IL-1B_Rep2' \
-) 
-
+'smFISH_images/Linda_smFISH_images/Confocal/20220207/GAPDH-Cy3_NFKBIA-Cy5_3h_10ng_mL_IL-1B_Rep2' ) 
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -50,7 +58,7 @@ list_ILB=(\
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 
 send_data_to_NAS=1       # If data sent back to NAS use 1.
-diamter_nucleus=100      # approximate nucleus size in pixels
+diamter_nucleus=120      # approximate nucleus size in pixels
 diameter_cytosol=250     # approximate cytosol size in pixels
 psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
@@ -58,14 +66,14 @@ nucleus_channel=0        # Channel to pass to python for nucleus segmentation
 cyto_channel=2           # Channel to pass to python for cytosol segmentation
 FISH_channel=1           # Channel to pass to python for spot detection
 FISH_second_channel=0    # Channel to pass to python for spot detection in a second Channel, if 0 is ignored.
-
+path_to_config_file="$HOME/FISH_Processing"
 # ########### PYTHON PROGRAM #############################
-#COUNTER=0
-for folder in ${list_ILB[*]}; do
+for folder in ${list_ILB_Rep1[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py $folder $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_names >> $output_names &
+     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" >> "$output_names" &
      wait
 done
+
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown
@@ -84,7 +92,3 @@ exit 0
 # scancel [jobid]
 # squeue -u [username]
 # squeue
-#SBATCH --partition=all
-#SBATCH --ntasks=1
-#SBATCH --gres=gpu:4
-

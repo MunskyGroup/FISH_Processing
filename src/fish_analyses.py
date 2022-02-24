@@ -67,7 +67,7 @@ if import_libraries == 1:
 
 class Banner():
     def __init__(self,show=True):
-        self.show = True
+        self.show = show
     def print_banner(self):
         if self.show == True:
             print(" \n"
@@ -305,7 +305,7 @@ class ReadImages():
         number_files = len(path_files)
         list_images = [imread(f) for f in path_files]
         list_images_rm = [RemoveExtrema(im,min_percentile=0.01, max_percentile=99.9).remove_outliers()  for im in list_images]
-        list_images_unit16 = [img.astype(np.uint16) for img in list_images_rm  ]
+        list_images_unit16 = [img[1:15].astype(np.uint16) for img in list_images_rm  ]
         return list_images_unit16, path_files, list_files_names, number_files
 
 
@@ -657,14 +657,13 @@ class CellSegmentation():
                     for nm in range (1, n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
                         tested_mask = np.where(list_masks[nm] == 1, nm, 0)
                         base_image = base_image + tested_mask
-                         # making zeros all elements outside each mask, and once all elements inside of each mask.
+                # making zeros all elements outside each mask, and once all elements inside of each mask.
                 else:  # do nothing if only a single mask is detected per image.
                     base_image = list_masks[0]
             else:
                 base_image =[]
             masks = base_image.astype(np.uint8)
             return masks
-            
 
         # function that determines if a cell is in the border of the image
         def remove_fragmented(img_masks):
@@ -713,6 +712,7 @@ class CellSegmentation():
                 return 1
             else:
                 return 0
+        
         # This function takes two list of images for masks and returns a list of lists with pairs indicating the nucleus masks that are contained in a cytosol
         def paired_masks(list_masks_nuclei:list, list_masks_cyto:list):
             n_masks_nuclei = len (list_masks_nuclei)
@@ -743,6 +743,7 @@ class CellSegmentation():
                 sel_mask_n = index_paired_masks[i][1]
                 list_masks_nuclei.append(list_separated_masks_nuclei[sel_mask_n])
             return list_masks_nuclei
+        
         # This function creates a mask for each cytosol without nucleus
         def generate_masks_cytosol_no_nuclei(index_paired_masks:np.ndarray, list_masks_complete_cells:list, list_masks_nuclei:list):
             list_masks_cytosol_no_nuclei = []
@@ -751,6 +752,7 @@ class CellSegmentation():
                 substraction[substraction < 0] = 0
                 list_masks_cytosol_no_nuclei.append(substraction)
             return list_masks_cytosol_no_nuclei
+        
         def join_nulcei_masks(index_paired_masks:np.ndarray, list_masks_nuclei:list):
             # this code detects duplicated mask for the nucleus in the same cell and replaces with a joined mask. Also deletes from the list the duplicated elements.
             index_masks_cytosol = index_paired_masks[:, 0]
@@ -818,10 +820,6 @@ class CellSegmentation():
                     index_paired_masks =[]
                     masks_cyto = None
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
-
-        
-        
-        
         
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.video.shape) > 3):
@@ -843,9 +841,6 @@ class CellSegmentation():
             video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
         
-
-
-
         elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.video.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.video.shape[0]
@@ -867,9 +862,6 @@ class CellSegmentation():
             test_video_optimization = np.amax(self.video[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
         
-
-
-
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.video.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.video.shape[0]//2
@@ -896,20 +888,22 @@ class CellSegmentation():
         def remove_border(img,px_to_remove = 5):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
-
+        
         if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
                 n_channels = np.amin([3, video_normalized.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                im = convert_to_int8(video_normalized[ :, :, 0:n_channels])                    
+                im = convert_to_int8(video_normalized[ :, :, 0:n_channels])  
+                masks_plot_cyto= merge_masks (list_masks_complete_cells) 
+                masks_plot_nuc = merge_masks (list_masks_nuclei)              
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
-                axes[1].imshow(masks_cyto)
+                axes[1].imshow(masks_plot_cyto)
                 axes[1].set(title = 'Cytosol mask')
-                axes[2].imshow(masks_nuclei)
+                axes[2].imshow(masks_plot_nuc)
                 axes[2].set(title = 'Nuclei mask')
                 axes[3].imshow(im)
-                for i in range(0, index_paired_masks.shape[0]):
+                for i in range(0, len(index_paired_masks)):
                     # Removing the borders just for plotting
                     temp_nucleus_mask= remove_border(list_masks_nuclei[i])
                     temp_complete_mask = remove_border(list_masks_complete_cells[i])
@@ -918,6 +912,7 @@ class CellSegmentation():
                     axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
                     axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     axes[3].set(title = 'Paired masks')
+                print(index_paired_masks.shape[0])
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
                 plt.show()
@@ -929,7 +924,7 @@ class CellSegmentation():
                     im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
-                    axes[1].imshow(masks_cyto)
+                    axes[1].imshow(masks_plot_cyto)
                     axes[1].set(title = 'Cytosol mask')
                     if not(self.image_name is None):
                         plt.savefig(self.image_name,bbox_inches='tight')
@@ -941,7 +936,7 @@ class CellSegmentation():
                     im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
-                    axes[1].imshow(masks_nuclei)
+                    axes[1].imshow(masks_plot_nuc)
                     axes[1].set(title = 'Nuclei mask')
                     if not(self.image_name is None):
                         plt.savefig(self.image_name,bbox_inches='tight')
@@ -1014,25 +1009,26 @@ class BigFISH():
         # Calculating Sigma with  the parameters for the PSF.
         spot_radius_px = detection.get_object_radius_pixel(
             voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-            object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), 
-            ndim=3)
+            object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), ndim=3)
         sigma = spot_radius_px
 
         ## SPOT DETECTION
         try:
-            rna_filtered = stack.log_filter(rna, sigma) # LoG filter
+            rna_filtered = stack.remove_background_gaussian(rna, sigma)
+            rna_filtered = stack.log_filter(rna_filtered, sigma) # LoG filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
-            rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
-            #rna_filtered = stack.remove_background_gaussian(rnarna, sigma)
+            #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
+            rna_filtered = stack.remove_background_gaussian(rna, sigma)
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
         threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
+        
         # Decomposing dense regions
         spots_post_decomposition, _, _ = detection.decompose_dense(
             image=rna, spots=spots, 
-            voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-            spot_radius=(self.psf_z, self.psf_yx, self.psf_yx),
+            voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
+            spot_radius = (self.psf_z, self.psf_yx, self.psf_yx),
             alpha=0.9,   # alpha impacts the number of spots per candidate region
             beta=1,      # beta impacts the number of candidate regions to decompose
             gamma=5)     # gamma the filtering step to denoise the image
@@ -1048,7 +1044,7 @@ class BigFISH():
         ## PLOTTING
         if self.show_plot == True:
             try:
-                plot.plot_elbow(rna_filtered, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
+                plot.plot_elbow(rna, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
                 plt.show()
             except:
                 print('not showing elbow plot')
@@ -1064,6 +1060,7 @@ class BigFISH():
             #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
             central_slice = rna.shape[0]//2
             #for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
+            #for i in range(0,    rna.shape[0]//2):
             for i in range(central_slice,central_slice+1):
                 print('Z-Slice: ', str(i))
                 image_2D = rna_filtered[i,:,:]

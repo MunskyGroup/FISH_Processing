@@ -50,10 +50,15 @@ fa.Banner(show=True).print_banner()
 
 # Path to credentials
 #try:
-#  path_to_config_file = current_dir.parents[0].joinpath('config.yml')
+path_to_config_file = pathlib.Path(sys.argv[12])
+#path_to_config_file = current_dir.parents[0].joinpath('config.yml')
+#desktop_path = pathlib.Path.home()/'Desktop'
+#path_to_config_file = desktop_path.joinpath('config.yml')
+  
+  
 #except:
-desktop_path = pathlib.Path.home()/'Desktop'
-path_to_config_file = desktop_path.joinpath('config.yml')
+#desktop_path = pathlib.Path.home()/'Desktop'
+#path_to_config_file = desktop_path.joinpath('config.yml')
   
 share_name = 'share'
 
