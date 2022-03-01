@@ -59,8 +59,8 @@ list_ILB_Rep2=( \
 
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 diamter_nucleus=120      # approximate nucleus size in pixels
-diameter_cytosol=250     # approximate cytosol size in pixels
-psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+diameter_cytosol=220     # approximate cytosol size in pixels
+psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel=0        # Channel to pass to python for nucleus segmentation
 cyto_channel=2           # Channel to pass to python for cytosol segmentation
@@ -68,7 +68,7 @@ FISH_channel=1           # Channel to pass to python for spot detection
 FISH_second_channel=0    # Channel to pass to python for spot detection in a second Channel, if 0 is ignored.
 path_to_config_file="$HOME/FISH_Processing/config.yml"
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_ILB_Rep1[*]}; do
+for folder in ${list_ILB_Rep2[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" >> "$output_names" &
      wait

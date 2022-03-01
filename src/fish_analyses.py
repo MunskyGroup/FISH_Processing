@@ -1014,8 +1014,8 @@ class BigFISH():
 
         ## SPOT DETECTION
         try:
-            rna_filtered = stack.remove_background_gaussian(rna, sigma)
-            rna_filtered = stack.log_filter(rna_filtered, sigma) # LoG filter
+            #rna_filtered = stack.remove_background_gaussian(rna, sigma)
+            rna_filtered = stack.log_filter(rna, sigma) # LoG filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
             #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
