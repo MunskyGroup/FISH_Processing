@@ -61,7 +61,7 @@ if import_libraries == 1:
     import shutil
     # To create PDF report
     from fpdf import FPDF
-    #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" #str(np.random.randint(0,2,1))
 
 
