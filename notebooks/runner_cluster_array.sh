@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=FISH
-#SBATCH --output=out-%j.out
+# #SBATCH --output=out-%j.out
 #SBATCH --error=out-%j.err
 #SBATCH --partition=all
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
 #SBATCH -a 0-8    # Including the last element 
 
@@ -26,9 +26,9 @@ list_ILB_Rep1=( \
 
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 diamter_nucleus=120      # approximate nucleus size in pixels
-diameter_cytosol=250     # approximate cytosol size in pixels
-psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=105               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+diameter_cytosol=220     # approximate cytosol size in pixels
+psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel=0        # Channel to pass to python for nucleus segmentation
 cyto_channel=2           # Channel to pass to python for cytosol segmentation
 FISH_channel=1           # Channel to pass to python for spot detection
@@ -38,7 +38,8 @@ path_to_config_file="$HOME/FISH_Processing/config.yml"
 for idx in {0..8} # Including the last element 
 do
      folder=${list_ILB_Rep1[idx]}
-     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$path_to_config_file" 
+     output_name=output_${SLURM_ARRAY_TASK_ID}
+     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$path_to_config_file" $output_name >> $output_name  
 done
 
 

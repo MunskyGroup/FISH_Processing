@@ -88,7 +88,7 @@ for folder in ${list_ILB_Rep2[*]}; do
      output_name=''output__"${folder////__}"".txt"
      nohup python3 ./pipeline_executable.py $folder_new $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel $output_name "$path_to_config_file" >> $output_name &
      COUNTER=$((COUNTER+1))
-     val1=$(($COUNTER%4)) 
+     val1=$(($COUNTER%3)) 
      if [ $val1 -eq '0' ];then
      wait
      fi
@@ -116,7 +116,8 @@ conda deactivate
 
 
 # nvidia-smi | grep 'Default'
-# top -u luisub
+# top -u luisub | grep 'python3'
+
 
 # To remove files
 # ls *.tif

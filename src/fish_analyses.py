@@ -62,8 +62,13 @@ if import_libraries == 1:
     # To create PDF report
     from fpdf import FPDF
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" #str(np.random.randint(0,2,1))
-
+    if np.random.randint(0,2,1)[0] ==0:
+        try:
+            os.environ["CUDA_VISIBLE_DEVICES"] = "1" 
+        except:
+            os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+    else:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
 
 class Banner():
     def __init__(self,show=True):
