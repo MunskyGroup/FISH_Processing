@@ -50,7 +50,6 @@ if import_libraries == 1:
     import matplotlib.path as mpltPath
     #from matplotlib import gridspec
     plt.style.use('ggplot')  # ggplot  #default
-
     from joblib import Parallel, delayed
     import multiprocessing
     # SMB connection
@@ -61,6 +60,8 @@ if import_libraries == 1:
     import shutil
     # To create PDF report
     from fpdf import FPDF
+    
+    # Selecting the GPU. This is used in case multiple scripts run in parallel.
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     if np.random.randint(0,2,1)[0] ==0:
         try:
@@ -309,9 +310,9 @@ class ReadImages():
         path_files = [ str(self.directory.joinpath(f).resolve()) for f in list_files_names ] # creating the complete path for each file
         number_files = len(path_files)
         list_images = [imread(f) for f in path_files]
-        list_images_rm = [RemoveExtrema(im,min_percentile=0.01, max_percentile=99.9).remove_outliers()  for im in list_images]
-        list_images_unit16 = [img[1:15].astype(np.uint16) for img in list_images_rm  ]
-        return list_images_unit16, path_files, list_files_names, number_files
+        #list_images_rm = [RemoveExtrema(im,min_percentile=0.01, max_percentile=99.9).remove_outliers()  for im in list_images]
+        #list_images_unit16 = [img.astype(np.uint16) for img in list_images_rm  ]
+        return list_images, path_files, list_files_names, number_files
 
 
 class MergeChannels():
@@ -1382,8 +1383,42 @@ class Utilities ():
     parameter: bool, optional
         parameter description. The default is True. 
     '''
-    def __init__(self,argument):
+    def __init__(self):
         pass
+    
+    # This function is intended to merge masks in a single image
+    def merge_masks (self,list_masks):
+        n_masks = len(list_masks)
+        if not ( n_masks is None):
+            if n_masks > 1: # detecting if more than 1 mask are detected per cell
+                base_image = np.zeros_like(list_masks[0])
+                for nm in range (1, n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                    tested_mask = np.where(list_masks[nm] == 1, nm, 0)
+                    base_image = base_image + tested_mask
+            # making zeros all elements outside each mask, and once all elements inside of each mask.
+            else:  # do nothing if only a single mask is detected per image.
+                base_image = list_masks[0]
+        else:
+            base_image =[]
+        masks = base_image.astype(np.uint8)
+        return masks
+    
+    # This function is intended to separate masks in list of submasks
+    def separate_masks (self,masks):
+        list_masks = []
+        n_masks = np.amax(masks)
+        if not ( n_masks is None):
+            if n_masks > 1: # detecting if more than 1 mask are detected per cell
+                #number_particles = []
+                for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                    mask_copy = masks.copy()
+                    tested_mask = np.where(mask_copy == nm, 1, 0) # making zeros all elements outside each mask, and once all elements inside of each mask.
+                    list_masks.append(tested_mask)
+            else:  # do nothing if only a single mask is detected per image.
+                list_masks.append(masks)
+        else:
+            list_masks.append(masks)
+        return list_masks
     
     
 class Metadata():
@@ -1591,6 +1626,8 @@ class PipelineFISH():
         list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
     list_psfs : List of lists or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+    list_masks : List of Numpy or None.
+        list of Numpy arrays where each array has values from 0 to n where n is the number of masks in  the image.
     '''
     def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation'):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
@@ -1616,6 +1653,10 @@ class PipelineFISH():
             self.name_for_files = file_name_str
         else:
             self.name_for_files = self.data_dir.name
+            
+            
+        #if not(masks_dir is None):
+        #    pass
         
     def run(self):
         # Printing banner
@@ -1639,9 +1680,13 @@ class PipelineFISH():
             temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
             temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
             PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name ).plot()
+            
             print('CELL SEGMENTATION')
             temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
+            
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, index_paired_masks, masks_cyto_single, masks_nuclei_single,masks_cytosol_no_nuclei_single = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
+            
+            
             print('SPOT DETECTION')
             temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name).get_dataframe()
