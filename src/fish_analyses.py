@@ -39,6 +39,7 @@ if import_libraries == 1:
     from cellpose import models
     import os; from os import listdir; from os.path import isfile, join
     import warnings
+    warnings.filterwarnings('ignore')
     warnings.filterwarnings('ignore', category=DeprecationWarning)
     warnings.filterwarnings('ignore', category=FutureWarning)
     # Skimage
@@ -617,14 +618,13 @@ class CellSegmentation():
         self.show_plot = show_plot
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
+        self.NUMBER_OF_CORES = 1 # number of cores for parallel computing.
         
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
-        if number_gpus >1:
+        if number_gpus ==0:
             self.NUMBER_OPTIMIZATION_VALUES= 0
-            self.NUMBER_OF_CORES = multiprocessing.cpu_count()
             self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         else:
-            self.NUMBER_OF_CORES = 1
             self.NUMBER_OPTIMIZATION_VALUES= 5
             self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
