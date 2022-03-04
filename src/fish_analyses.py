@@ -518,7 +518,11 @@ class Cellpose():
         # Next two lines suppressing output from cellpose
         old_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+        number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+        if number_gpus ==0:
+            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+        else:
+            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
