@@ -515,8 +515,8 @@ class Cellpose():
             List of NumPy arrays with values between 0 and the number of detected cells in the image, where a number larger than zero represents the masked area for each cell, and 0 represents the area where no cells are detected.
         '''
         # Next two lines suppressing output from cellpose
-        #old_stdout = sys.stdout
-        #sys.stdout = open(os.devnull, "w")
+        old_stdout = sys.stdout
+        sys.stdout = open(os.devnull, "w")
         model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
@@ -580,8 +580,8 @@ class Cellpose():
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
             selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
-        #sys.stdout.close()
-        #sys.stdout = old_stdout
+        sys.stdout.close()
+        sys.stdout = old_stdout
         return selected_masks
 
 
@@ -615,14 +615,15 @@ class CellSegmentation():
         self.diameter_cytosol = diameter_cytosol
         self.diamter_nucleus = diamter_nucleus
         self.show_plot = show_plot
-        self.NUMBER_OPTIMIZATION_VALUES= 5
         self.remove_fragmented_cells = remove_fragmented_cells
         model_test = models.Cellpose(gpu=True, model_type='cyto')
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         if model_test.gpu ==0:
+            self.NUMBER_OPTIMIZATION_VALUES= 0
             self.NUMBER_OF_CORES = multiprocessing.cpu_count()
         else:
             self.NUMBER_OF_CORES = 1
+            self.NUMBER_OPTIMIZATION_VALUES= 5
         self.image_name = image_name
 
     def calculate_masks(self):
