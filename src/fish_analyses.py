@@ -57,16 +57,20 @@ try:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         os.environ["CUDA_VISIBLE_DEVICES"] =  str(np.random.randint(0,number_gpus,1)[0])        
 except:
-    print('No GPU are detected on this computer. Please follow the instructions for a correct installation.')
+    print('No GPUs are detected on this computer. Please follow the instructions for the correct installation.')
 
 
 class Banner():
     def __init__(self):
         '''
+        This class prints a banner with a fish and the name of the authors of this repository. 
         '''
         pass
         
     def print_banner(self):
+        '''
+        This method prints the banner as text output. No parameters are needed.
+        '''
         print(" \n"
             "FISH processing repository by : \n"
             "Luis U. Aguilera, Joshua Cook, Tim Stasevich, and Brian Munsky. \n" 
@@ -89,18 +93,21 @@ class Banner():
 
 class Utilities():
     '''
-    Description for the class.
-    
-    Parameters
-    
-    parameter: bool, optional
-        parameter description. The default is True. 
+    This class contains miscellaneous methods to perform tasks needed in multiple classes. No parameters are necessary for this class.
     '''
     def __init__(self):
         pass
     
     # This function is intended to merge masks in a single image
     def merge_masks (self,list_masks):
+        '''
+        This method is intended to merge a list of images into a single image (Numpy array) where each cell is represented by an integer value.
+        
+        Parameters
+        
+        list_masks : List of Numpy arrays.
+            List of Numpy arrays, where each array has dimensions [Y, X] with values 0 and 1, where 0 represents the background and 1 the cell mask in the image.
+        '''
         n_masks = len(list_masks)
         if not ( n_masks is None):
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
@@ -115,8 +122,16 @@ class Utilities():
             base_image =[]
         masks = base_image.astype(np.uint8)
         return masks
-    # This function is intended to separate masks in list of submasks
+    
     def separate_masks (self,masks):
+        '''
+        This method is intended to separate an image (Numpy array) with multiple masks into a list of Numpy arrays where each cell is represented individually in a new NumPy array.
+        
+        Parameters
+        
+        masks : Numpy array.
+            Numpy array with dimensions [Y, X] with values from 0 to n where n is the number of masks in the image.
+        '''
         list_masks = []
         n_masks = np.amax(masks)
         if not ( n_masks is None):
@@ -131,13 +146,21 @@ class Utilities():
         else:
             list_masks.append(masks)
         return list_masks
-    # This function converts images to uint8. The image can be rescaled and stretched.
+    
     def convert_to_int8(self,image,rescale=True):
+        '''
+        This method converts images from int16 to uint8. Optionally, the image can be rescaled and stretched.
+        
+        Parameters
+            image : NumPy array
+                NumPy array with dimensions [Y, X, C]. The code expects 3 channels (RGB). If less than 3 values are passed, the array is padded with zeros.
+            rescale : bool, optional
+                If True it rescales the image to stretch intensity values to a 95 percentile, and then rescale the min and max intensity to 0 and 255. The default is True. 
+        '''
         if rescale == True:
             image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=95)
         image_new= np.zeros_like(image)
         if rescale == True:
-            image = stack.rescale(image, channel_to_stretch=0,stretching_percentile=95)
             imin, imax = np.min(image), np.max(image) 
             image -= imin
             image_float = np.array(image, 'float32')
@@ -156,23 +179,25 @@ class Utilities():
 
 class NASConnection():
     '''
-    This class is intended to establish a connection between a Network-Attached storage and a local computer. The class allow the user to establish a connection to NAS, download specific files, and write back files to NAS.
+    This class is intended to establish a connection between Network-Attached storage and a remote (or local) computer. The class allows the user to connect to NAS, download specific files, and write backfiles to NAS.
     This class doesn't allow the user to delete, modify or overwrite files in NAS.
-    To use this class you need to:
-    1) Use the university's network or use the two factor authentication to connect to the university's VPN.
-    2) You need to create a configuration yaml file, with the following format:
-    ```
+    To use this class, you need to:
+    1) Use the university's network or use the two-factor authentication to connect to the university's VPN.
+    2) You need to create a configuration YAML file with the following format:
+    
+    ```yaml
     user:
         username: name_of_the_user_in_the_nas_server
         password: user_password_in_the_nas_server 
         remote_address : ip or name for the nas server
         domain: domain for the nas server
     ```
+    
     Parameters
     
-    path_to_config_file : str, Pathlib obj
-        The path in the local computer that containts the config file.
-    share_name : str
+    path_to_config_file : str, or Pathlib object
+        The path in the local computer contains the config file.
+    share_name: str
         Name of the share partition to access in NAS. The default is 'share'.
     '''
     def __init__(self,path_to_config_file,share_name = 'share'):
@@ -186,7 +211,7 @@ class NASConnection():
         local_name = socket.gethostbyname(socket.gethostname())
         # SERVER NAME
         self.share_name = share_name
-        self.server_name, alias, addresslist = socket.gethostbyaddr(remote_address)
+        self.server_name, _, _ = socket.gethostbyaddr(remote_address)
         # Deffining the connection to NAS
         self.conn = SMBConnection(username=usr, password=pwd, domain=domain, my_name=local_name, remote_name=self.server_name, is_direct_tcp=True)
     def connect_to_server(self,timeout=60):
@@ -586,7 +611,7 @@ class Cellpose():
             try:
                 masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
-                masks =0
+                masks = 0
             n_masks = np.amax(masks)
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 size_mask = []
@@ -609,7 +634,7 @@ class Cellpose():
             try:
                 masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
-                masks =0
+                masks = 0
             n_masks = np.amax(masks)
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 size_mask = []
