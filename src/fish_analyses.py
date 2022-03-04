@@ -618,8 +618,8 @@ class CellSegmentation():
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
         
-        model_test = models.Cellpose(gpu=True, model_type='cyto')
-        if model_test.gpu ==0:
+        number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+        if number_gpus >1:
             self.NUMBER_OPTIMIZATION_VALUES= 0
             self.NUMBER_OF_CORES = multiprocessing.cpu_count()
             self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
