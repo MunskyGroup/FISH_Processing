@@ -12,9 +12,6 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
 
 
-from operator import truediv
-
-
 import_libraries = 1
 if import_libraries == 1:
     # importing Big-FISH
@@ -65,14 +62,16 @@ if import_libraries == 1:
     from fpdf import FPDF
     
     # Selecting the GPU. This is used in case multiple scripts run in parallel.
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    if np.random.randint(0,2,1)[0] ==0:
-        try:
-            os.environ["CUDA_VISIBLE_DEVICES"] = "1" 
-        except:
-            os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
-    else:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+    try:
+        import torch
+        number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+        if number_gpus >1:
+            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+            os.environ["CUDA_VISIBLE_DEVICES"] =  str(np.random.randint(0,number_gpus,1)[0])
+    except:
+        number_gpus =0 
+        print('No GPU are detected on this computer. Please follow the instructions for a correct installation.')
+
 
 class Banner():
     def __init__(self,show=True):
@@ -82,7 +81,7 @@ class Banner():
             print(" \n"
                 "FISH processing repository by : \n"
                 "Luis U. Aguilera, Joshua Cook, Tim Stasevich, and Brian Munsky. \n" 
-                "_____________________________________________________________  \n"      
+                " ____________________________________________________________  \n"      
                 "|                      ,#^^^^^^^%&&&                         | \n"
                 "|  .&.                 &.           ,&&&___                  | \n"
                 "|  &  &         ___&&&/                    (&&&&____         | \n"
@@ -96,7 +95,6 @@ class Banner():
                 "|  & &                %&&&(,.      .*#&&&&&%.                | \n"
                 "|                          &    ,%%%%                        | \n"
                 "|___________________________/%%^_____________________________| \n" )
-
 
 class NASConnection():
     
@@ -113,9 +111,7 @@ class NASConnection():
         domain: domain for the nas server
     
     Parameters
-    --  --  --  --  -- 
-    ,: bool, optional
-        parameter description. The default is True. 
+    
     path_to_config_file : str, Pathlib obj
         The path in the local computer that containts the config file.
     share_name : str
@@ -525,7 +521,6 @@ class Cellpose():
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                #masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold =  self.CELLPOSE_PROBABILITY , diameter = optimization_parameter, min_size = -1, channels = self.channels, progress = None)
                 masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks =0
@@ -560,7 +555,6 @@ class Cellpose():
                 number_masks= np.amax(masks)
                 #metric = np.sum(np.asarray(size_mask)) * number_masks
                 metric = np.sum(np.asarray(size_mask)) * number_masks
-
                 return metric
             if n_masks == 1: # do nothing if only a single mask is detected per image.
                 return np.sum(masks == 1)
@@ -575,12 +569,17 @@ class Cellpose():
         if self.selection_method == 'max_cells_and_area':
             list_metrics_masks = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(cellpose_max_cells_and_area)(tested_parameter) for _,tested_parameter in enumerate(self.optimization_parameter))
             evaluated_metric_for_masks = np.asarray(list_metrics_masks)
-        if np.amax(evaluated_metric_for_masks) >0:
+
+        if not (self.selection_method is None) and (np.amax(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
             selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         else:
             selected_masks = None
             print('No cells detected on the image')
+            
+        # If no GPU is available, the segmentation is performed with a single threshold. 
+        if self.selection_method == None:
+            selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         #sys.stdout.close()
         #sys.stdout = old_stdout
         return selected_masks
@@ -1674,7 +1673,6 @@ class PipelineFISH():
         self.channels_with_FISH = channels_with_FISH
         self.diamter_nucleus = diamter_nucleus
         self.diameter_cytosol = diameter_cytosol
-        self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         if type(list_voxels[0]) != list:
             self.list_voxels = [list_voxels]
         else:
@@ -1698,6 +1696,12 @@ class PipelineFISH():
             self.save_masks_as_file = True
         else:
             self.save_masks_as_file = False
+        number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+        if number_gpus ==0:
+            self.optimization_segmentation_method = None
+        else:
+            self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+
         
         
     def run(self):
@@ -1743,12 +1747,7 @@ class PipelineFISH():
                 masks_nuclei = imread(str(mask_nuc_path)) 
                 masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))                
                 # Plotting masks
-                #temp_img = np.amax(self.list_images[i],axis=0) #  [Z, Y, X, C]
-                #temp_img = stack.focus_projection(self.list_images[i][3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') 
-                #temp_img =RemoveExtrema(temp_img,min_percentile=2, max_percentile=95,selected_channels=None).remove_outliers() 
-                #n_channels = np.amin([3, temp_img.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
-                #im = Utilities().convert_to_int8(temp_img[ :, :, 0:n_channels], rescale=True)     
                 axes[0].imshow(masks_complete_cells)
                 axes[0].set(title = 'Cytosol mask')
                 axes[1].imshow(masks_nuclei)
