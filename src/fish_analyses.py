@@ -11,106 +11,163 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
 # ExceptionName, function_name, GLOBAL_CONSTANT_NAME,
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
 
-
-import_libraries = 1
-if import_libraries == 1:
-    # importing Big-FISH
-    import bigfish.stack as stack
-    import bigfish.plot as plot
-    import bigfish.detection as detection
-    import bigfish.multistack as multistack
-    import pandas as pd
-    # importing libraries
-    import pathlib
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import re  
-    #import time
-    from skimage.io import imread
-    from scipy import ndimage
-    import glob
-    import tifffile
-    import pyfiglet
-    import sys
-    import datetime
-    import getpass
-    import pkg_resources
-    import platform
-    from cellpose import models
-    import os; from os import listdir; from os.path import isfile, join
-    import warnings
-    warnings.filterwarnings('ignore')
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    warnings.filterwarnings('ignore', category=FutureWarning)
-    # Skimage
-    from skimage.measure import find_contours
-    from skimage.io import imread
-    from scipy import ndimage
-    # Plotting
-    import matplotlib.pyplot as plt
-    import matplotlib.path as mpltPath
-    #from matplotlib import gridspec
-    plt.style.use('ggplot')  # ggplot  #default
-    from joblib import Parallel, delayed
-    import multiprocessing
-    # SMB connection
-    from smb.SMBConnection import SMBConnection
-    import socket
-    import pathlib
-    import yaml
-    import shutil
-    # To create PDF report
-    from fpdf import FPDF
-    
-    # Selecting the GPU. This is used in case multiple scripts run in parallel.
-    try:
-        import torch
-        number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
-        if number_gpus >1:
-            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] =  str(np.random.randint(0,number_gpus,1)[0])
-    except:
-        number_gpus =0 
-        print('No GPU are detected on this computer. Please follow the instructions for a correct installation.')
+import bigfish.stack as stack
+import bigfish.plot as plot
+import bigfish.detection as detection
+import bigfish.multistack as multistack
+import pandas as pd
+import pathlib
+import numpy as np
+import matplotlib.pyplot as plt
+import re  
+from skimage.io import imread
+from scipy import ndimage
+import glob
+import tifffile
+import sys
+import datetime
+import getpass
+import pkg_resources
+import platform
+from cellpose import models
+import os; from os import listdir; from os.path import isfile, join
+import warnings
+warnings.filterwarnings('ignore')
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
+from skimage.measure import find_contours
+from skimage.io import imread
+from scipy import ndimage
+import matplotlib.pyplot as plt
+import matplotlib.path as mpltPath
+plt.style.use('ggplot')  # ggplot  #default
+from joblib import Parallel, delayed
+import multiprocessing
+from smb.SMBConnection import SMBConnection
+import socket
+import pathlib
+import yaml
+import shutil
+from fpdf import FPDF
+# Selecting the GPU. This is used in case multiple scripts run in parallel.
+try:
+    import torch
+    number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+    if number_gpus >1 : # number_gpus
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] =  str(np.random.randint(0,number_gpus,1)[0])        
+except:
+    print('No GPU are detected on this computer. Please follow the instructions for a correct installation.')
 
 
 class Banner():
-    def __init__(self,show=True):
-        self.show = show
+    def __init__(self):
+        '''
+        '''
+        pass
+        
     def print_banner(self):
-        if self.show == True:
-            print(" \n"
-                "FISH processing repository by : \n"
-                "Luis U. Aguilera, Joshua Cook, Tim Stasevich, and Brian Munsky. \n" 
-                " ____________________________________________________________  \n"      
-                "|                      ,#^^^^^^^%&&&                         | \n"
-                "|  .&.                 &.           ,&&&___                  | \n"
-                "|  &  &         ___&&&/                    (&&&&____         | \n"
-                "|  &    &,____#&                   .       #.       %&**,    | \n"
-                "|  /(                  &         ,%       &       %     ,&   | \n"
-                "|    &          &.                       %.      %&%     &*  | \n"
-                "|     &&         *         .%            &             &(    | \n"
-                "|   &                &(           ,#     .%             ,.&  | \n"
-                "|  &    _&&__#&.     &&           &.      ,&         ,%&     | \n"
-                "|  &  (%        #&,___                      (-***%&%^        | \n"
-                "|  & &                %&&&(,.      .*#&&&&&%.                | \n"
-                "|                          &    ,%%%%                        | \n"
-                "|___________________________/%%^_____________________________| \n" )
+        print(" \n"
+            "FISH processing repository by : \n"
+            "Luis U. Aguilera, Joshua Cook, Tim Stasevich, and Brian Munsky. \n" 
+            " ____________________________________________________________  \n"      
+            "|                      ,#^^^^^^^%&&&                         | \n"
+            "|  .&.                 &.           ,&&&___                  | \n"
+            "|  &  &         ___&&&/                    (&&&&____         | \n"
+            "|  &    &,____#&                   .       #.       %&**,    | \n"
+            "|  /(                  &         ,%       &       %     ,&   | \n"
+            "|    &          &.                       %.      %&%     &*  | \n"
+            "|     &&         *         .%            &             &(    | \n"
+            "|   &                &(           ,#     .%             ,.&  | \n"
+            "|  &    _&&__#&.     &&           &.      ,&         ,%&     | \n"
+            "|  &  (%        #&,___                      (-***%&%^        | \n"
+            "|  & &                %&&&(,.      .*#&&&&&%.                | \n"
+            "|                          &    ,%%%%                        | \n"
+            "|___________________________/%%^_____________________________| \n" )
+        return None
+
+
+class Utilities():
+    '''
+    Description for the class.
+    
+    Parameters
+    
+    parameter: bool, optional
+        parameter description. The default is True. 
+    '''
+    def __init__(self):
+        pass
+    
+    # This function is intended to merge masks in a single image
+    def merge_masks (self,list_masks):
+        n_masks = len(list_masks)
+        if not ( n_masks is None):
+            if n_masks > 1: # detecting if more than 1 mask are detected per cell
+                base_image = np.zeros_like(list_masks[0])
+                for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                    tested_mask = np.where(list_masks[nm-1] == 1, nm, 0)
+                    base_image = base_image + tested_mask
+            # making zeros all elements outside each mask, and once all elements inside of each mask.
+            else:  # do nothing if only a single mask is detected per image.
+                base_image = list_masks[0]
+        else:
+            base_image =[]
+        masks = base_image.astype(np.uint8)
+        return masks
+    # This function is intended to separate masks in list of submasks
+    def separate_masks (self,masks):
+        list_masks = []
+        n_masks = np.amax(masks)
+        if not ( n_masks is None):
+            if n_masks > 1: # detecting if more than 1 mask are detected per cell
+                #number_particles = []
+                for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                    mask_copy = masks.copy()
+                    tested_mask = np.where(mask_copy == nm, 1, 0) # making zeros all elements outside each mask, and once all elements inside of each mask.
+                    list_masks.append(tested_mask)
+            else:  # do nothing if only a single mask is detected per image.
+                list_masks.append(masks)
+        else:
+            list_masks.append(masks)
+        return list_masks
+    # This function converts images to uint8. The image can be rescaled and stretched.
+    def convert_to_int8(self,image,rescale=True):
+        if rescale == True:
+            image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=95)
+        image_new= np.zeros_like(image)
+        if rescale == True:
+            image = stack.rescale(image, channel_to_stretch=0,stretching_percentile=95)
+            imin, imax = np.min(image), np.max(image) 
+            image -= imin
+            image_float = np.array(image, 'float32')
+            image_float *= 255./(imax-imin)
+            image_new = np.asarray(np.round(image_float), 'uint8')
+        else:
+            for i in range(0, image.shape[2]):  # iterate for each channel
+                image_new[:,:,i]= (image[:,:,i]/ image[:,:,i].max()) *255
+                image_new = np.uint8(image_new)
+        # padding with zeros the channel dimenssion.
+        while image_new.shape[2]<3:
+            zeros_plane = np.zeros_like(image_new[:,:,0])
+            image_new = np.concatenate((image_new,zeros_plane[:,:,np.newaxis]),axis=2)
+        return image_new
+
 
 class NASConnection():
-    
     '''
     This class is intended to establish a connection between a Network-Attached storage and a local computer. The class allow the user to establish a connection to NAS, download specific files, and write back files to NAS.
     This class doesn't allow the user to delete, modify or overwrite files in NAS.
     To use this class you need to:
     1) Use the university's network or use the two factor authentication to connect to the university's VPN.
     2) You need to create a configuration yaml file, with the following format:
+    ```
     user:
         username: name_of_the_user_in_the_nas_server
         password: user_password_in_the_nas_server 
         remote_address : ip or name for the nas server
         domain: domain for the nas server
-    
+    ```
     Parameters
     
     path_to_config_file : str, Pathlib obj
@@ -139,12 +196,13 @@ class NASConnection():
         else:
             print('Connection failed')
         return self.conn
-
+    
     def read_files(self, remote_folder_path, timeout=60):
         '''
         This method reads all files from a NAS directory
+        
         Parameters
-        --  --  --  --  -- 
+        
         remote_folder_path : str, Pathlib obj
             The path in the remote folder to download
         timeout : int, optional
@@ -169,8 +227,9 @@ class NASConnection():
     def download_file(self, remote_file_path, local_folder_path, timeout=60):
         '''
         This method download an specific file
+        
         Parameters
-        --  --  --  --  -- 
+        
         remote_file_path : str, Pathlib obj
             The path in the remote file to download
         local_folder_path : str, Pathlib obj
@@ -199,13 +258,14 @@ class NASConnection():
         # moving files in the local computer
         shutil.move(pathlib.Path().absolute().joinpath(filename), local_folder_path.joinpath(filename))
         print('Files downloaded to: ' + str(local_folder_path.joinpath(filename)))
-
-
+        return None
+    
     def copy_files(self, remote_folder_path, local_folder_path, timeout=60, file_extension ='.tif'):
         '''
         This method downloads the tif files from NAS to a temp folder in the local computer
+        
         Parameters
-        --  --  --  --  -- 
+        
         remote_folder_path : str, Pathlib obj
             The path in the remote folder to download
         local_folder_path : str, Pathlib obj
@@ -224,14 +284,10 @@ class NASConnection():
             local_folder_path = pathlib.Path(local_folder_path)
         if type(remote_folder_path)==str:
             remote_folder_path = pathlib.Path(remote_folder_path)
-        # Creating a temporal folder in path
-        #if  not str(local_folder_path)[0:5] ==  'temp_':
-        #    local_folder_path = pathlib.Path(local_folder_path).joinpath('temp_' + local_folder_path.name )
         # Making the local directory
         if (os.path.exists(local_folder_path))  and  (str(local_folder_path.name)[0:5] ==  'temp_'):
             shutil.rmtree(local_folder_path)
         os.makedirs(str(local_folder_path))
-        
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
         for file in list_dir:
@@ -243,12 +299,14 @@ class NASConnection():
                 # moving files in the local computer
                 shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
         print('Files downloaded to: ' + str(local_folder_path))
+        return None
     
     def write_files_to_NAS(self, local_file_to_send_to_NAS, remote_folder_path,  timeout=60):
         '''
         This method writes files from a local computer to NAS 
+        
         Parameters
-        --  --  --  --  -- 
+        
         remote_folder_path : str, Pathlib obj
             The path in the remote folder to download
         local_folder_path : str, Pathlib obj
@@ -265,10 +323,8 @@ class NASConnection():
         # Converting the paths to a Pathlib object
         if type(local_file_to_send_to_NAS) == str:
             local_file_to_send_to_NAS = pathlib.Path(local_file_to_send_to_NAS)
-
         if type(remote_folder_path)==str:
             remote_folder_path = pathlib.Path(remote_folder_path)
-
         # checks that the file doesn't exist on NAS. If it exist it will create a new name as follows original_name__1
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
@@ -277,14 +333,15 @@ class NASConnection():
             with open(str(local_file_to_send_to_NAS), 'rb') as file_obj:
                 self.conn.storeFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name) ) ,  file_obj )
                 print ('The file was uploaded to NAS in location:', str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name))  )
-      
+        return None
+
 
 class ReadImages():
     '''
     This class reads all .tif images in a given folder and returns the names of these files, path, and number of files.
     
     Parameters
-    --  --  --  --  -- 
+    
     directory: str or PosixPath
         Directory containing the images to merge.
     '''    
@@ -296,8 +353,9 @@ class ReadImages():
     def read(self):
         '''
         Method takes all the videos in the folder and merge those with similar names.
+        
         Returns
-        --  --  -- -
+        
         list_images : List of NumPy arrays. 
             List of NumPy arrays with format np.uint16 and dimensions [Z, Y, X, C] or [T, Y, X, C] . 
         list_file_names : List of strings 
@@ -310,8 +368,6 @@ class ReadImages():
         path_files = [ str(self.directory.joinpath(f).resolve()) for f in list_files_names ] # creating the complete path for each file
         number_files = len(path_files)
         list_images = [imread(str(f)) for f in path_files]
-        #list_images_rm = [RemoveExtrema(im,min_percentile=0.01, max_percentile=99.9).remove_outliers()  for im in list_images]
-        #list_images_unit16 = [img.astype(np.uint16) for img in list_images_rm  ]
         return list_images, path_files, list_files_names, number_files
 
 
@@ -321,7 +377,7 @@ class MergeChannels():
     It recursively merges the channels in a new dimenssion in the array. Minimal number of Channels 2 maximum is 4
     
     Parameters
-    --  --  --  --  -- 
+
     directory: str or PosixPath
         Directory containing the images to merge.
     substring_to_detect_in_file_name: str
@@ -340,8 +396,9 @@ class MergeChannels():
     def checking_images(self):
         '''
         Method takes all the videos in the folder and merge those with similar names.
+        
         Returns
-        --  --  -- -
+        
         list_file_names : List of strings 
             List with strings of names.
         list_merged_images : List of NumPy arrays. 
@@ -364,8 +421,9 @@ class MergeChannels():
     def merge(self):
         '''
         Method takes all the videos in the folder and merge those with similar names.
+        
         Returns
-        --  --  -- -
+        
         list_file_names : List of strings 
             List with strings of names.
         list_merged_images : List of NumPy arrays. 
@@ -402,8 +460,9 @@ class MergeChannels():
 class RemoveExtrema():
     '''
     This class is intended to remove extreme values from a video. The format of the video must be [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
+    
     Parameters
-    --  --  --  --  -- 
+    
     video : NumPy array
         Array of images with dimensions [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
     min_percentile : float, optional
@@ -417,7 +476,6 @@ class RemoveExtrema():
         self.video = video
         self.min_percentile = min_percentile
         self.max_percentile = max_percentile
-        #self.ignore_channel = ignore_channel
         if not (type(selected_channels) is list):
                 self.selected_channels = [selected_channels]
         else:
@@ -426,8 +484,9 @@ class RemoveExtrema():
     def remove_outliers(self):
         '''
         This method normalizes the values of a video by removing extreme values.
+        
         Returns
-        --  --  -- -
+        
         normalized_video : np.uint16
             Normalized video. Array with dimensions [T, Y, X, C] or image with format [Y, X].
         '''
@@ -444,7 +503,6 @@ class RemoveExtrema():
                 normalized_video_temp [normalized_video_temp > max_val] = max_val
                 normalized_video_temp [normalized_video_temp < min_val] = min_val
                 normalized_video_temp [normalized_video_temp < 0] = 0
-        
         # Normalization for video with format [Y, X, C].
         if len(self.video.shape) == 3:
             number_channels   = self.video.shape[2]
@@ -457,7 +515,6 @@ class RemoveExtrema():
                         normalized_video_temp [normalized_video_temp > max_val] = max_val
                         normalized_video_temp [normalized_video_temp < min_val] =  min_val
                         normalized_video_temp [normalized_video_temp < 0] = 0
-        
         # Normalization for video with format [T, Y, X, C] or [Z, Y, X, C].
         if len(self.video.shape) == 4:
             number_timepoints, number_channels   = self.video.shape[0], self.video.shape[3]
@@ -478,8 +535,9 @@ class RemoveExtrema():
 class Cellpose():
     '''
     This class is intended to detect cells by image masking using **Cellpose** . The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
+    
     Parameters
-    --  --  --  --  -- 
+    
     video : NumPy array
         Array of images with dimensions [T, Y, X, C].
     num_iterations : int, optional
@@ -493,7 +551,7 @@ class Cellpose():
     selection_method : str, optional
         Option to use the optimization algorithm to maximize the number of cells or maximize the size options are 'max_area' or 'max_cells' or 'max_cells_and_area'. The default is 'max_cells_and_area'.
     '''
-    def __init__(self, video:np.ndarray, num_iterations:int = 5, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, video:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.video = video
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
@@ -505,13 +563,13 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.CELLPOSE_PROBABILITY = 0.6
         self.optimization_parameter = np.round(np.linspace(self.minimumm_probability, self.maximum_probability, self.num_iterations), 2)
-        #self.optimization_parameter = np.round(np.linspace( self.diameter ,self.diameter+50, self.num_iterations),0)
-        #self.optimization_parameter = np.linspace(50,350,self.num_iterations)
+        
     def calculate_masks(self):
         '''
         This method performs the process of image masking using **Cellpose**.
+        
         Returns
-        --  --  -- -
+        
         selected_masks : List of NumPy arrays
             List of NumPy arrays with values between 0 and the number of detected cells in the image, where a number larger than zero represents the masked area for each cell, and 0 represents the area where no cells are detected.
         '''
@@ -546,7 +604,7 @@ class Cellpose():
             except:
                 masks =0
             return np.amax(masks)
-
+        
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
                 masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
@@ -574,14 +632,12 @@ class Cellpose():
         if self.selection_method == 'max_cells_and_area':
             list_metrics_masks = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(cellpose_max_cells_and_area)(tested_parameter) for _,tested_parameter in enumerate(self.optimization_parameter))
             evaluated_metric_for_masks = np.asarray(list_metrics_masks)
-
         if not (self.selection_method is None) and (np.amax(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
             selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         else:
             selected_masks = None
             print('No cells detected on the image')
-            
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
             selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
@@ -593,8 +649,9 @@ class Cellpose():
 class CellSegmentation():
     '''
     This class is intended to detect cells in FISH images using **Cellpose**. The class uses optimization to generate the meta-parameters used by cellpose. This class segments the nucleus and cytosol for every cell detected in the image.
+    
     Parameters
-    --  --  --  --  -- 
+    
     video : NumPy array
         Array of images with dimensions [Z, Y, X, C] or maximum projection with dimensions [Y,X,C].
     channels_with_cytosol : List of int or None, optional
@@ -635,8 +692,9 @@ class CellSegmentation():
     def calculate_masks(self):
         '''
         This method performs the process of cell detection for FISH images using **Cellpose**.
+        
         Returns
-        --  --  -- -
+        
         list_masks_complete_cells : List of NumPy arrays or a single NumPy array
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
         list_masks_nuclei : List of NumPy arrays or a single NumPy array
@@ -646,40 +704,6 @@ class CellSegmentation():
         index_paired_masks: List of pairs of int
             List of pairs of integers that associates the detected nuclei and cytosol.
         '''
-        # This function is intended to separate masks in list of submasks
-        def separate_masks (masks):
-            list_masks = []
-            n_masks = np.amax(masks)
-            if not ( n_masks is None):
-                if n_masks > 1: # detecting if more than 1 mask are detected per cell
-                    #number_particles = []
-                    for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                        mask_copy = masks.copy()
-                        tested_mask = np.where(mask_copy == nm, 1, 0) # making zeros all elements outside each mask, and once all elements inside of each mask.
-                        list_masks.append(tested_mask)
-                else:  # do nothing if only a single mask is detected per image.
-                    list_masks.append(masks)
-            else:
-                list_masks.append(masks)
-            return list_masks
-
-        # This function is intended to merge masks in a single image
-        def merge_masks (list_masks):
-            n_masks = len(list_masks)
-            if not ( n_masks is None):
-                if n_masks > 1: # detecting if more than 1 mask are detected per cell
-                    base_image = np.zeros_like(list_masks[0])
-                    for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                        tested_mask = np.where(list_masks[nm-1] == 1, nm, 0)
-                        base_image = base_image + tested_mask
-                # making zeros all elements outside each mask, and once all elements inside of each mask.
-                else:  # do nothing if only a single mask is detected per image.
-                    base_image = list_masks[0]
-            else:
-                base_image =[]
-            masks = base_image.astype(np.uint8)
-            return masks
-
         # function that determines if a cell is in the border of the image
         def remove_fragmented(img_masks):
             img_masks_copy = np.copy(img_masks)
@@ -689,25 +713,9 @@ class CellSegmentation():
                     tested = np.where(img_masks_copy == nm, 1, 0)   # making zeros all elements outside each mask, and once all elements inside of each mask.
                     # testing if tested is touching the border of the image
                     is_border = np.any( np.concatenate( ( tested[:,0],tested[:,-1],tested[0,:],tested[-1,:] ) ) )
-                    #num_border = np.count_nonzero(np.concatenate( ( tested[:,0],tested[:,-1],tested[0,:],tested[-1,:] ) ) )
                     if is_border == True:
                         img_masks = np.where(img_masks == nm, 0, img_masks)
             return img_masks
-        
-        # this function is intended to convert and np.int16 image to np.int8
-        def convert_to_int8(image):
-            image = stack.rescale(image, channel_to_stretch=0,stretching_percentile=95)
-            imin, imax = np.min(image), np.max(image) 
-            image -= imin
-            imf = np.array(image, 'float32')
-            imf *= 255./(imax-imin)
-            image = np.asarray(np.round(imf), 'uint8')
-            # padding with zeros the channel dimenssion.
-            while image.shape[2]<3:
-                zeros_plane = np.zeros_like(image[:,:,0])
-                image = np.concatenate((image,zeros_plane[:,:,np.newaxis]),axis=2)
-            return image
-        
         # function that determines if the nucleus is in the cytosol
         def is_nucleus_in_cytosol(mask_nucleus, mask_cyto):
             nucleusInCell = []
@@ -727,7 +735,6 @@ class CellSegmentation():
                 return 1
             else:
                 return 0
-        
         # This function takes two list of images for masks and returns a list of lists with pairs indicating the nucleus masks that are contained in a cytosol
         def paired_masks(list_masks_nuclei:list, list_masks_cyto:list):
             n_masks_nuclei = len (list_masks_nuclei)
@@ -758,7 +765,6 @@ class CellSegmentation():
                 sel_mask_n = index_paired_masks[i][1]
                 list_masks_nuclei.append(list_separated_masks_nuclei[sel_mask_n])
             return list_masks_nuclei
-        
         # This function creates a mask for each cytosol without nucleus
         def generate_masks_cytosol_no_nuclei(index_paired_masks:np.ndarray, list_masks_complete_cells:list, list_masks_nuclei:list):
             list_masks_cytosol_no_nuclei = []
@@ -767,7 +773,6 @@ class CellSegmentation():
                 substraction[substraction < 0] = 0
                 list_masks_cytosol_no_nuclei.append(substraction)
             return list_masks_cytosol_no_nuclei
-        
         def join_nulcei_masks(index_paired_masks:np.ndarray, list_masks_nuclei:list):
             # this code detects duplicated mask for the nucleus in the same cell and replaces with a joined mask. Also deletes from the list the duplicated elements.
             index_masks_cytosol = index_paired_masks[:, 0]
@@ -789,13 +794,11 @@ class CellSegmentation():
             # removing from index
             new_index_paired_masks = np.delete(index_paired_masks, idxs_to_delete, axis = 0)
             return list_mask_joined, new_index_paired_masks
-        
         ##### IMPLEMENTATION #####
         if len(self.video.shape) > 3:  # [ZYXC]
             video_normalized = np.amax(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
             video_normalized = self.video # [YXC]       
-        
         def function_to_find_masks (video):                
             if not (self.channels_with_cytosol is None):
                 masks_cyto = Cellpose(video[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
@@ -807,8 +810,8 @@ class CellSegmentation():
                     masks_nuclei= remove_fragmented(masks_nuclei)
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 # Implementation
-                list_separated_masks_nuclei = separate_masks(masks_nuclei)
-                list_separated_masks_cyto = separate_masks(masks_cyto)
+                list_separated_masks_nuclei = Utilities().separate_masks(masks_nuclei)
+                list_separated_masks_cyto = Utilities().separate_masks(masks_cyto)
                 # Array with paired masks
                 index_paired_masks  =  paired_masks(list_separated_masks_nuclei, list_separated_masks_cyto)
                 # Optional section that joins multiple nucleus masks
@@ -822,7 +825,7 @@ class CellSegmentation():
                 list_masks_cytosol_no_nuclei = generate_masks_cytosol_no_nuclei(index_paired_masks, list_masks_complete_cells, list_masks_nuclei)
             else:
                 if not (self.channels_with_cytosol is None):
-                    list_masks_complete_cells = separate_masks(masks_cyto) # []
+                    list_masks_complete_cells = Utilities().separate_masks(masks_cyto) # []
                     list_masks_nuclei = []
                     list_masks_cytosol_no_nuclei = []
                     index_paired_masks =[]
@@ -830,12 +833,11 @@ class CellSegmentation():
                     masks_nuclei= None
                 if not (self.channels_with_nucleus is None):
                     list_masks_complete_cells = []
-                    list_masks_nuclei = separate_masks(masks_nuclei)
+                    list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
                     list_masks_cytosol_no_nuclei = []
                     index_paired_masks =[]
                     masks_cyto = None
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
-        
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.video.shape) > 3):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
@@ -855,7 +857,6 @@ class CellSegmentation():
             video_copy = video_normalized.copy()
             video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
-        
         elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.video.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.video.shape[0]
@@ -876,7 +877,6 @@ class CellSegmentation():
             # Running the mask selection once a threshold is obtained
             test_video_optimization = np.amax(self.video[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
-        
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.video.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.video.shape[0]//2
@@ -898,22 +898,17 @@ class CellSegmentation():
         else:
             # no optimization is applied if a 2D image is passed
             list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_normalized)
-
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 5):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
-        
-        
-        
-        
         if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
                 n_channels = np.amin([3, video_normalized.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                im = convert_to_int8(video_normalized[ :, :, 0:n_channels])  
-                masks_plot_cyto= merge_masks (list_masks_complete_cells) 
-                masks_plot_nuc = merge_masks (list_masks_nuclei)              
+                im = Utilities().convert_to_int8(video_normalized[ :, :, 0:n_channels])  
+                masks_plot_cyto= Utilities().merge_masks (list_masks_complete_cells) 
+                masks_plot_nuc = Utilities().merge_masks (list_masks_nuclei)              
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
                 axes[1].imshow(masks_plot_cyto)
@@ -939,7 +934,7 @@ class CellSegmentation():
                 if self.show_plot == 1:
                     n_channels = np.amin([3, video_normalized.shape[2]])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
+                    im = Utilities().convert_to_int8(video_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
                     axes[1].imshow(masks_plot_cyto)
@@ -951,7 +946,7 @@ class CellSegmentation():
                 if self.show_plot == 1:
                     n_channels = np.amin([3, video_normalized.shape[2]])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = convert_to_int8(video_normalized[ :, :, 0:n_channels])
+                    im = Utilities().convert_to_int8(video_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
                     axes[1].imshow(masks_plot_nuc)
@@ -960,19 +955,14 @@ class CellSegmentation():
                         plt.savefig(self.image_name,bbox_inches='tight')
                     plt.show()
             print('No paired masks were detected for this image')
-
-
         if (self.channels_with_cytosol is None):
             index_paired_masks = np.linspace(0, len(list_masks_nuclei)-1, len(list_masks_nuclei), dtype='int32')
-
         if (self.channels_with_nucleus is None):
             index_paired_masks = np.linspace(0, len(list_masks_complete_cells)-1, len(list_masks_complete_cells), dtype='int32')
-        
         # generating a single image with all the masks for cyto and nuclei 
-        masks_cyto_single = merge_masks(list_masks_complete_cells)
-        masks_nuclei_single = merge_masks(list_masks_nuclei)
-        masks_cytosol_no_nuclei_single = merge_masks(list_masks_cytosol_no_nuclei)
-
+        masks_cyto_single = Utilities().merge_masks(list_masks_complete_cells)
+        masks_nuclei_single = Utilities().merge_masks(list_masks_nuclei)
+        masks_cytosol_no_nuclei_single = Utilities().merge_masks(list_masks_cytosol_no_nuclei)
         # return values
         return masks_cyto_single, masks_nuclei_single, masks_cytosol_no_nuclei_single
 
@@ -980,9 +970,11 @@ class CellSegmentation():
 class BigFISH():
     '''
     This class is intended to detect spots in FISH images using Big-FISH Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
+    
     Parameters
-    --  --  --  --  -- 
+    
     The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
     FISH_channel : int
@@ -1017,8 +1009,9 @@ class BigFISH():
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using Big-FISH Copyright © 2020, Arthur Imbert.
+        
         Returns
-        --  --  -- -
+        
         clusterDectionCSV : np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
             One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
         spotDectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
@@ -1027,10 +1020,9 @@ class BigFISH():
         rna=self.image[:,:,:,self.FISH_channel]
         # Calculating Sigma with  the parameters for the PSF.
         spot_radius_px = detection.get_object_radius_pixel(
-            voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-            object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), ndim=3)
+                        voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
+                        object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), ndim=3)
         sigma = spot_radius_px
-
         ## SPOT DETECTION
         try:
             #rna_filtered = stack.remove_background_gaussian(rna, sigma)
@@ -1044,22 +1036,20 @@ class BigFISH():
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         
         # Decomposing dense regions
-        spots_post_decomposition, _, _ = detection.decompose_dense(
-            image=rna, spots=spots, 
-            voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-            spot_radius = (self.psf_z, self.psf_yx, self.psf_yx),
-            alpha=0.9,   # alpha impacts the number of spots per candidate region
-            beta=1,      # beta impacts the number of candidate regions to decompose
-            gamma=5)     # gamma the filtering step to denoise the image
+        spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, spots=spots, 
+                                                                voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
+                                                                spot_radius = (self.psf_z, self.psf_yx, self.psf_yx),
+                                                                alpha=0.9,   # alpha impacts the number of spots per candidate region
+                                                                beta=1,      # beta impacts the number of candidate regions to decompose
+                                                                gamma=5)     # gamma the filtering step to denoise the image
         ### CLUSTER DETECTION
         
         spots_post_clustering, clusters = detection.detect_clusters(spots_post_decomposition, 
                                             voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
-                                             radius= self.cluster_radius, nb_min_spots = self.minimum_spots_cluster)
+                                            radius= self.cluster_radius, nb_min_spots = self.minimum_spots_cluster)
         # Saving results with new variable names
         spotDectionCSV = spots_post_clustering
         clusterDectionCSV = clusters
-        #print(spots_post_decomposition.shape, clusters.shape)
         ## PLOTTING
         if self.show_plot == True:
             try:
@@ -1067,16 +1057,6 @@ class BigFISH():
                 plt.show()
             except:
                 print('not showing elbow plot')
-            #selected_slice = 5
-            #values, counts = np.unique(spots_post_decomposition[:,0], return_counts=True)
-            #ind = np.argmax(counts)
-            #selected_slice = np.argmax(values[ind])
-            #counts = np.bincount(spots_post_decomposition[:,0][spots_post_decomposition[:,0]>0])
-            #counts = np.bincount(clusters[:,0][clusters[:,0]>0])
-            #selected_slice = np.argmax(counts)
-            #image_2D = stack.focus_projection(rna, proportion = 0.2, neighborhood_size = 7, method = 'max') # maximum projection 
-            #image_2D = stack.maximum_projection(rna)
-            #image_2D = stack.rescale(image_2D, channel_to_stretch = 0, stretching_percentile = 99)
             central_slice = rna.shape[0]//2
             #for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
             #for i in range(0,    rna.shape[0]//2):
@@ -1117,7 +1097,7 @@ class Intensity():
     This class is intended to calculate the average intensity in an spot and substract the intensity in background.
     
     Parameters
-    --  --  --  --  -- 
+    
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] . 
     dataframe : Pandas dataframe
@@ -1131,8 +1111,9 @@ class Intensity():
     def get_intensity(self):
         '''
         This method extracts data from the class SpotDetection and return the data as a dataframe.
+        
         Returns
-        --  --  -- -
+        
         dataframe : Pandas dataframe
             Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
         '''
@@ -1144,7 +1125,7 @@ class DataProcessing():
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
     
     Parameters
-    --  --  --  --  -- 
+    
     spotDectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
             One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
     clusterDectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
@@ -1167,22 +1148,18 @@ class DataProcessing():
     def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei,spot_type=0,dataframe =None,reset_cell_counter=False,image_counter=0):
         self.spotDectionCSV=spotDectionCSV 
         self.clusterDectionCSV=clusterDectionCSV
-        
         if isinstance(masks_complete_cells, list):
             self.masks_complete_cells=masks_complete_cells
         else:
             self.masks_complete_cells=Utilities().separate_masks(masks_complete_cells)
-            
         if isinstance(masks_nuclei, list):
             self.masks_nuclei=masks_nuclei
         else:
             self.masks_nuclei=Utilities().separate_masks(masks_nuclei)
-            
         if isinstance(masks_cytosol_no_nuclei, list):
             self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
         else:
             self.masks_cytosol_no_nuclei= Utilities().separate_masks(masks_cytosol_no_nuclei)
-        
         self.dataframe=dataframe
         self.spot_type = spot_type
         self.reset_cell_counter = reset_cell_counter
@@ -1190,8 +1167,9 @@ class DataProcessing():
     def get_dataframe(self):
         '''
         This method extracts data from the class SpotDetection and return the data as a dataframe.
+        
         Returns
-        --  --  -- -
+        
         dataframe : Pandas dataframe
             Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
         '''
@@ -1321,7 +1299,7 @@ class SpotDetection():
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
     
     Parameters
-    --  --  --  --  -- 
+    
     The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
@@ -1353,17 +1331,14 @@ class SpotDetection():
         list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
     list_psfs : List of tuples or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
-    
     show_plot : bool, optional
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
     '''
     def __init__(self,image,  FISH_channels , cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None):
         self.image = image
-        
         self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
         self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
         self.list_masks_cytosol_no_nuclei = Utilities().separate_masks(masks_cytosol_no_nuclei)
-        
         self.FISH_channels = FISH_channels
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
@@ -1401,75 +1376,12 @@ class SpotDetection():
         return dataframe_FISH
     
     
-class Utilities ():
-    '''
-    Description for the class.
-    
-    Parameters
-    --  --  --  --  -- 
-    parameter: bool, optional
-        parameter description. The default is True. 
-    '''
-    def __init__(self):
-        pass
-    
-    # This function is intended to merge masks in a single image
-    def merge_masks (self,list_masks):
-        n_masks = len(list_masks)
-        if not ( n_masks is None):
-            if n_masks > 1: # detecting if more than 1 mask are detected per cell
-                base_image = np.zeros_like(list_masks[0])
-                for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                    tested_mask = np.where(list_masks[nm-1] == 1, nm, 0)
-                    base_image = base_image + tested_mask
-            # making zeros all elements outside each mask, and once all elements inside of each mask.
-            else:  # do nothing if only a single mask is detected per image.
-                base_image = list_masks[0]
-        else:
-            base_image =[]
-        masks = base_image.astype(np.uint8)
-        return masks
-    
-    # This function is intended to separate masks in list of submasks
-    def separate_masks (self,masks):
-        list_masks = []
-        n_masks = np.amax(masks)
-        if not ( n_masks is None):
-            if n_masks > 1: # detecting if more than 1 mask are detected per cell
-                #number_particles = []
-                for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                    mask_copy = masks.copy()
-                    tested_mask = np.where(mask_copy == nm, 1, 0) # making zeros all elements outside each mask, and once all elements inside of each mask.
-                    list_masks.append(tested_mask)
-            else:  # do nothing if only a single mask is detected per image.
-                list_masks.append(masks)
-        else:
-            list_masks.append(masks)
-        return list_masks
-    
-    def convert_to_int8(self,image,rescale=True):
-        
-        if rescale == True:
-            image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=99)
-        
-        # Convert  to unint8.
-        image_new= np.zeros_like(image)
-        for i in range(0, image.shape[2]):  # iterate for each channel
-            image_new[...,i]= (image[...,i]/ image[...,i].max()) *255
-                
-        # padding with zeros the channel dimenssion.
-        #while image_new.shape[2]<3:
-        #    zeros_plane = np.zeros_like(image_new[:,:,0])
-        #    image_new = np.concatenate((image_new,zeros_plane[:,:,np.newaxis]),axis=2)
-        return np.uint8(image_new)
-    
-    
 class Metadata():
     '''
     This class is intended to generate a metadata file with information about used dependencies, user information, and parameters used.
     
     Parameters
-    --  --  --  --  -- 
+    
     parameter: bool, optional
         parameter description. The default is True. 
     '''
@@ -1493,71 +1405,70 @@ class Metadata():
         self.data_dir = data_dir
         
     def write_metadata(self):
-      installed_modules = [str(module).replace(" ","==") for module in pkg_resources.working_set]
-      important_modules = [ 'tqdm', 'torch','tifffile', 'setuptools', 'scipy', 'scikit-learn', 'scikit-image', 'PyYAML', 'pysmb', 'pyfiglet', 'pip', 'Pillow', 'pandas', 'opencv-python-headless', 'numpy', 'numba', 'natsort', 'mrc', 'matplotlib', 'llvmlite', 'jupyter-core', 'jupyter-client', 'joblib', 'ipython', 'ipython-genutils', 'ipykernel', 'cellpose', 'big-fish']
-      
-      def create_data_file(filename):
-        if sys.platform == 'linux' or sys.platform == 'darwin':
-          os.system('touch' + filename)
-        elif sys.platform == 'win32':
-          os.system('echo , > ' + filename)
-          
-      number_spaces_pound_sign = 75
-      def write_data_in_file(filename):
-          with open(filename, 'w') as fd:
-              fd.write('#' * (number_spaces_pound_sign)) 
-              fd.write('\nAUTHOR INFORMATION  ')
-              fd.write('\n    Author: ' + getpass.getuser())
-              fd.write('\n    Created at: ' + datetime.datetime.today().strftime('%d %b %Y'))
-              fd.write('\n    Time: ' + str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute) )
-              fd.write('\n    Operative System: ' + sys.platform )
-              fd.write('\n    Hostname: ' + socket.gethostname() + '\n')
-              fd.write('#' * (number_spaces_pound_sign) ) 
-              fd.write('\nPARAMETERS USED  ')
-              fd.write('\n    channels_with_cytosol: ' + str(self.channels_with_cytosol) )
-              fd.write('\n    channels_with_nucleus: ' + str(self.channels_with_nucleus) )
-              fd.write('\n    channels_with_FISH: ' + str(self.channels_with_FISH) )
-              fd.write('\n    diamter_nucleus: ' + str(self.diamter_nucleus) )
-              fd.write('\n    diameter_cytosol: ' + str(self.diameter_cytosol) )
-              fd.write('\n    FISH parameters')
-              for k in range (0,len(self.channels_with_FISH)):
-                fd.write('\n      For Channel ' + str(self.channels_with_FISH[k]) )
-                fd.write('\n        voxel_size_z: ' + str(self.list_voxels[k][0]) )
-                fd.write('\n        voxel_size_yx: ' + str(self.list_voxels[k][1]) )
-                fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
-                fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
-              fd.write('\n    minimum_spots_cluster: ' + str(self.minimum_spots_cluster) )
-              fd.write('\n') 
-              fd.write('#' * (number_spaces_pound_sign) ) 
-              fd.write('\nFILES AND DIRECTORIES USED ')
-              fd.write('\n    Directory path: ' + str(self.data_dir) )
-              fd.write('\n    Folder name: ' + str(self.data_dir.name)  )
-              # for loop for all the images.
-              fd.write('\n    Images in directory :'  )
-              for img_name in self.list_files_names:
-                fd.write('\n        '+ img_name)
-              fd.write('\n')  
-              fd.write('#' * (number_spaces_pound_sign)) 
-              fd.write('\nREPRODUCIBILITY ')
-              fd.write('\n    Platform: \n')
-              fd.write('        Python: ' + str(platform.python_version()) )
-              fd.write('\n    Dependancies: ')
-              # iterating for all modules
-              for module_name in installed_modules:
-                if any(module_name[0:4] in s for s in important_modules):
-                  fd.write('\n        '+ module_name)
-              fd.write('\n') 
-              fd.write('#' * (number_spaces_pound_sign) ) 
-      create_data_file(self.filename)
-      write_data_in_file(self.filename)
-    
+        installed_modules = [str(module).replace(" ","==") for module in pkg_resources.working_set]
+        important_modules = [ 'tqdm', 'torch','tifffile', 'setuptools', 'scipy', 'scikit-learn', 'scikit-image', 'PyYAML', 'pysmb', 'pyfiglet', 'pip', 'Pillow', 'pandas', 'opencv-python-headless', 'numpy', 'numba', 'natsort', 'mrc', 'matplotlib', 'llvmlite', 'jupyter-core', 'jupyter-client', 'joblib', 'ipython', 'ipython-genutils', 'ipykernel', 'cellpose', 'big-fish']
+        def create_data_file(filename):
+            if sys.platform == 'linux' or sys.platform == 'darwin':
+                os.system('touch' + filename)
+            elif sys.platform == 'win32':
+                os.system('echo , > ' + filename)
+        number_spaces_pound_sign = 75
+        def write_data_in_file(filename):
+            with open(filename, 'w') as fd:
+                fd.write('#' * (number_spaces_pound_sign)) 
+                fd.write('\nAUTHOR INFORMATION  ')
+                fd.write('\n    Author: ' + getpass.getuser())
+                fd.write('\n    Created at: ' + datetime.datetime.today().strftime('%d %b %Y'))
+                fd.write('\n    Time: ' + str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute) )
+                fd.write('\n    Operative System: ' + sys.platform )
+                fd.write('\n    Hostname: ' + socket.gethostname() + '\n')
+                fd.write('#' * (number_spaces_pound_sign) ) 
+                fd.write('\nPARAMETERS USED  ')
+                fd.write('\n    channels_with_cytosol: ' + str(self.channels_with_cytosol) )
+                fd.write('\n    channels_with_nucleus: ' + str(self.channels_with_nucleus) )
+                fd.write('\n    channels_with_FISH: ' + str(self.channels_with_FISH) )
+                fd.write('\n    diamter_nucleus: ' + str(self.diamter_nucleus) )
+                fd.write('\n    diameter_cytosol: ' + str(self.diameter_cytosol) )
+                fd.write('\n    FISH parameters')
+                for k in range (0,len(self.channels_with_FISH)):
+                    fd.write('\n      For Channel ' + str(self.channels_with_FISH[k]) )
+                    fd.write('\n        voxel_size_z: ' + str(self.list_voxels[k][0]) )
+                    fd.write('\n        voxel_size_yx: ' + str(self.list_voxels[k][1]) )
+                    fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
+                    fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
+                fd.write('\n    minimum_spots_cluster: ' + str(self.minimum_spots_cluster) )
+                fd.write('\n') 
+                fd.write('#' * (number_spaces_pound_sign) ) 
+                fd.write('\nFILES AND DIRECTORIES USED ')
+                fd.write('\n    Directory path: ' + str(self.data_dir) )
+                fd.write('\n    Folder name: ' + str(self.data_dir.name)  )
+                # for loop for all the images.
+                fd.write('\n    Images in directory :'  )
+                for img_name in self.list_files_names:
+                    fd.write('\n        '+ img_name)
+                fd.write('\n')  
+                fd.write('#' * (number_spaces_pound_sign)) 
+                fd.write('\nREPRODUCIBILITY ')
+                fd.write('\n    Platform: \n')
+                fd.write('        Python: ' + str(platform.python_version()) )
+                fd.write('\n    Dependancies: ')
+                # iterating for all modules
+                for module_name in installed_modules:
+                    if any(module_name[0:4] in s for s in important_modules):
+                        fd.write('\n        '+ module_name)
+                fd.write('\n') 
+                fd.write('#' * (number_spaces_pound_sign) ) 
+        create_data_file(self.filename)
+        write_data_in_file(self.filename)
+        return None
+
 
 class PlotImages():
     '''
     This class intended to plot all the channels from an image with format  [Z, Y, X, C].
     
     Parameters
-    --  --  --  --  -- 
+    
     image: NumPy array
         Array of images with dimensions [Z, Y, X, C].
     figsize : tuple with figure size, optional.
@@ -1587,7 +1498,7 @@ class PlotImages():
             axes[i].set_title('Channel_'+str(i))
         plt.savefig(self.image_name,bbox_inches='tight')
         plt.show()
-        return 
+        return None
 
 
 class ReportPDF():
@@ -1595,7 +1506,7 @@ class ReportPDF():
     This class intended to create a PDF report including the images generated during the pipeline.
     
     Parameters
-    --  --  --  --  -- 
+    
     directory_results: str or PosixPath
         Directory containing the images to include in the report.
     substring_to_detect_in_file_name: str
@@ -1604,12 +1515,10 @@ class ReportPDF():
         Name of the report. 
     folder_output: str or PosixPath
         Directory to place the report.
-
     '''    
     def __init__(self,directory, channels_with_FISH):
         self.directory = directory
         self.channels_with_FISH = channels_with_FISH
-    
     def create_report(self):
         pdf = FPDF()
         WIDTH = 210
@@ -1655,6 +1564,7 @@ class ReportPDF():
                     pdf.add_page()
         pdf_name =  'pdf_report_' + self.directory.name[13:] + '.pdf'
         pdf.output(pdf_name, 'F')
+        return None
 
 
 class PipelineFISH():
@@ -1662,10 +1572,9 @@ class PipelineFISH():
     This class is intended to perform complete FISH analyses including cell segmentation and spot detection.
     
     Parameters
-    --  --  --  --  -- 
+    
     parameter: bool, optional
         parameter description. The default is True. 
-        
     list_voxels : List of lists or None
         list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
     list_psfs : List of lists or None
@@ -1696,7 +1605,6 @@ class PipelineFISH():
             self.name_for_files = file_name_str
         else:
             self.name_for_files = self.data_dir.name
-        
         self.masks_dir=masks_dir
         # saving the masks if they are not passed as a directory
         if (masks_dir is None):
@@ -1708,12 +1616,8 @@ class PipelineFISH():
             self.optimization_segmentation_method = None
         else:
             self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
-
-        
         
     def run(self):
-        # Printing banner
-        #Banner(show=True).print_banner()
         # Prealocating arrays
         list_masks_complete_cells=[]
         list_masks_nuclei=[]
@@ -1722,15 +1626,15 @@ class PipelineFISH():
         temp_folder_name = str('temp_results_'+ self.name_for_files)
         if not os.path.exists(temp_folder_name):
             os.makedirs(temp_folder_name)
-        
         if self.save_masks_as_file ==True:
             masks_folder_name = str('masks_'+ self.name_for_files)
             if not os.path.exists(masks_folder_name):
                 os.makedirs(masks_folder_name)        
-        
         # Running the pipeline.
         for i in range (0, self.number_images ):
-            print( pyfiglet.figlet_format('IMAGE : '+ str(i) ) )
+            print( ' ############### ' )
+            print( '       IMAGE : '+ str(i) )
+            print( ' ############### \n ' )
             if i ==0:
                 dataframe = None
             print('ORIGINAL IMAGE')
@@ -1738,13 +1642,11 @@ class PipelineFISH():
             temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
             temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
             PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name ).plot()            
-            
             # Cell segmentation
             temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
             print('CELL SEGMENTATION')
             if (self.masks_dir is None):
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
-            
             else:
                 # Paths to masks
                 mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
@@ -1763,8 +1665,7 @@ class PipelineFISH():
                 axes[2].set(title = 'Cytosol only')
                 plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
                 plt.show()
-                
-            # saving
+            # saving masks
             if self.save_masks_as_file ==True:
                 mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                 mask_nuc_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_nuclei_' + temp_file_name +'.tif' )
@@ -1772,7 +1673,6 @@ class PipelineFISH():
                 tifffile.imwrite(mask_cyto_path, masks_complete_cells)
                 tifffile.imwrite(mask_nuc_path, masks_nuclei)
                 tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
-            
             print('SPOT DETECTION')
             temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
             dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name).get_dataframe()
@@ -1781,20 +1681,13 @@ class PipelineFISH():
             list_masks_nuclei.append(masks_nuclei)
             list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
             del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
-        
         # Creating the dataframe        
         if  not str(self.name_for_files)[0:5] ==  'temp_':
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
         else:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')
-        
         # Creating the metadata
         Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files).write_metadata()
-        
         # Creating a PDF report
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH).create_report()
-
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei
-
-
-
