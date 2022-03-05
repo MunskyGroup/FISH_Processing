@@ -152,10 +152,11 @@ class Utilities():
         This method converts images from int16 to uint8. Optionally, the image can be rescaled and stretched.
         
         Parameters
-            image : NumPy array
-                NumPy array with dimensions [Y, X, C]. The code expects 3 channels (RGB). If less than 3 values are passed, the array is padded with zeros.
-            rescale : bool, optional
-                If True it rescales the image to stretch intensity values to a 95 percentile, and then rescale the min and max intensity to 0 and 255. The default is True. 
+        
+        image : NumPy array
+            NumPy array with dimensions [Y, X, C]. The code expects 3 channels (RGB). If less than 3 values are passed, the array is padded with zeros.
+        rescale : bool, optional
+            If True it rescales the image to stretch intensity values to a 95 percentile, and then rescale the min and max intensity to 0 and 255. The default is True. 
         '''
         if rescale == True:
             image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=95)
@@ -185,13 +186,13 @@ class NASConnection():
     1) Use the university's network or use the two-factor authentication to connect to the university's VPN.
     2) You need to create a configuration YAML file with the following format:
     
-    ```yaml
-    user:
-        username: name_of_the_user_in_the_nas_server
-        password: user_password_in_the_nas_server 
-        remote_address : ip or name for the nas server
-        domain: domain for the nas server
-    ```
+        ```yaml
+        user:
+            username: name_of_the_user_in_the_nas_server
+            password: user_password_in_the_nas_server 
+            remote_address : ip or name for the nas server
+            domain: domain for the nas server 
+        ```
     
     Parameters
     
@@ -215,6 +216,14 @@ class NASConnection():
         # Deffining the connection to NAS
         self.conn = SMBConnection(username=usr, password=pwd, domain=domain, my_name=local_name, remote_name=self.server_name, is_direct_tcp=True)
     def connect_to_server(self,timeout=60):
+        '''
+        This method establishes the connection to the NAS.
+        
+        Parameters 
+        
+        timeout : int, optional
+            Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
+        '''
         is_connected = self.conn.connect(self.server_name,timeout=timeout)
         if is_connected == True:
             print('Connection established')
@@ -229,9 +238,9 @@ class NASConnection():
         Parameters
         
         remote_folder_path : str, Pathlib obj
-            The path in the remote folder to download
+            The path in the remote folder to download.
         timeout : int, optional
-            seconds to establish connection. The default is 60.
+            Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
         # Connecting to NAS
         is_connected = self.conn.connect(self.server_name,timeout=timeout)
@@ -256,11 +265,11 @@ class NASConnection():
         Parameters
         
         remote_file_path : str, Pathlib obj
-            The path in the remote file to download
+            The path in the remote file to download.
         local_folder_path : str, Pathlib obj
-            The path in the local computer where the files will be copied
+            The path in the local computer where the files will be copied.
         timeout : int, optional
-            seconds to establish connection. The default is 60.
+            Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
         # Connecting to NAS
         is_connected = self.conn.connect(self.server_name,timeout=timeout)
@@ -287,16 +296,18 @@ class NASConnection():
     
     def copy_files(self, remote_folder_path, local_folder_path, timeout=60, file_extension ='.tif'):
         '''
-        This method downloads the tif files from NAS to a temp folder in the local computer
+        This method downloads tif files from NAS to a temporal folder in the local computer.
         
         Parameters
         
         remote_folder_path : str, Pathlib obj
-            The path in the remote folder to download
+            The path in the remote folder to download.
         local_folder_path : str, Pathlib obj
-            The path in the local computer where the files will be copied
+            The path in the local computer where the files will be copied.
         timeout : int, optional
-            seconds to establish connection. The default is 60.
+            Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
+        file_extension : str, optional.
+            String representing the file type to download.
         '''
         # Connecting to NAS
         is_connected = self.conn.connect(self.server_name,timeout=timeout)
@@ -332,12 +343,12 @@ class NASConnection():
         
         Parameters
         
+        local_file_to_send_to_NAS : str, Pathlib obj
+            The path in the file to send to the NAS.
         remote_folder_path : str, Pathlib obj
-            The path in the remote folder to download
-        local_folder_path : str, Pathlib obj
-            The path in the local computer where the files will be copied
+            The path in the remote folder to download.
         timeout : int, optional
-            seconds to establish connection. The default is 60.
+            Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
         # Connecting to NAS
         is_connected = self.conn.connect(self.server_name,timeout=timeout)
@@ -363,12 +374,12 @@ class NASConnection():
 
 class ReadImages():
     '''
-    This class reads all .tif images in a given folder and returns the names of these files, path, and number of files.
+    This class reads all tif images in a given folder and returns each image as a Numpy array inside a list, the names of these files, path, and the number of files.
     
     Parameters
     
     directory: str or PosixPath
-        Directory containing the images to merge.
+        Directory containing the images to read.
     '''    
     def __init__(self, directory:str ):
         if type(directory)== pathlib.PosixPath:
@@ -377,16 +388,18 @@ class ReadImages():
             self.directory = pathlib.Path(directory)
     def read(self):
         '''
-        Method takes all the videos in the folder and merge those with similar names.
+        Method takes all the images in the folder and merges those with similar names.
         
         Returns
         
-        list_images : List of NumPy arrays. 
-            List of NumPy arrays with format np.uint16 and dimensions [Z, Y, X, C] or [T, Y, X, C] . 
-        list_file_names : List of strings 
-            List with strings of names.
-        number_files : int. 
-            Number of images in the folder.
+        list_images : List of NumPy arrays 
+            List of NumPy arrays with format np.uint16 and dimensions [Z, Y, X, C] or [T, Y, X, C]. 
+        path_files : List of strings 
+            List of strings containing the path to each image.
+        list_files_names : List of strings 
+            List of strings where each element is the name of the files in the directory.
+        number_files : int 
+            The number of images in the folder.
         '''
         list_files_names = sorted([f for f in listdir(self.directory) if isfile(join(self.directory, f)) and ('.tif') in f], key=str.lower)  # reading all tif files in the folder
         list_files_names.sort(key=lambda f: int(re.sub('\D', '', f)))  # sorting the index in numerical order
@@ -398,17 +411,17 @@ class ReadImages():
 
 class MergeChannels():
     '''
-    This class takes images as arrays with format [Z,Y,X] and merge then in a numpy array with format [Z, Y, X, C].
-    It recursively merges the channels in a new dimenssion in the array. Minimal number of Channels 2 maximum is 4
+    This class takes images as arrays with format [Z, Y, X] and merges them in a NumPy array with format [Z, Y, X, C].
+    It recursively merges the channels in a new dimension in the array. The minimum number of channels 2 maximum is 4.
     
     Parameters
 
     directory: str or PosixPath
         Directory containing the images to merge.
     substring_to_detect_in_file_name: str
-        String with the prefix to detect in the files names. 
+        String with the prefix to detect the names of the files. 
     save_figure: bool, optional
-        Flag to save the merged images as .tif. The default is False. 
+        If True, it saves the merged images as tif. The default is False. 
     '''
     def __init__(self, directory:str ,substring_to_detect_in_file_name:str = '.*_C0.tif', save_figure:bool = False ):
         if type(directory)== pathlib.PosixPath:
@@ -420,18 +433,13 @@ class MergeChannels():
 
     def checking_images(self):
         '''
-        Method takes all the videos in the folder and merge those with similar names.
+        Method that reads all images in the folder and returns a flag indicating if each channel in the image is separated in an independent file.
         
         Returns
         
-        list_file_names : List of strings 
-            List with strings of names.
-        list_merged_images : List of NumPy arrays. 
-            List of NumPy arrays with format np.uint16 and dimensions [Z, Y, X, C].
-        number_files : int. 
-            Number of merged images in the folder.
+        Flag : Bool 
+            If True, it indicates that each channel is split into different files. If False, it indicates that the image is contained in a single file.
         '''
-        # This function 
         ending_string = re.compile(self.substring_to_detect_in_file_name)  # detecting files ending in _C0.tif
         for _, _, files in os.walk(self.directory):
             for file in files:
@@ -445,18 +453,17 @@ class MergeChannels():
     
     def merge(self):
         '''
-        Method takes all the videos in the folder and merge those with similar names.
+        Method takes all the images in the folder and merges those with similar names.
         
         Returns
         
         list_file_names : List of strings 
             List with strings of names.
-        list_merged_images : List of NumPy arrays. 
+        list_merged_images : List of NumPy arrays
             List of NumPy arrays with format np.uint16 and dimensions [Z, Y, X, C].
-        number_files : int. 
-            Number of merged images in the folder.
+        number_files : int
+            The number of merged images in the folder.
         '''
-        # This function 
         list_file_names =[]
         list_merged_images =[]  # list that stores all files belonging to the same image in a sublist
         ending_string = re.compile(self.substring_to_detect_in_file_name)  # detecting files ending in _C0.tif
@@ -466,7 +473,7 @@ class MergeChannels():
                 if ending_string.match(file) and file[0]!= '.': # detecting a match in the end, not consider hidden files starting with '.'
                     prefix = file.rpartition('_')[0]            # stores a string with the first part of the file name before the last underscore character in the file name string.
                     list_files_per_image = sorted ( glob.glob( str(self.directory.joinpath(prefix)) + '*.tif') ) # List of files that match the pattern 'file_prefix_C*.tif'
-                    if len(list_files_per_image)>1:             # creating merged files if more than one images with the same ending substring are detected.
+                    if len(list_files_per_image)>1:             # creating merged files if more than one image with the exact ending substring is detected.
                         try:
                             list_file_names.append(prefix)
                             merged_img = np.concatenate([ imread(list_files_per_image[i])[..., np.newaxis] for i,_ in enumerate(list_files_per_image)],axis=-1).astype('uint16')
@@ -477,19 +484,18 @@ class MergeChannels():
                         if not os.path.exists(str(save_to_path)):
                             os.makedirs(str(save_to_path))
                         tifffile.imsave(str(save_to_path.joinpath(prefix+'_merged'+'.tif')), merged_img, metadata={'axes': 'ZYXC'})
-                    #del merged_img, list_files_per_image
         number_files = len(list_file_names)
         return list_file_names, list_merged_images, number_files,save_to_path
 
 
 class RemoveExtrema():
     '''
-    This class is intended to remove extreme values from a video. The format of the video must be [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
+    This class is intended to remove extreme values from an image. The format of the image must be [Y, X], [Y, X, C], or [Z, Y, X, C].
     
     Parameters
     
-    video : NumPy array
-        Array of images with dimensions [Y, X] , [Y, X, C] , [Z, Y, X, C] or [T, Y, X, C].
+    image : NumPy array
+        Array of images with dimensions [Y, X], [Y, X, C], or [Z, Y, X, C].
     min_percentile : float, optional
         Lower bound to normalize intensity. The default is 1.
     max_percentile : float, optional
@@ -497,8 +503,8 @@ class RemoveExtrema():
     selected_channels : List or None, optional
         Use this option to select a list channels to remove extrema. The default is None and applies the removal of extrema to all the channels.
     '''
-    def __init__(self, video:np.ndarray, min_percentile:float = 1, max_percentile:float = 99, selected_channels = None):
-        self.video = video
+    def __init__(self, image:np.ndarray, min_percentile:float = 1, max_percentile:float = 99, selected_channels = None):
+        self.image = image
         self.min_percentile = min_percentile
         self.max_percentile = max_percentile
         if not (type(selected_channels) is list):
@@ -508,53 +514,52 @@ class RemoveExtrema():
 
     def remove_outliers(self):
         '''
-        This method normalizes the values of a video by removing extreme values.
+        This method normalizes the values of an image by removing extreme values.
         
         Returns
         
-        normalized_video : np.uint16
-            Normalized video. Array with dimensions [T, Y, X, C] or image with format [Y, X].
+        normalized_image : np.uint16
+            Normalized image. Array with dimensions [Y, X, C], [Y, X], or [Z, Y, X, C].
         '''
-        normalized_video = np.copy(self.video)
-        normalized_video = np.array(normalized_video, 'float32')
+        normalized_image = np.copy(self.image)
+        normalized_image = np.array(normalized_image, 'float32')
         # Normalization code for image with format [Y, X]
-        if len(self.video.shape) == 2:
+        if len(self.image.shape) == 2:
             number_timepoints = 1
             number_channels = 1
-            normalized_video_temp = normalized_video
-            if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
-                max_val = np.percentile(normalized_video_temp, self.max_percentile)
-                min_val = np.percentile(normalized_video_temp, self.min_percentile)
-                normalized_video_temp [normalized_video_temp > max_val] = max_val
-                normalized_video_temp [normalized_video_temp < min_val] = min_val
-                normalized_video_temp [normalized_video_temp < 0] = 0
-        # Normalization for video with format [Y, X, C].
-        if len(self.video.shape) == 3:
-            number_channels   = self.video.shape[2]
+            normalized_image_temp = normalized_image
+            if not np.amax(normalized_image_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
+                max_val = np.percentile(normalized_image_temp, self.max_percentile)
+                min_val = np.percentile(normalized_image_temp, self.min_percentile)
+                normalized_image_temp [normalized_image_temp > max_val] = max_val
+                normalized_image_temp [normalized_image_temp < min_val] = min_val
+                normalized_image_temp [normalized_image_temp < 0] = 0
+        # Normalization for image with format [Y, X, C].
+        if len(self.image.shape) == 3:
+            number_channels   = self.image.shape[2]
             for index_channels in range (number_channels):
                 if (index_channels in self.selected_channels) or (self.selected_channels is None) :
-                    normalized_video_temp = normalized_video[ :, :, index_channels]
-                    if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
-                        max_val = np.percentile(normalized_video_temp, self.max_percentile)
-                        min_val = np.percentile(normalized_video_temp, self.min_percentile)
-                        normalized_video_temp [normalized_video_temp > max_val] = max_val
-                        normalized_video_temp [normalized_video_temp < min_val] =  min_val
-                        normalized_video_temp [normalized_video_temp < 0] = 0
-        # Normalization for video with format [T, Y, X, C] or [Z, Y, X, C].
-        if len(self.video.shape) == 4:
-            number_timepoints, number_channels   = self.video.shape[0], self.video.shape[3]
+                    normalized_image_temp = normalized_image[ :, :, index_channels]
+                    if not np.amax(normalized_image_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
+                        max_val = np.percentile(normalized_image_temp, self.max_percentile)
+                        min_val = np.percentile(normalized_image_temp, self.min_percentile)
+                        normalized_image_temp [normalized_image_temp > max_val] = max_val
+                        normalized_image_temp [normalized_image_temp < min_val] =  min_val
+                        normalized_image_temp [normalized_image_temp < 0] = 0
+        # Normalization for image with format [Z, Y, X, C].
+        if len(self.image.shape) == 4:
+            number_timepoints, number_channels   = self.image.shape[0], self.image.shape[3]
             for index_channels in range (number_channels):
                 if (index_channels in self.selected_channels) or (self.selected_channels is None) :
-                #if not self.ignore_channel == index_channels:
                     for index_time in range (number_timepoints):
-                        normalized_video_temp = normalized_video[index_time, :, :, index_channels]
-                        if not np.amax(normalized_video_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
-                            max_val = np.percentile(normalized_video_temp, self.max_percentile)
-                            min_val = np.percentile(normalized_video_temp, self.min_percentile)
-                            normalized_video_temp [normalized_video_temp > max_val] = max_val
-                            normalized_video_temp [normalized_video_temp < min_val] = min_val
-                            normalized_video_temp [normalized_video_temp < 0] = 0
-        return np.asarray(normalized_video, 'uint16')
+                        normalized_image_temp = normalized_image[index_time, :, :, index_channels]
+                        if not np.amax(normalized_image_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
+                            max_val = np.percentile(normalized_image_temp, self.max_percentile)
+                            min_val = np.percentile(normalized_image_temp, self.min_percentile)
+                            normalized_image_temp [normalized_image_temp > max_val] = max_val
+                            normalized_image_temp [normalized_image_temp < min_val] = min_val
+                            normalized_image_temp [normalized_image_temp < 0] = 0
+        return np.asarray(normalized_image, 'uint16')
 
 
 class Cellpose():
@@ -563,7 +568,7 @@ class Cellpose():
     
     Parameters
     
-    video : NumPy array
+    image : NumPy array
         Array of images with dimensions [T, Y, X, C].
     num_iterations : int, optional
         Number of iterations for the optimization process. The default is 5.
@@ -572,12 +577,14 @@ class Cellpose():
     diameter : float, optional
         Average cell size. The default is 120.
     model_type : str, optional
-        To detect between the two options: 'cyto' or 'nuclei'. The default is 'cyto'.
+        Cellpose model type the options are 'cyto' for cytosol or 'nuclei' for the nucleus. The default is 'cyto'.
     selection_method : str, optional
         Option to use the optimization algorithm to maximize the number of cells or maximize the size options are 'max_area' or 'max_cells' or 'max_cells_and_area'. The default is 'max_cells_and_area'.
+    NUMBER_OF_CORES : int, optional
+        The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, video:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
-        self.video = video
+    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+        self.image = image
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
         self.maximum_probability = 2
@@ -596,7 +603,7 @@ class Cellpose():
         Returns
         
         selected_masks : List of NumPy arrays
-            List of NumPy arrays with values between 0 and the number of detected cells in the image, where a number larger than zero represents the masked area for each cell, and 0 represents the area where no cells are detected.
+            List of NumPy arrays with values between 0 and the number of detected cells in the image, where an integer larger than zero represents the masked area for each cell, and 0 represents the background in the image.
         '''
         # Next two lines suppressing output from cellpose
         old_stdout = sys.stdout
@@ -609,7 +616,7 @@ class Cellpose():
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -625,14 +632,14 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks =0
             return np.amax(masks)
         
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -641,7 +648,6 @@ class Cellpose():
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
                     size_mask.append(np.sum(masks == nm)) # creating a list with the size of each mask
                 number_masks= np.amax(masks)
-                #metric = np.sum(np.asarray(size_mask)) * number_masks
                 metric = np.sum(np.asarray(size_mask)) * number_masks
                 return metric
             if n_masks == 1: # do nothing if only a single mask is detected per image.
@@ -659,13 +665,13 @@ class Cellpose():
             evaluated_metric_for_masks = np.asarray(list_metrics_masks)
         if not (self.selection_method is None) and (np.amax(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
-            selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         else:
             selected_masks = None
             print('No cells detected on the image')
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
-            selected_masks, _, _, _ = model.eval(self.video, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         sys.stdout.close()
         sys.stdout = old_stdout
         return selected_masks
@@ -673,12 +679,12 @@ class Cellpose():
 
 class CellSegmentation():
     '''
-    This class is intended to detect cells in FISH images using **Cellpose**. The class uses optimization to generate the meta-parameters used by cellpose. This class segments the nucleus and cytosol for every cell detected in the image.
+     This class is intended to detect cells in FISH images using **Cellpose**. This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose.
     
     Parameters
     
-    video : NumPy array
-        Array of images with dimensions [Z, Y, X, C] or maximum projection with dimensions [Y,X,C].
+    image : NumPy array
+        Array of images with dimensions [Z, Y, X, C] or maximum projection with dimensions [Y, X, C].
     channels_with_cytosol : List of int or None, optional
         DESCRIPTION. The default is None.
     channels_with_nucleus : list of int or None, optional
@@ -690,12 +696,12 @@ class CellSegmentation():
     diamter_nucleus : float, optional
         Average nucleus size in pixels. The default is 100.
     remove_fragmented_cells: bool, optional
-        If true, it removes masks  in the border of the image. The default is False.
+        If true, it removes masks in the border of the image. The default is False.
     show_plot : bool, optional
         If true, it shows a plot with the detected masks. The default is True.
     '''
-    def __init__(self, video:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None):
-        self.video = video
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None):
+        self.image = image
         self.selected_z_slice = selected_z_slice
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -705,7 +711,6 @@ class CellSegmentation():
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
         self.NUMBER_OF_CORES = 1 # number of cores for parallel computing.
-        
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         if number_gpus ==0:
             self.NUMBER_OPTIMIZATION_VALUES= 0
@@ -720,14 +725,12 @@ class CellSegmentation():
         
         Returns
         
-        list_masks_complete_cells : List of NumPy arrays or a single NumPy array
-            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
-        list_masks_nuclei : List of NumPy arrays or a single NumPy array
-            Masks for the nuclei for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
-        list_masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
-            Masks for every nucleus and cytosol for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
-        index_paired_masks: List of pairs of int
-            List of pairs of integers that associates the detected nuclei and cytosol.
+        masks_complete_cells : NumPy array. np.uint8
+            Image containing the masks for every cell detected in the image. Numpy array with format [Y, X].
+        masks_nuclei : NumPy array. np.uint8
+            Image containing the masks for every nuclei detected in the image. Numpy array with format [Y, X].
+        masks_cytosol_no_nuclei : NumPy array. np.uint8
+            Image containing the masks for every cytosol (removing the nucleus) detected in the image. Numpy array with format [Y, X].
         '''
         # function that determines if a cell is in the border of the image
         def remove_fragmented(img_masks):
@@ -778,7 +781,6 @@ class CellSegmentation():
         # This function creates a mask for each cell.
         def generate_masks_complete_cell(index_paired_masks:np.ndarray, list_separated_masks_cyto:list):
             list_masks_complete_cells = []
-            #list_idx = []
             for i in range(0, index_paired_masks.shape[0]):
                 sel_mask_c = index_paired_masks[i][0]
                 list_masks_complete_cells.append(list_separated_masks_cyto[sel_mask_c])
@@ -820,17 +822,17 @@ class CellSegmentation():
             new_index_paired_masks = np.delete(index_paired_masks, idxs_to_delete, axis = 0)
             return list_mask_joined, new_index_paired_masks
         ##### IMPLEMENTATION #####
-        if len(self.video.shape) > 3:  # [ZYXC]
-            video_normalized = np.amax(self.video[3:-3,:,:,:],axis=0)    # taking the mean value
+        if len(self.image.shape) > 3:  # [ZYXC]
+            image_normalized = np.amax(self.image[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
-            video_normalized = self.video # [YXC]       
-        def function_to_find_masks (video):                
+            image_normalized = self.image # [YXC]       
+        def function_to_find_masks (image):                
             if not (self.channels_with_cytosol is None):
-                masks_cyto = Cellpose(video[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
+                masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
                 if self.remove_fragmented_cells ==1:
                     masks_cyto= remove_fragmented(masks_cyto)
             if not (self.channels_with_nucleus is None):
-                masks_nuclei = Cellpose(video[:, :, self.channels_with_nucleus],  diameter = self.diamter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
+                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diamter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
                 if self.remove_fragmented_cells ==1:
                     masks_nuclei= remove_fragmented(masks_nuclei)
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
@@ -864,35 +866,34 @@ class CellSegmentation():
                     masks_cyto = None
             return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
         # OPTIMIZATION METHODS FOR SEGMENTATION
-        if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.video.shape) > 3):
+        if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 tested_thresholds = np.round(np.linspace(0, 3, self.NUMBER_OPTIMIZATION_VALUES), 0)
                 list_sotring_number_paired_masks = []
                 for idx, threshold in enumerate(tested_thresholds):
-                    video_copy = video_normalized.copy()
-                    video_temp = RemoveExtrema(video_copy,min_percentile=threshold, max_percentile=100-threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (video_temp)
+                    image_copy = image_normalized.copy()
+                    image_temp = RemoveExtrema(image_copy,min_percentile=threshold, max_percentile=100-threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
+                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (image_temp)
                     list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
                 array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
                 selected_threshold = tested_thresholds[np.argmax(array_number_paired_masks)]
             else:
                 selected_threshold = 0
             # Running the mask selection once a threshold is obtained
-            video_copy = video_normalized.copy()
-            video_temp = RemoveExtrema(video_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_temp)
-        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.video.shape) > 3):
+            image_copy = image_normalized.copy()
+            image_temp = RemoveExtrema(image_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (image_temp)
+        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
-            number_z_slices = self.video.shape[0]
+            number_z_slices = self.image.shape[0]
             list_idx = np.round(np.linspace(4, number_z_slices-4, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 for idx, idx_value in enumerate(list_idx):
-                    #test_video_optimization = stack.gaussian_filter(self.video[idx_value,:,:,:],sigma=1)  
-                    test_video_optimization = np.amax(self.video[idx_value-3:idx_value+3,:,:,:],axis=0)  
-                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_video_optimization)
+                    test_image_optimization = np.amax(self.image[idx_value-3:idx_value+3,:,:,:],axis=0)  
+                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_image_optimization)
                     metric = (len(list_masks_cytosol_no_nuclei) *  np.count_nonzero(np.asarray(list_masks_cytosol_no_nuclei) )  )
                     list_sotring_number_paired_masks.append(metric)
                 array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
@@ -900,38 +901,38 @@ class CellSegmentation():
             else:
                 selected_threshold = list_idx[0]
             # Running the mask selection once a threshold is obtained
-            test_video_optimization = np.amax(self.video[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
-        elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.video.shape) > 3):
+            test_image_optimization = np.amax(self.image[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_image_optimization)
+        elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
-            half_z_slices = self.video.shape[0]//2
+            half_z_slices = self.image.shape[0]//2
             list_sigmas = np.round(np.linspace(0.5, 20, self.NUMBER_OPTIMIZATION_VALUES), 1) 
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 for idx, sigma_value in enumerate(list_sigmas):
-                    test_video_optimization = stack.gaussian_filter(self.video[half_z_slices,:,:,:],sigma=sigma_value)  
-                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_video_optimization)
+                    test_image_optimization = stack.gaussian_filter(self.image[half_z_slices,:,:,:],sigma=sigma_value)  
+                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_image_optimization)
                     list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
                 array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
                 selected_threshold = list_sigmas[np.argmax(array_number_paired_masks)]
             else:
                 selected_threshold = list_sigmas[0]
             # Running the mask selection once a threshold is obtained
-            test_video_optimization = stack.gaussian_filter(self.video[half_z_slices,:,:,:],sigma=selected_threshold) 
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_video_optimization)
+            test_image_optimization = stack.gaussian_filter(self.image[half_z_slices,:,:,:],sigma=selected_threshold) 
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_image_optimization)
         else:
             # no optimization is applied if a 2D image is passed
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (video_normalized)
+            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (image_normalized)
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 5):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
         if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
-                n_channels = np.amin([3, video_normalized.shape[2]])
+                n_channels = np.amin([3, image_normalized.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                im = Utilities().convert_to_int8(video_normalized[ :, :, 0:n_channels])  
+                im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels])  
                 masks_plot_cyto= Utilities().merge_masks (list_masks_complete_cells) 
                 masks_plot_nuc = Utilities().merge_masks (list_masks_nuclei)              
                 axes[0].imshow(im)
@@ -957,9 +958,9 @@ class CellSegmentation():
         else:
             if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
                 if self.show_plot == 1:
-                    n_channels = np.amin([3, video_normalized.shape[2]])
+                    n_channels = np.amin([3, image_normalized.shape[2]])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = Utilities().convert_to_int8(video_normalized[ :, :, 0:n_channels])
+                    im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
                     axes[1].imshow(masks_plot_cyto)
@@ -969,9 +970,9 @@ class CellSegmentation():
                     plt.show()
             if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 if self.show_plot == 1:
-                    n_channels = np.amin([3, video_normalized.shape[2]])
+                    n_channels = np.amin([3, image_normalized.shape[2]])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = Utilities().convert_to_int8(video_normalized[ :, :, 0:n_channels])
+                    im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels])
                     axes[0].imshow(im)
                     axes[0].set(title = 'All channels')
                     axes[1].imshow(masks_plot_nuc)
@@ -985,11 +986,11 @@ class CellSegmentation():
         if (self.channels_with_nucleus is None):
             index_paired_masks = np.linspace(0, len(list_masks_complete_cells)-1, len(list_masks_complete_cells), dtype='int32')
         # generating a single image with all the masks for cyto and nuclei 
-        masks_cyto_single = Utilities().merge_masks(list_masks_complete_cells)
-        masks_nuclei_single = Utilities().merge_masks(list_masks_nuclei)
-        masks_cytosol_no_nuclei_single = Utilities().merge_masks(list_masks_cytosol_no_nuclei)
+        masks_complete_cells = Utilities().merge_masks(list_masks_complete_cells)
+        masks_nuclei = Utilities().merge_masks(list_masks_nuclei)
+        masks_cytosol_no_nuclei = Utilities().merge_masks(list_masks_cytosol_no_nuclei)
         # return values
-        return masks_cyto_single, masks_nuclei_single, masks_cytosol_no_nuclei_single
+        return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
 
 
 class BigFISH():
@@ -1038,9 +1039,9 @@ class BigFISH():
         Returns
         
         clusterDectionCSV : np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
-            One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
+            One coordinate per dimension for the centroid of the cluster (zyx or yx coordinates), the number of spots detected in the clusters, and its index.
         spotDectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
-            Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, value is -1.
+            Coordinates of the detected spots. One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
         '''
         rna=self.image[:,:,:,self.FISH_channel]
         # Calculating Sigma with  the parameters for the PSF.
@@ -1050,7 +1051,6 @@ class BigFISH():
         sigma = spot_radius_px
         ## SPOT DETECTION
         try:
-            #rna_filtered = stack.remove_background_gaussian(rna, sigma)
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
@@ -1059,7 +1059,6 @@ class BigFISH():
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
         threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
-        
         # Decomposing dense regions
         spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, spots=spots, 
                                                                 voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
@@ -1068,7 +1067,6 @@ class BigFISH():
                                                                 beta=1,      # beta impacts the number of candidate regions to decompose
                                                                 gamma=5)     # gamma the filtering step to denoise the image
         ### CLUSTER DETECTION
-        
         spots_post_clustering, clusters = detection.detect_clusters(spots_post_decomposition, 
                                             voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
                                             radius= self.cluster_radius, nb_min_spots = self.minimum_spots_cluster)
@@ -1096,7 +1094,6 @@ class BigFISH():
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-                #clusters_to_plot = clusters 
                 if not(self.image_name is None) and (i==central_slice): # saving only the central slice
                     path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel)
                 else:
@@ -1199,8 +1196,6 @@ class DataProcessing():
             Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
         '''
         def mask_selector(mask,calculate_centroid= True):
-            #temp_mask = np.zeros_like(masks) # making a copy of the image
-            #selected_mask = temp_mask + (masks==id) # Selecting a single mask and making this mask equal to one and the background equal to zero.
             mask_area = np.count_nonzero(mask)
             if calculate_centroid == True:
                 centroid_y,centroid_x = ndimage.measurements.center_of_mass(mask)
@@ -1274,7 +1269,6 @@ class DataProcessing():
             array_complete[:,5] = nuc_area       #'nuc_area_px'
             array_complete[:,6] = cyto_area      # cyto_area_px
             array_complete[:,7] = cell_area      #'cell_area_px'
-            # df = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
             df = df.astype(new_dtypes)
@@ -1283,13 +1277,11 @@ class DataProcessing():
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
             new_dataframe = self.dataframe
             counter_total_cells = np.amax( self.dataframe['cell_id'].values) +1
-            #counter_image =  np.amax( self.dataframe['image_id'].values) +1
         elif (not ( self.dataframe is None)) and (self.reset_cell_counter == True):    # IF dataframe exist and reset is passed
             new_dataframe = self.dataframe
             counter_total_cells = np.amax( self.dataframe['cell_id'].values) - len(self.masks_nuclei) +1   # restarting the counter for the number of cells
         else: # IF the dataframe does not exist.
             new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
-            #counter_image = 0 
             counter_total_cells = 0
         # loop for each cell in image
         n_masks = len(self.masks_nuclei)
@@ -1511,13 +1503,9 @@ class PlotImages():
         print(self.image.shape)
         number_channels = self.image.shape[3]
         fig, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
-        rescaled_video = stack.rescale(self.image[:,:,:,:], channel_to_stretch=None, stretching_percentile=99)
+        rescaled_image = stack.rescale(self.image[:,:,:,:], channel_to_stretch=None, stretching_percentile=99)
         for i in range (0,number_channels ):
-            #temp_img = RemoveExtrema(self.image[:,:,:,i],min_percentile=1, max_percentile=95).remove_outliers() 
-            img_2D = stack.focus_projection(rescaled_video[3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') # maximum projection 
-            #img_2D=difference_of_gaussians(img_2D,low_sigma=1, high_sigma=10)
-            #img_2D = stack.remove_background_mean(img_2D, kernel_shape='disk', kernel_size=50)
-            #img_2D = np.amax(temp_img,axis=0)
+            img_2D = stack.focus_projection(rescaled_image[3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') # maximum projection 
             img_2D = stack.gaussian_filter(img_2D,sigma=2)
             axes[i].imshow( img_2D ,cmap='viridis') 
             axes[i].set_title('Channel_'+str(i))
