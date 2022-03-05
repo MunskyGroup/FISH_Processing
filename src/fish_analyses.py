@@ -995,11 +995,11 @@ class CellSegmentation():
 
 class BigFISH():
     '''
-    This class is intended to detect spots in FISH images using Big-FISH Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
+    This class is intended to detect spots in FISH images using [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
     
     Parameters
     
-    The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    The description of the parameters is taken from [Big-FISH](https://github.com/fish-quant/big-fish) BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
     
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
@@ -1019,7 +1019,8 @@ class BigFISH():
         Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
     show_plot : bool, optional
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
-    
+    image_name : str or None.
+        Name for the image with detected spots. The default is None.
     '''
     def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None):
         self.image = image
@@ -1032,9 +1033,12 @@ class BigFISH():
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plot = show_plot
         self.image_name=image_name
+        self.display_all_images = True                 # Displays all the z-planes
+        self.display_spots_on_multiple_z_planes = True # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
+        
     def detect(self):
         '''
-        This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using Big-FISH Copyright © 2020, Arthur Imbert.
+        This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert.
         
         Returns
         
@@ -1081,16 +1085,21 @@ class BigFISH():
             except:
                 print('not showing elbow plot')
             central_slice = rna.shape[0]//2
-            #for i in range(central_slice-1, central_slice+2): # rna.shape[0]):
-            #for i in range(0,    rna.shape[0]//2):
-            for i in range(central_slice,central_slice+1):
+            if self.display_all_images:
+                range_plot_images = range(0, rna.shape[0])
+            else:
+                range_plot_images = range(central_slice,central_slice+1)      
+            for i in range_plot_images:
                 print('Z-Slice: ', str(i))
                 image_2D = rna_filtered[i,:,:]
                 if i > 1 and i<rna.shape[0]-1:
-                    #clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
-                    clusters_to_plot = clusters[clusters[:,0]==i]
-                    #spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ] 
-                    spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                    if self.display_spots_on_multiple_z_planes == True:
+                        # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane-1
+                        clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
+                        spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ]
+                    else:
+                        clusters_to_plot = clusters[clusters[:,0]==i]
+                        spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
@@ -1145,13 +1154,14 @@ class Intensity():
 class DataProcessing():
     '''
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
+    This class contains parameter descriptions obtained from [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert.
     
     Parameters
     
     spotDectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
-            One coordinate per dimension for the clusters centroid (zyx or yx coordinates), the number of spots detected in the clusters and its index.
+            One coordinate per dimension for the cluster\'s centroid (zyx or yx coordinates), the number of spots detected in the clusters, and its index.
     clusterDectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
-            Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, value is -1.
+            Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
     masks_complete_cells : List of NumPy arrays or a single NumPy array
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     masks_nuclei: List of NumPy arrays or a single NumPy array
@@ -1159,15 +1169,15 @@ class DataProcessing():
     masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
             Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     spot_type : int, optional
-        integer indicates the type of spot if more than one channel are used for quantification. The default is zero.
+        A label indicating the spot type, this counter starts at zero, increasing with the number of channels containing FISH spots. The default is zero.
     dataframe : Pandas dataframe or None.
         Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented. The default is None.
-    reset_cell_counter : int or None
-        Number of cells in channel. This number is used only to reset the counter of number of cells.
+    reset_cell_counter : bool
+        This number is used to reset the counter of the number of cells. The default is False.
     image_counter : int, optional
         counter for the number of images in the folder. The default is zero.
     '''
-    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei,spot_type=0,dataframe =None,reset_cell_counter=False,image_counter=0):
+    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, spot_type=0, dataframe =None,reset_cell_counter=False,image_counter=0):
         self.spotDectionCSV=spotDectionCSV 
         self.clusterDectionCSV=clusterDectionCSV
         if isinstance(masks_complete_cells, list):
@@ -1188,7 +1198,7 @@ class DataProcessing():
         self.image_counter = image_counter
     def get_dataframe(self):
         '''
-        This method extracts data from the class SpotDetection and return the data as a dataframe.
+        This method extracts data from the class SpotDetection and returns the data as a dataframe.
         
         Returns
         
@@ -1312,46 +1322,45 @@ class DataProcessing():
 
 class SpotDetection():
     '''
-    This class is intended to detect spots in FISH images using Big-FISH Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
+    This class is intended to detect spots in FISH images using [Big-FISH](https://github.com/fish-quant/big-fish). The format of the image must be  [Z, Y, X, C].
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
+    This class contains parameter description obtained from [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert.
     
     Parameters
     
-    The description of the parameters is taken from Big-FISH BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    The description of the parameters is taken from [Big-FISH](https://github.com/fish-quant/big-fish) BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
     FISH_channels : int, or List
         List of channels with FISH spots that are used for the quantification
-    voxel_size_z : int, optional
-        Height of a voxel, along the z axis, in nanometers. The default is 300.
-    voxel_size_yx : int, optional
-        Size of a voxel on the yx plan in nanometers. The default is 150.
-    psf_z : int, optional
-        Theoretical size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
-    psf_yx : int, optional
-        Theoretical size of the PSF emitted by a spot in the yx plan in nanometers.
     cluster_radius : int, optional
         Maximum distance between two samples for one to be considered as in the neighborhood of the other. Radius expressed in nanometer.
     minimum_spots_cluster : int, optional
         Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
     masks_complete_cells : NumPy array
-            Masks for every cell detected in the image indicated by the values of the array, where 0 indicates the background in the image, and intenger numbers indicate the ith mask in the image. Array with format [Y, X].
+            Masks for every cell detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
     masks_nuclei: NumPy array
-            Masks for every nuclei detected in the image indicated by the values of the array, where 0 indicates the background in the image, and intenger numbers indicate the ith mask in the image. Array with format [Y, X].
+            Masks for every nucleus detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
     masks_cytosol_no_nuclei :  NumPy array
-            Masks for every cytosol detected in the image indicated by the values of the array, where 0 indicates the background in the image, and intenger numbers indicate the ith mask in the image. Array with format [Y, X].
+            Masks for every cytosol detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
     dataframe : Pandas Dataframe 
         Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented. The default is None.
     image_counter : int, optional
         counter for the number of images in the folder. The default is zero.
     list_voxels : List of tupples or None
         list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
+        voxel_size_z is the height of a voxel, along the z axis, in nanometers. The default is 300.
+        voxel_size_yx is the size of a voxel on the yx plan in nanometers. The default is 150.
     list_psfs : List of tuples or None
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+        psf_z is the size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
+        psf_yx is the size of the PSF emitted by a spot in the yx plan in nanometers.
     show_plot : bool, optional
-        If True shows a 2D maximum projection of the image and the detected spots. The default is False
+        If True, it shows a 2D maximum projection of the image and the detected spots. The default is False.
+    image_name : str or None.
+        Name for the image with detected spots. The default is None.
     '''
-    def __init__(self,image,  FISH_channels , cluster_radius=350,minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None):
+    def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None):
         self.image = image
         self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
         self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
@@ -1395,12 +1404,15 @@ class SpotDetection():
     
 class Metadata():
     '''
-    This class is intended to generate a metadata file with information about used dependencies, user information, and parameters used.
+    This class is intended to generate a metadata file containing used dependencies, user information, and parameters used to run the code.
     
     Parameters
     
+    
+    
     parameter: bool, optional
         parameter description. The default is True. 
+    
     '''
     def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=None, list_psfs=None,file_name_str=None):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
