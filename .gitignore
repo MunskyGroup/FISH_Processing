@@ -3,7 +3,7 @@
 # Ignore folders
 Output/
 .ipynb_checkpoints
-__pycache__
+__pycache__/
 .vscode
 temp/
 config.yml
