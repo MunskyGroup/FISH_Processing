@@ -10,7 +10,7 @@ This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user
 
 ## Code overview and architecture
 
-<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/code_architecture.png alt="drawing" width="1200"/>
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/code_architecture.png alt="drawing" width="1200"/>
 
 # Colab implementation
 
