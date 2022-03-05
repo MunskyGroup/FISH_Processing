@@ -679,30 +679,31 @@ class Cellpose():
 
 class CellSegmentation():
     '''
-     This class is intended to detect cells in FISH images using **Cellpose**. This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose.
+     This class is intended to detect cells in FISH images using [Cellpose](https://github.com/MouseLand/cellpose). This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose.
     
     Parameters
     
     image : NumPy array
-        Array of images with dimensions [Z, Y, X, C] or maximum projection with dimensions [Y, X, C].
-    channels_with_cytosol : List of int or None, optional
-        DESCRIPTION. The default is None.
-    channels_with_nucleus : list of int or None, optional
-        DESCRIPTION. The default is None.
-    selected_z_slice : int, optional
-        DESCRIPTION. The default is 5.
-    diameter_cytosol : float, optional
+        Array of images with dimensions [Z, Y, X, C] or maximum projection with dimensions [Y, X, C].    
+    channels_with_cytosol : List of int
+        List with integers indicating the index of channels for the cytosol segmentation. The default is None.
+    channels_with_nucleus : list of int
+        List with integers indicating the index of channels for the nucleus segmentation. The default is None. 
+    diameter_cytosol : int, optional
         Average cytosol size in pixels. The default is 150.
-    diamter_nucleus : float, optional
+    diamter_nucleus : int, optional
         Average nucleus size in pixels. The default is 100.
+    optimization_segmentation_method: str
+        Method used for the segmentation. The options are: \'intensity_segmentation\', \'z_slice_segmentation\', \'gaussian_filter_segmentation\' ,and None.
     remove_fragmented_cells: bool, optional
         If true, it removes masks in the border of the image. The default is False.
     show_plot : bool, optional
         If true, it shows a plot with the detected masks. The default is True.
+    image_name : str or None.
+        Name for the image with detected spots. The default is None.
     '''
-    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, selected_z_slice:int = 5, diameter_cytosol:float = 150, diamter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None):
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diamter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None):
         self.image = image
-        self.selected_z_slice = selected_z_slice
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.diameter_cytosol = diameter_cytosol
@@ -1126,13 +1127,14 @@ class BigFISH():
 class Intensity():
     '''
     This class is intended to calculate the average intensity in an spot and substract the intensity in background.
+    This class is still a work in progress.
     
     Parameters
     
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] . 
     dataframe : Pandas dataframe
-            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
+        Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
     '''
     def __init__(self,image,dataframe,spot_size):
         self.dataframe = dataframe
@@ -1159,15 +1161,15 @@ class DataProcessing():
     Parameters
     
     spotDectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
-            One coordinate per dimension for the cluster\'s centroid (zyx or yx coordinates), the number of spots detected in the clusters, and its index.
+        One coordinate per dimension for the cluster\'s centroid (zyx or yx coordinates), the number of spots detected in the clusters, and its index.
     clusterDectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
-            Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
+        Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
     masks_complete_cells : List of NumPy arrays or a single NumPy array
-            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+        Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     masks_nuclei: List of NumPy arrays or a single NumPy array
-            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+        Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
-            Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+        Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     spot_type : int, optional
         A label indicating the spot type, this counter starts at zero, increasing with the number of channels containing FISH spots. The default is zero.
     dataframe : Pandas dataframe or None.
@@ -1338,11 +1340,11 @@ class SpotDetection():
     minimum_spots_cluster : int, optional
         Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
     masks_complete_cells : NumPy array
-            Masks for every cell detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
+        Masks for every cell detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
     masks_nuclei: NumPy array
-            Masks for every nucleus detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
+        Masks for every nucleus detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
     masks_cytosol_no_nuclei :  NumPy array
-            Masks for every cytosol detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
+        Masks for every cytosol detected in the image are indicated by the array\'s values, where 0 indicates the background in the image, and integer numbers indicate the ith mask in the image. Array with format [Y, X].
     dataframe : Pandas Dataframe 
         Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented. The default is None.
     image_counter : int, optional
@@ -1352,7 +1354,7 @@ class SpotDetection():
         voxel_size_z is the height of a voxel, along the z axis, in nanometers. The default is 300.
         voxel_size_yx is the size of a voxel on the yx plan in nanometers. The default is 150.
     list_psfs : List of tuples or None
-        list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+        List with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
         psf_z is the size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
         psf_yx is the size of the PSF emitted by a spot in the yx plan in nanometers.
     show_plot : bool, optional
@@ -1408,13 +1410,28 @@ class Metadata():
     
     Parameters
     
-    
-    
-    parameter: bool, optional
-        parameter description. The default is True. 
-    
+    data_dir: str or PosixPath
+        Directory containing the images to read.
+    channels_with_cytosol : List of int
+        List with integers indicating the index of channels for the cytosol segmentation. 
+    channels_with_nucleus : list of int
+        List with integers indicating the index of channels for the nucleus segmentation.
+    channels_with_FISH  : list of int
+        List with integers indicating the index of channels for the FISH detection using.
+    diameter_cytosol : int
+        Average cytosol size in pixels. The default is 150.
+    diamter_nucleus : int
+        Average nucleus size in pixels. The default is 100.
+    minimum_spots_cluster : int
+        Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
+    list_voxels : List of lists or None
+        List with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
+    list_psfs : List of lists or None
+        List with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+    file_name_str : str
+        Name used for the metadata file. The final name has the format metadata_<<file_name_str>>.txt
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diamter_nucleus, diameter_cytosol, minimum_spots_cluster,list_voxels=None, list_psfs=None,file_name_str=None):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diamter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -1432,8 +1449,10 @@ class Metadata():
         else:
             self.filename = './metadata_'+ str(data_dir.name[5:]) +'.txt'
         self.data_dir = data_dir
-        
     def write_metadata(self):
+        '''
+        This method writes the metadata file.
+        '''
         installed_modules = [str(module).replace(" ","==") for module in pkg_resources.working_set]
         important_modules = [ 'tqdm', 'torch','tifffile', 'setuptools', 'scipy', 'scikit-learn', 'scikit-image', 'PyYAML', 'pysmb', 'pyfiglet', 'pip', 'Pillow', 'pandas', 'opencv-python-headless', 'numpy', 'numba', 'natsort', 'mrc', 'matplotlib', 'llvmlite', 'jupyter-core', 'jupyter-client', 'joblib', 'ipython', 'ipython-genutils', 'ipykernel', 'cellpose', 'big-fish']
         def create_data_file(filename):
@@ -1510,11 +1529,11 @@ class PlotImages():
         
     def plot(self):
         '''
-        This function plots all the channels for the original image.
+        This method plots all the channels for the original image.
         '''
         print(self.image.shape)
         number_channels = self.image.shape[3]
-        fig, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
+        _, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
         rescaled_image = stack.rescale(self.image[:,:,:,:], channel_to_stretch=None, stretching_percentile=99)
         for i in range (0,number_channels ):
             img_2D = stack.focus_projection(rescaled_image[3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') # maximum projection 
@@ -1534,17 +1553,16 @@ class ReportPDF():
     
     directory_results: str or PosixPath
         Directory containing the images to include in the report.
-    substring_to_detect_in_file_name: str
-        String with the prefix to detect in the files names. 
-    file_name: str
-        Name of the report. 
-    folder_output: str or PosixPath
-        Directory to place the report.
+    channels_with_FISH  : list of int
+        List with integers indicating the index of channels for the FISH detection using.
     '''    
-    def __init__(self,directory, channels_with_FISH):
+    def __init__(self, directory, channels_with_FISH):
         self.directory = directory
         self.channels_with_FISH = channels_with_FISH
     def create_report(self):
+        '''
+        This method creates a PDF with the original images, images for cell segmentation and images for the spot detection.
+        '''
         pdf = FPDF()
         WIDTH = 210
         HEIGHT = 297
