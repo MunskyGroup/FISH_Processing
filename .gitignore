@@ -6,7 +6,6 @@ Output/
 __pycache__
 .vscode
 temp/
-tests/
 config.yml
 merged
 ms2_cy5_20210518
@@ -24,3 +23,4 @@ analyses/
 output__*
 slurm-*
 out-*
+results/
