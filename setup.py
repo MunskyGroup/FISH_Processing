@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
-with open("README.md", "r") as fh:
+with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 # package requirements
-with open("requirements.txt", encoding='utf-8') as f:
+with open('requirements.txt', encoding='utf-8') as f:
     requirements = [l.strip() for l in f.readlines() if l]
 
 # package version

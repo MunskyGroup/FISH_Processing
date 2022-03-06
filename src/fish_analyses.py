@@ -1,9 +1,17 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
-Python codes to analyze FISH images using (FISH-quant v2) BIG-FISH.
-Created on Fri Oct 22 10:41:00 2021
-Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
+This module uses `pysmb <https://github.com/miketeo/pysmb>`_ to allow the user to transfer data between a Network-attached storage (NAS) and remote or local server. Then it uses `Cellpose <https://github.com/MouseLand/cellpose>`_ to detect and segment cells on microscope images. `Big-FISH <https://github.com/fish-quant/big-fish>`_ is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
+Authors: Luis U. Aguilera, Joshua Cook, and Brian Munsky.
+
+If you use this repository, make sure to cite:
+
+    - `Big-FISH <https://github.com/fish-quant/big-fish>`_ :
+    Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
+
+    - `Cellpose <https://github.com/MouseLand/cellpose>`_ :
+    Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
+
 '''
 
 # Conventions.
@@ -180,19 +188,19 @@ class Utilities():
 
 class NASConnection():
     '''
-    This class is intended to establish a connection between Network-Attached storage and a remote (or local) computer. The class allows the user to connect to NAS, download specific files, and write backfiles to NAS.
+    This class is intended to establish a connection between Network-Attached storage and a remote (or local) computer using `pysmb <https://github.com/miketeo/pysmb>`_ . The class allows the user to connect to NAS, download specific files, and write backfiles to NAS.
     This class doesn't allow the user to delete, modify or overwrite files in NAS.
     To use this class, you need to:
     1) Use the university's network or use the two-factor authentication to connect to the university's VPN.
     2) You need to create a configuration YAML file with the following format:
     
-        ```yaml
+    .. code-block:: bash
+
         user:
-            username: name_of_the_user_in_the_nas_server
-            password: user_password_in_the_nas_server 
-            remote_address : ip or name for the nas server
-            domain: domain for the nas server 
-        ```
+        username: name_of_the_user_in_the_nas_server
+        password: user_password_in_the_nas_server 
+        remote_address : ip or name for the nas server
+        domain: domain for the nas server 
     
     Parameters
     
@@ -564,7 +572,7 @@ class RemoveExtrema():
 
 class Cellpose():
     '''
-    This class is intended to detect cells by image masking using **Cellpose** . The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
+    This class is intended to detect cells by image masking using `Cellpose <https://github.com/MouseLand/cellpose>`_ . The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
     
     Parameters
     
@@ -679,7 +687,7 @@ class Cellpose():
 
 class CellSegmentation():
     '''
-     This class is intended to detect cells in FISH images using [Cellpose](https://github.com/MouseLand/cellpose). This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose.
+     This class is intended to detect cells in FISH images using `Cellpose <https://github.com/MouseLand/cellpose>`_ . This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose.
     
     Parameters
     
@@ -694,7 +702,7 @@ class CellSegmentation():
     diamter_nucleus : int, optional
         Average nucleus size in pixels. The default is 100.
     optimization_segmentation_method: str
-        Method used for the segmentation. The options are: \'intensity_segmentation\', \'z_slice_segmentation\', \'gaussian_filter_segmentation\' ,and None.
+        Method used for the segmentation. The options are: \'intensity_segmentation\', \'z_slice_segmentation\', \'gaussian_filter_segmentation\', and None.
     remove_fragmented_cells: bool, optional
         If true, it removes masks in the border of the image. The default is False.
     show_plot : bool, optional
@@ -996,11 +1004,11 @@ class CellSegmentation():
 
 class BigFISH():
     '''
-    This class is intended to detect spots in FISH images using [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
+    This class is intended to detect spots in FISH images using `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert. The format of the image must be  [Z, Y, X, C].
     
     Parameters
     
-    The description of the parameters is taken from [Big-FISH](https://github.com/fish-quant/big-fish) BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    The description of the parameters is taken from `Big-FISH <https://github.com/fish-quant/big-fish>`_ BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
     
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
@@ -1039,7 +1047,7 @@ class BigFISH():
         
     def detect(self):
         '''
-        This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert.
+        This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
         
         Returns
         
@@ -1156,7 +1164,7 @@ class Intensity():
 class DataProcessing():
     '''
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
-    This class contains parameter descriptions obtained from [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert.
+    This class contains parameter descriptions obtained from `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
     
     Parameters
     
@@ -1324,13 +1332,13 @@ class DataProcessing():
 
 class SpotDetection():
     '''
-    This class is intended to detect spots in FISH images using [Big-FISH](https://github.com/fish-quant/big-fish). The format of the image must be  [Z, Y, X, C].
+    This class is intended to detect spots in FISH images using `Big-FISH <https://github.com/fish-quant/big-fish>`_. The format of the image must be  [Z, Y, X, C].
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
-    This class contains parameter description obtained from [Big-FISH](https://github.com/fish-quant/big-fish) Copyright © 2020, Arthur Imbert.
+    This class contains parameter description obtained from `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
     
     Parameters
     
-    The description of the parameters is taken from [Big-FISH](https://github.com/fish-quant/big-fish) BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    The description of the parameters is taken from `Big-FISH <https://github.com/fish-quant/big-fish>`_ BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
     FISH_channels : int, or List

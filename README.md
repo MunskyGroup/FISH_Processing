@@ -103,6 +103,13 @@ Additional steps to deactivate or remove the environment from the computer:
  conda env remove -n FISH_processing
 ```
 
+To create the documentation, the following modules are needed.
+```sh
+pip install sphinx
+pip install sphinx_rtd_theme
+pip install Pygments
+```
+
 # Licenses for dependencies
 
 ## If you use this repository, make sure to cite:

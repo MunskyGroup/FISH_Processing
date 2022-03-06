@@ -1,7 +1,7 @@
 FISH Processing: Module Guide
 ===================================
 .. image:: images/code_architecture.png
-    :width: 600
+    :width: 900
     :alt: FISH_processing
 
 .. automodule:: src.fish_analyses
