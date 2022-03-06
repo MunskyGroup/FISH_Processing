@@ -1,7 +1,7 @@
-Licenses for dependencies
+# Licenses for dependencies
 
 
-- License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert.
+## License for [Big-FISH](https://github.com/fish-quant/big-fish): BSD 3-Clause License. Copyright © 2020, Arthur Imbert.
 Copyright © 2020, Arthur Imbert
 All rights reserved.
 
@@ -25,7 +25,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 
 
 
-- License for [Cellpose](https://github.com/MouseLand/cellpose): BSD 3-Clause. Copyright © 2020 Howard Hughes Medical Institute
+## License for [Cellpose](https://github.com/MouseLand/cellpose): BSD 3-Clause. Copyright © 2020 Howard Hughes Medical Institute
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions 
 are met:
@@ -45,7 +45,7 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISE
 
 
 
-- License for [pysmb] https://github.com/miketeo/pysmb. Copyright (C) 2001-2020 Michael Teo <miketeo (a) miketeo.net>
+## License for [pysmb] https://github.com/miketeo/pysmb. Copyright (C) 2001-2020 Michael Teo <miketeo (a) miketeo.net>
 
 This software is provided 'as-is', without any express or implied warranty.
 In no event will the author be held liable for any damages arising from the
