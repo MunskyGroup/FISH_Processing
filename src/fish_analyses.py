@@ -167,7 +167,7 @@ class Utilities():
             If True it rescales the image to stretch intensity values to a 95 percentile, and then rescale the min and max intensity to 0 and 255. The default is True. 
         '''
         if rescale == True:
-            image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=90)
+            image = stack.rescale(image, channel_to_stretch=0, stretching_percentile=99)
         
         if rescale == True:
             imin, imax = np.min(image), np.max(image) 
