@@ -167,8 +167,8 @@ class Utilities():
             If True it rescales the image to stretch intensity values to a 95 percentile, and then rescale the min and max intensity to 0 and 255. The default is True. 
         '''
         if rescale == True:
-            image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=95)
-        image_new= np.zeros_like(image)
+            image = stack.rescale(image, channel_to_stretch=None, stretching_percentile=90)
+        
         if rescale == True:
             imin, imax = np.min(image), np.max(image) 
             image -= imin
@@ -176,6 +176,7 @@ class Utilities():
             image_float *= 255./(imax-imin)
             image_new = np.asarray(np.round(image_float), 'uint8')
         else:
+            image_new= np.zeros_like(image)
             for i in range(0, image.shape[2]):  # iterate for each channel
                 image_new[:,:,i]= (image[:,:,i]/ image[:,:,i].max()) *255
                 image_new = np.uint8(image_new)
