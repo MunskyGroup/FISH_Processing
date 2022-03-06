@@ -112,7 +112,7 @@ pip install Pygments
 
 # Licenses for dependencies
 
-Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/main/Licenses_Dependencies.txt) with the licenses for BIG-FISH, Cellpose, and Pysmb.
+Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/main/Licenses_Dependencies.md) with the licenses for BIG-FISH, Cellpose, and Pysmb.
 
 # Citation
 
