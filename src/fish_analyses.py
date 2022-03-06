@@ -1564,6 +1564,11 @@ class ReportPDF():
         Directory containing the images to include in the report.
     channels_with_FISH  : list of int
         List with integers indicating the index of channels for the FISH detection using.
+    
+    .. image:: images/pdf_report.png
+    
+    This PDF file is generated, and it contains the processing steps for each image in the folder.
+       
     '''    
     def __init__(self, directory, channels_with_FISH):
         self.directory = directory
