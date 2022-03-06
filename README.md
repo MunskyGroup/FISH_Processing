@@ -112,7 +112,11 @@ pip install Pygments
 
 # Licenses for dependencies
 
-## If you use this repository, make sure to cite:
+Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/main/Licenses_Dependencies.txt) with the licenses for BIG-FISH, Cellpose, and Pysmb.
+
+# Citation
+
+If you use this repository, make sure to cite BIG-FISH and Cellpose:
 
 - [Big-FISH](https://github.com/fish-quant/big-fish):
 Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).

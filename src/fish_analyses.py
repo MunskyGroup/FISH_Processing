@@ -190,7 +190,7 @@ class Utilities():
 class NASConnection():
     '''
     This class is intended to establish a connection between Network-Attached storage and a remote (or local) computer using `pysmb <https://github.com/miketeo/pysmb>`_ . The class allows the user to connect to NAS, download specific files, and write backfiles to NAS.
-    This class doesn't allow the user to delete, modify or overwrite files in NAS.
+    This class doesn't allow the user to delete, modify or overwrite files in NAS. For a complete description of pysmb check the `pysmb documentation <https://pysmb.readthedocs.io/en/latest/>`_ .
     To use this class, you need to:
     1) Use the university's network or use the two-factor authentication to connect to the university's VPN.
     2) You need to create a configuration YAML file with the following format:
@@ -574,6 +574,7 @@ class RemoveExtrema():
 class Cellpose():
     '''
     This class is intended to detect cells by image masking using `Cellpose <https://github.com/MouseLand/cellpose>`_ . The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
+    For a complete description of Cellpose check the `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
     
     Parameters
     
@@ -688,7 +689,7 @@ class Cellpose():
 
 class CellSegmentation():
     '''
-     This class is intended to detect cells in FISH images using `Cellpose <https://github.com/MouseLand/cellpose>`_ . This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose.
+     This class is intended to detect cells in FISH images using `Cellpose <https://github.com/MouseLand/cellpose>`_ . This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose. For a complete description of Cellpose check the `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
     
     Parameters
     
@@ -1009,7 +1010,7 @@ class BigFISH():
     
     Parameters
     
-    The description of the parameters is taken from `Big-FISH <https://github.com/fish-quant/big-fish>`_ BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
+    The description of the parameters is taken from `Big-FISH <https://github.com/fish-quant/big-fish>`_ BSD 3-Clause License. Copyright © 2020, Arthur Imbert. For a complete description of the parameters used check the `Big-FISH documentation <https://big-fish.readthedocs.io/en/stable/>`_ .
     
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
@@ -1165,7 +1166,7 @@ class Intensity():
 class DataProcessing():
     '''
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
-    This class contains parameter descriptions obtained from `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
+    This class contains parameter descriptions obtained from `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert. For a complete description of the parameters used check the `Big-FISH documentation <https://big-fish.readthedocs.io/en/stable/>`_ .
     
     Parameters
     
@@ -1336,6 +1337,7 @@ class SpotDetection():
     This class is intended to detect spots in FISH images using `Big-FISH <https://github.com/fish-quant/big-fish>`_. The format of the image must be  [Z, Y, X, C].
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
     This class contains parameter description obtained from `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
+    For a complete description of the parameters used check the `Big-FISH documentation <https://big-fish.readthedocs.io/en/stable/>`_ .
     
     Parameters
     
