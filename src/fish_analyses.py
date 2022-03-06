@@ -1042,8 +1042,8 @@ class BigFISH():
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plot = show_plot
         self.image_name=image_name
-        self.display_all_images = True                 # Displays all the z-planes
-        self.display_spots_on_multiple_z_planes = True # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
+        self.display_all_images = False                 # Displays all the z-planes
+        self.display_spots_on_multiple_z_planes = False # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         
     def detect(self):
         '''
