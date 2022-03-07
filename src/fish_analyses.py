@@ -6,11 +6,11 @@ Authors: Luis U. Aguilera, Joshua Cook, and Brian Munsky.
 
 If you use this repository, make sure to cite:
 
-    - `Big-FISH <https://github.com/fish-quant/big-fish>`_ :
-    Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
+`Big-FISH <https://github.com/fish-quant/big-fish>`_ :
+Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
 
-    - `Cellpose <https://github.com/MouseLand/cellpose>`_ :
-    Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
+`Cellpose <https://github.com/MouseLand/cellpose>`_ :
+Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
 
 '''
 
@@ -192,6 +192,7 @@ class NASConnection():
     This class is intended to establish a connection between Network-Attached storage and a remote (or local) computer using `pysmb <https://github.com/miketeo/pysmb>`_ . The class allows the user to connect to NAS, download specific files, and write backfiles to NAS.
     This class doesn't allow the user to delete, modify or overwrite files in NAS. For a complete description of pysmb check the `pysmb documentation <https://pysmb.readthedocs.io/en/latest/>`_ .
     To use this class, you need to:
+    
     1) Use the university's network or use the two-factor authentication to connect to the university's VPN.
     2) You need to create a configuration YAML file with the following format:
     
@@ -1341,7 +1342,6 @@ class SpotDetection():
     
     Parameters
     
-    The description of the parameters is taken from `Big-FISH <https://github.com/fish-quant/big-fish>`_ BSD 3-Clause License. Copyright © 2020, Arthur Imbert. 
     image : NumPy array
         Array of images with dimensions [Z, Y, X, C] .
     FISH_channels : int, or List
@@ -1372,6 +1372,7 @@ class SpotDetection():
         If True, it shows a 2D maximum projection of the image and the detected spots. The default is False.
     image_name : str or None.
         Name for the image with detected spots. The default is None.
+        
     '''
     def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None):
         self.image = image

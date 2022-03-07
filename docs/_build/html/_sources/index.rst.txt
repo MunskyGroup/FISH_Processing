@@ -4,11 +4,11 @@ FISH Processing: Module Guide
     :width: 900
     :alt: FISH_processing
 
-.. automodule:: src.fish_analyses
+.. automodule:: fish_analyses
     :members:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
 Indices and tables
