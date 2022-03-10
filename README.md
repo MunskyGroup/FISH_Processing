@@ -1,6 +1,6 @@
-# FISH processing repository.
+# FISH processing repository
 
-Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky.
+Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
 
 # Description
 
@@ -103,7 +103,7 @@ Additional steps to deactivate or remove the environment from the computer:
  conda env remove -n FISH_processing
 ```
 
-To create the documentation, the following modules are needed.
+To create the documentation use the following modules.
 ```sh
 pip install sphinx
 pip install sphinx_rtd_theme

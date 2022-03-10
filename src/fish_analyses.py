@@ -117,12 +117,15 @@ class Utilities():
             List of Numpy arrays, where each array has dimensions [Y, X] with values 0 and 1, where 0 represents the background and 1 the cell mask in the image.
         '''
         n_masks = len(list_masks)
+        print('n_masks',n_masks)
         if not ( n_masks is None):
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 base_image = np.zeros_like(list_masks[0])
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                    #print('nm', nm)
                     tested_mask = np.where(list_masks[nm-1] == 1, nm, 0)
                     base_image = base_image + tested_mask
+                    #print('range',np.unique(base_image))
             # making zeros all elements outside each mask, and once all elements inside of each mask.
             else:  # do nothing if only a single mask is detected per image.
                 base_image = list_masks[0]
@@ -594,7 +597,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 2, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
@@ -678,7 +681,10 @@ class Cellpose():
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
             selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
         else:
-            selected_masks = None
+            if len(self.image.shape) >= 3:
+                selected_masks = np.zeros_like(self.image[:,:,0])
+            else:
+                selected_masks = np.zeros_like(self.image[:,:])
             print('No cells detected on the image')
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
@@ -686,8 +692,9 @@ class Cellpose():
         sys.stdout.close()
         sys.stdout = old_stdout
         return selected_masks
-
-
+    
+    
+    
 class CellSegmentation():
     '''
      This class is intended to detect cells in FISH images using `Cellpose <https://github.com/MouseLand/cellpose>`_ . This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose. For a complete description of Cellpose check the `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
@@ -744,150 +751,122 @@ class CellSegmentation():
         masks_cytosol_no_nuclei : NumPy array. np.uint8
             Image containing the masks for every cytosol (removing the nucleus) detected in the image. Numpy array with format [Y, X].
         '''
-        # function that determines if a cell is in the border of the image
-        def remove_fragmented(img_masks):
-            img_masks_copy = np.copy(img_masks)
-            num_masks_detected = np.amax(img_masks)
-            if num_masks_detected > 1:
-                for nm in range(1,num_masks_detected+1):
-                    tested = np.where(img_masks_copy == nm, 1, 0)   # making zeros all elements outside each mask, and once all elements inside of each mask.
-                    # testing if tested is touching the border of the image
-                    is_border = np.any( np.concatenate( ( tested[:,0],tested[:,-1],tested[0,:],tested[-1,:] ) ) )
-                    if is_border == True:
-                        img_masks = np.where(img_masks == nm, 0, img_masks)
-            return img_masks
         # function that determines if the nucleus is in the cytosol
-        def is_nucleus_in_cytosol(mask_nucleus, mask_cyto):
-            nucleusInCell = []
-            nucleusInCell.append(0) # Appending an empty value, to avoid errors
-            contuour_n = find_contours(mask_nucleus, 0.5)
-            contuour_c = find_contours(mask_cyto, 0.5)
-            path = mpltPath.Path(contuour_c[0])
-            # calculating the center of the mask applying a 10% reduction
-            x_coord = [[i][0][1] for i in contuour_n[0]]
-            y_coord = [[i][0][0] for i in contuour_n[0]]
-            # Center of mask
-            center_value = 0.5
-            x_center = center_value* min(x_coord) + center_value * max(x_coord)
-            y_center = center_value* min(y_coord) + center_value* max(y_coord)
-            test_point = [y_center, x_center]
-            if path.contains_point(test_point) == 1:
+        def is_nucleus_in_cytosol(mask_n, mask_c):
+            mask_n[mask_n>1]=1
+            mask_c[mask_c>1]=1
+            size_mask_n = np.count_nonzero(mask_n)
+            size_mask_c = np.count_nonzero(mask_c)
+            min_size =np.amin( (size_mask_n,size_mask_c) )
+            mask_combined =  mask_n + mask_c
+            sum_mask = np.count_nonzero(mask_combined[mask_combined==2])
+            if sum_mask> min_size*0.8: # the element is inside if the two masks overlap over the 80% of the smaller mask.
                 return 1
             else:
                 return 0
-        # This function takes two list of images for masks and returns a list of lists with pairs indicating the nucleus masks that are contained in a cytosol
-        def paired_masks(list_masks_nuclei:list, list_masks_cyto:list):
-            n_masks_nuclei = len (list_masks_nuclei)
-            n_masks_cyto = len(list_masks_cyto)
-            array_paired_masks = np.zeros((n_masks_cyto, n_masks_nuclei)) # This array has dimensions n_masks_cyto, n_masks_nuclei and each entry indicate if the masks are paired
-            for i in range(0, n_masks_cyto):
-                for j in range (0, n_masks_nuclei):
-                    try:
-                        array_paired_masks[i, j] = is_nucleus_in_cytosol(list_masks_nuclei[j], list_masks_cyto[i])
-                    except:
-                        array_paired_masks[i, j] = 0
-            # vertical array with paired masks
-            itemindex = np.where(array_paired_masks == 1)
-            index_paired_masks = np.vstack((itemindex[0], itemindex[1])).T
-            return index_paired_masks # This array has dimensions [n_masks_cyto, n_masks_nuclei]
-        # This function creates a mask for each cell.
-        def generate_masks_complete_cell(index_paired_masks:np.ndarray, list_separated_masks_cyto:list):
-            list_masks_complete_cells = []
-            for i in range(0, index_paired_masks.shape[0]):
-                sel_mask_c = index_paired_masks[i][0]
-                list_masks_complete_cells.append(list_separated_masks_cyto[sel_mask_c])
-            return list_masks_complete_cells
-        # This function creates a mask for each nuclei
-        def generate_masks_nuclei(index_paired_masks:np.ndarray, list_separated_masks_nuclei:list):
-            list_masks_nuclei = []
-            for i in range(0, index_paired_masks.shape[0]):
-                sel_mask_n = index_paired_masks[i][1]
-                list_masks_nuclei.append(list_separated_masks_nuclei[sel_mask_n])
-            return list_masks_nuclei
-        # This function creates a mask for each cytosol without nucleus
-        def generate_masks_cytosol_no_nuclei(index_paired_masks:np.ndarray, list_masks_complete_cells:list, list_masks_nuclei:list):
-            list_masks_cytosol_no_nuclei = []
-            for i in range(0, index_paired_masks.shape[0]):
-                substraction = list_masks_complete_cells[i] - list_masks_nuclei[i]
-                substraction[substraction < 0] = 0
-                list_masks_cytosol_no_nuclei.append(substraction)
-            return list_masks_cytosol_no_nuclei
-        def join_nulcei_masks(index_paired_masks:np.ndarray, list_masks_nuclei:list):
-            # this code detects duplicated mask for the nucleus in the same cell and replaces with a joined mask. Also deletes from the list the duplicated elements.
-            index_masks_cytosol = index_paired_masks[:, 0]
-            idxs_to_delete = []
-            for i in range(0, len (index_masks_cytosol)):
-                duplicated_masks_idx = np.where(index_masks_cytosol == i)[0]
-                if len(duplicated_masks_idx) > 1:
-                    joined_mask = np.zeros_like(list_masks_nuclei[0])
-                    for j in range(0, len(duplicated_masks_idx)):
-                        joined_mask = joined_mask + list_masks_nuclei[duplicated_masks_idx[j]]
-                        joined_mask[joined_mask > 0] = 1
-                    list_masks_nuclei[duplicated_masks_idx[0]] = joined_mask # replacing the first duplication occurrence with the joined mask
-                    idxs_to_delete.append(duplicated_masks_idx[1::][0])
-            # creating a new list with the joined masks
-            list_mask_joined = []
-            for i in range(0, len (list_masks_nuclei)):
-                if i not in idxs_to_delete:
-                    list_mask_joined.append(list_masks_nuclei[i])
-            # removing from index
-            new_index_paired_masks = np.delete(index_paired_masks, idxs_to_delete, axis = 0)
-            return list_mask_joined, new_index_paired_masks
         ##### IMPLEMENTATION #####
         if len(self.image.shape) > 3:  # [ZYXC]
             image_normalized = np.amax(self.image[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
-            image_normalized = self.image # [YXC]       
-        def function_to_find_masks (image):                
+            image_normalized = self.image # [YXC] 
+        # Function to find masks
+        def function_to_find_masks (image):                    
             if not (self.channels_with_cytosol is None):
                 masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
-                if self.remove_fragmented_cells ==1:
-                    masks_cyto= remove_fragmented(masks_cyto)
+            else:
+                masks_cyto = np.zeros_like(image[:, :, 0])
             if not (self.channels_with_nucleus is None):
                 masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diamter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
-                if self.remove_fragmented_cells ==1:
-                    masks_nuclei= remove_fragmented(masks_nuclei)
+            else:
+                masks_nuclei= np.zeros_like(image[:, :, 0])
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-                # Implementation
-                list_separated_masks_nuclei = Utilities().separate_masks(masks_nuclei)
-                list_separated_masks_cyto = Utilities().separate_masks(masks_cyto)
-                # Array with paired masks
-                index_paired_masks  =  paired_masks(list_separated_masks_nuclei, list_separated_masks_cyto)
-                # Optional section that joins multiple nucleus masks
-                id_c = index_paired_masks[:, 0].tolist()
-                duplicated_nuclei_in_masks = any(id_c.count(x) > 1 for x in id_c)
-                if duplicated_nuclei_in_masks == True:
-                    list_masks_nuclei, index_paired_masks = join_nulcei_masks(index_paired_masks, list_separated_masks_nuclei)
-                # List of mask
-                list_masks_complete_cells = generate_masks_complete_cell(index_paired_masks, list_separated_masks_cyto)
-                list_masks_nuclei = generate_masks_nuclei(index_paired_masks, list_separated_masks_nuclei)
-                list_masks_cytosol_no_nuclei = generate_masks_cytosol_no_nuclei(index_paired_masks, list_masks_complete_cells, list_masks_nuclei)
+                # Function that removes masks that are not paired with a nucleus or cytosol
+                def remove_lonely_maks(masks_0, masks_1):
+                    n_mask_0 = np.amax(masks_0)
+                    n_mask_1 = np.amax(masks_1)
+                    if (n_mask_0>0) and (n_mask_1>0):
+                        for ind_0 in range(1,n_mask_0+1):
+                            tested_mask_0 = np.where(masks_0 == ind_0, 1, 0)
+                            array_paired= np.zeros(n_mask_1)
+                            for ind_1 in range(1,n_mask_1+1):
+                                tested_mask_1 = np.where(masks_1 == ind_1, 1, 0)
+                                array_paired[ind_1-1] = is_nucleus_in_cytosol(tested_mask_1, tested_mask_0)
+                            if any (array_paired) == False: # If the cytosol is not associated with any mask.
+                                masks_0 = np.where(masks_0 == ind_0, 0, masks_0)
+                            masks_with_pairs = masks_0
+                    else:
+                        masks_with_pairs = np.zeros_like(masks_0)
+                    return masks_with_pairs
+                # Function that reorder the index to make it continuos 
+                def reorder_masks(mask_tested):
+                    n_mask_0 = np.amax(mask_tested)
+                    mask_new =np.zeros_like(mask_tested)
+                    if n_mask_0>0:
+                        counter = 0
+                        for ind_0 in range(1,n_mask_0+1):
+                            if ind_0 in mask_tested:
+                                counter = counter + 1
+                                if counter ==1:
+                                    mask_new = np.where(mask_tested == ind_0, -counter, mask_tested)
+                                else:
+                                    mask_new = np.where(mask_new == ind_0, -counter, mask_new)
+                        reordered_mask = np.absolute(mask_new)
+                    else:
+                        reordered_mask = mask_new
+                    return reordered_mask                
+                # Cytosol maks
+                masks_cyto = remove_lonely_maks(masks_cyto, masks_nuclei)
+                masks_cyto = reorder_masks(masks_cyto)
+                # Masks nucleus
+                masks_nuclei = remove_lonely_maks(masks_nuclei, masks_cyto)
+                masks_nuclei = reorder_masks(masks_nuclei)
+                # Iterate for each cyto mask
+                def matching_masks(masks_cyto,masks_nuclei):
+                    n_mask_cyto = np.amax(masks_cyto)
+                    n_mask_nuc = np.amax(masks_nuclei)
+                    new_masks_nuclei = np.zeros_like(masks_cyto)
+                    reordered_mask_nuclei = np.zeros_like(masks_cyto)
+                    for mc in range(1,n_mask_cyto+1):
+                        tested_mask_cyto = np.where(masks_cyto == mc, 1, 0)
+                        for mn in range(1,n_mask_nuc+1):
+                            mask_paired = False
+                            tested_mask_nuc = np.where(masks_nuclei == mn, 1, 0)
+                            mask_paired = is_nucleus_in_cytosol(tested_mask_nuc, tested_mask_cyto)
+                            if mask_paired == True:
+                                if np.count_nonzero(new_masks_nuclei) ==0:
+                                    new_masks_nuclei = np.where(masks_nuclei == mn, -mc, masks_nuclei)
+                                else:
+                                    new_masks_nuclei = np.where(new_masks_nuclei == mn, -mc, new_masks_nuclei)
+                        reordered_mask_nuclei = np.absolute(new_masks_nuclei)
+                    return masks_cyto,reordered_mask_nuclei
+                # Matching nuclei and cytosol
+                masks_cyto, masks_nuclei = matching_masks(masks_cyto,masks_nuclei)                
+                #Generating mask for cyto without nuc
+                masks_cytosol_no_nuclei = masks_cyto-masks_nuclei
+                masks_cytosol_no_nuclei[masks_cytosol_no_nuclei < 0] = 0
+                masks_cytosol_no_nuclei.astype(int)
+                # Renaming 
+                masks_complete_cells = masks_cyto
             else:
                 if not (self.channels_with_cytosol is None):
-                    list_masks_complete_cells = Utilities().separate_masks(masks_cyto) # []
-                    list_masks_nuclei = []
-                    list_masks_cytosol_no_nuclei = []
-                    index_paired_masks =[]
-                    masks_cyto = None
-                    masks_nuclei= None
+                    masks_complete_cells = masks_cyto
+                    masks_nuclei = np.zeros_like(masks_cyto) 
+                    masks_cytosol_no_nuclei =np.zeros_like(masks_cyto) 
                 if not (self.channels_with_nucleus is None):
-                    list_masks_complete_cells = []
-                    list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
-                    list_masks_cytosol_no_nuclei = []
-                    index_paired_masks =[]
-                    masks_cyto = None
-            return list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto, masks_nuclei
+                    masks_complete_cells = np.zeros_like(masks_nuclei) 
+                    masks_cytosol_no_nuclei =np.zeros_like(masks_nuclei) 
+            return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 tested_thresholds = np.round(np.linspace(0, 3, self.NUMBER_OPTIMIZATION_VALUES), 0)
                 list_sotring_number_paired_masks = []
-                for idx, threshold in enumerate(tested_thresholds):
+                for _, threshold in enumerate(tested_thresholds):
                     image_copy = image_normalized.copy()
                     image_temp = RemoveExtrema(image_copy,min_percentile=threshold, max_percentile=100-threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (image_temp)
-                    list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
+                    masks_complete_cells, _, _ = function_to_find_masks(image_temp)
+                    list_sotring_number_paired_masks.append(np.amax(masks_complete_cells))
                 array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
                 selected_threshold = tested_thresholds[np.argmax(array_number_paired_masks)]
             else:
@@ -895,7 +874,7 @@ class CellSegmentation():
             # Running the mask selection once a threshold is obtained
             image_copy = image_normalized.copy()
             image_temp = RemoveExtrema(image_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (image_temp)
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_temp)
         elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.image.shape[0]
@@ -903,18 +882,21 @@ class CellSegmentation():
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
+                array_number_paired_masks = np.zeros( len(list_idx) )
                 for idx, idx_value in enumerate(list_idx):
                     test_image_optimization = np.amax(self.image[idx_value-3:idx_value+3,:,:,:],axis=0)  
-                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_image_optimization)
-                    metric = (len(list_masks_cytosol_no_nuclei) *  np.count_nonzero(np.asarray(list_masks_cytosol_no_nuclei) )  )
-                    list_sotring_number_paired_masks.append(metric)
-                array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
+                    masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
+                    metric = np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) + np.count_nonzero(masks_nuclei)
+                    try:
+                        array_number_paired_masks[idx] = metric
+                    except:
+                        array_number_paired_masks[idx] = 0
                 selected_threshold = list_idx[np.argmax(array_number_paired_masks)]
             else:
                 selected_threshold = list_idx[0]
             # Running the mask selection once a threshold is obtained
             test_image_optimization = np.amax(self.image[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_image_optimization)
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.image.shape[0]//2
@@ -922,31 +904,34 @@ class CellSegmentation():
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
+                array_number_paired_masks = np.zeros( len(list_sigmas)  )
+                print(array_number_paired_masks)
                 for idx, sigma_value in enumerate(list_sigmas):
                     test_image_optimization = stack.gaussian_filter(self.image[half_z_slices,:,:,:],sigma=sigma_value)  
-                    list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei = function_to_find_masks (test_image_optimization)
-                    list_sotring_number_paired_masks.append(len(list_masks_cytosol_no_nuclei))
-                array_number_paired_masks = np.asarray(list_sotring_number_paired_masks)
+                    masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
+                    metric = np.amax(masks_complete_cells)
+                    array_number_paired_masks[idx] = metric
                 selected_threshold = list_sigmas[np.argmax(array_number_paired_masks)]
             else:
                 selected_threshold = list_sigmas[0]
             # Running the mask selection once a threshold is obtained
             test_image_optimization = stack.gaussian_filter(self.image[half_z_slices,:,:,:],sigma=selected_threshold) 
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (test_image_optimization)
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
         else:
             # no optimization is applied if a 2D image is passed
-            list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, index_paired_masks, masks_cyto,masks_nuclei  = function_to_find_masks (image_normalized)
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_normalized)
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 5):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
-        if len(index_paired_masks) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+        # Plotting
+        if np.amax(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             if self.show_plot == 1:
                 n_channels = np.amin([3, image_normalized.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
                 im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels])  
-                masks_plot_cyto= Utilities().merge_masks (list_masks_complete_cells) 
-                masks_plot_nuc = Utilities().merge_masks (list_masks_nuclei)              
+                masks_plot_cyto= masks_complete_cells 
+                masks_plot_nuc = masks_nuclei              
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
                 axes[1].imshow(masks_plot_cyto)
@@ -954,16 +939,19 @@ class CellSegmentation():
                 axes[2].imshow(masks_plot_nuc)
                 axes[2].set(title = 'Nuclei mask')
                 axes[3].imshow(im)
-                for i in range(0, len(index_paired_masks)):
+                n_masks =np.amax(masks_complete_cells) 
+                for i in range(1, n_masks+1 ):
                     # Removing the borders just for plotting
-                    temp_nucleus_mask= remove_border(list_masks_nuclei[i])
-                    temp_complete_mask = remove_border(list_masks_complete_cells[i])
+                    tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0)
+                    tested_mask_nuc = np.where(masks_nuclei == i, 1, 0)
+                    # Remove border for plotting
+                    temp_nucleus_mask= remove_border(tested_mask_nuc)
+                    temp_complete_mask = remove_border(tested_mask_cyto)
                     contuour_n = find_contours(temp_nucleus_mask, 0.5)
                     contuour_c = find_contours(temp_complete_mask, 0.5)
                     axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
                     axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     axes[3].set(title = 'Paired masks')
-                print(index_paired_masks.shape[0])
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
                 plt.show()
@@ -993,16 +981,7 @@ class CellSegmentation():
                         plt.savefig(self.image_name,bbox_inches='tight')
                     plt.show()
             print('No paired masks were detected for this image')
-        if (self.channels_with_cytosol is None):
-            index_paired_masks = np.linspace(0, len(list_masks_nuclei)-1, len(list_masks_nuclei), dtype='int32')
-        if (self.channels_with_nucleus is None):
-            index_paired_masks = np.linspace(0, len(list_masks_complete_cells)-1, len(list_masks_complete_cells), dtype='int32')
-        # generating a single image with all the masks for cyto and nuclei 
-        masks_complete_cells = Utilities().merge_masks(list_masks_complete_cells)
-        masks_nuclei = Utilities().merge_masks(list_masks_nuclei)
-        masks_cytosol_no_nuclei = Utilities().merge_masks(list_masks_cytosol_no_nuclei)
-        # return values
-        return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
+        return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei 
 
 
 class BigFISH():
@@ -1193,23 +1172,31 @@ class DataProcessing():
     def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, spot_type=0, dataframe =None,reset_cell_counter=False,image_counter=0):
         self.spotDectionCSV=spotDectionCSV 
         self.clusterDectionCSV=clusterDectionCSV
+        
         if isinstance(masks_complete_cells, list):
             self.masks_complete_cells=masks_complete_cells
         else:
             self.masks_complete_cells=Utilities().separate_masks(masks_complete_cells)
+        
         if isinstance(masks_nuclei, list):
             self.masks_nuclei=masks_nuclei
         else:
             self.masks_nuclei=Utilities().separate_masks(masks_nuclei)
+        
+        
         if isinstance(masks_cytosol_no_nuclei, list):
             self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
         else:
             self.masks_cytosol_no_nuclei= Utilities().separate_masks(masks_cytosol_no_nuclei)
+        
+        
+        
         self.dataframe=dataframe
         self.spot_type = spot_type
         self.reset_cell_counter = reset_cell_counter
         self.image_counter = image_counter
     def get_dataframe(self):
+        print(len(self.masks_nuclei), len(self.masks_cytosol_no_nuclei), len(self.masks_complete_cells) )
         '''
         This method extracts data from the class SpotDetection and returns the data as a dataframe.
         
@@ -1294,7 +1281,7 @@ class DataProcessing():
             array_complete[:,7] = cell_area      #'cell_area_px'
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
-            df = df.astype(new_dtypes)
+            #df = df.astype(new_dtypes)
             return df
         # Initializing Dataframe
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
