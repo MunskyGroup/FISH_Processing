@@ -44,6 +44,12 @@ The following instructions are intended to use the codes on the Keck Cluster.
 
 * Clone the repository to the cluster.
 ```sh
+git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
+```
+
+If access is denied, please try using your Github token as follows:
+
+```sh
 git clone --depth 1 https://<token>@github.com/MunskyGroup/FISH_Processing.git
 ```
 where `<token>` is your Github access token. 
