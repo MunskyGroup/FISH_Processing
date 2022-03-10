@@ -905,7 +905,6 @@ class CellSegmentation():
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 array_number_paired_masks = np.zeros( len(list_sigmas)  )
-                print(array_number_paired_masks)
                 for idx, sigma_value in enumerate(list_sigmas):
                     test_image_optimization = stack.gaussian_filter(self.image[half_z_slices,:,:,:],sigma=sigma_value)  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
@@ -1071,7 +1070,7 @@ class BigFISH():
         ## PLOTTING
         if self.show_plot == True:
             try:
-                plot.plot_elbow(rna, voxel_size_z=self.voxel_size_z, voxel_size_yx = self.voxel_size_yx, psf_z = self.psf_z, psf_yx = self.psf_yx)
+                plot.plot_elbow(rna, voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), spot_radius= (self.psf_z, self.psf_yx, self.psf_yx) )
                 plt.show()
             except:
                 print('not showing elbow plot')
@@ -1196,7 +1195,6 @@ class DataProcessing():
         self.reset_cell_counter = reset_cell_counter
         self.image_counter = image_counter
     def get_dataframe(self):
-        print(len(self.masks_nuclei), len(self.masks_cytosol_no_nuclei), len(self.masks_complete_cells) )
         '''
         This method extracts data from the class SpotDetection and returns the data as a dataframe.
         
