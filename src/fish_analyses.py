@@ -122,10 +122,8 @@ class Utilities():
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 base_image = np.zeros_like(list_masks[0])
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                    #print('nm', nm)
                     tested_mask = np.where(list_masks[nm-1] == 1, nm, 0)
                     base_image = base_image + tested_mask
-                    #print('range',np.unique(base_image))
             # making zeros all elements outside each mask, and once all elements inside of each mask.
             else:  # do nothing if only a single mask is detected per image.
                 base_image = list_masks[0]
@@ -147,7 +145,6 @@ class Utilities():
         n_masks = np.amax(masks)
         if not ( n_masks is None):
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
-                #number_particles = []
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
                     mask_copy = masks.copy()
                     tested_mask = np.where(mask_copy == nm, 1, 0) # making zeros all elements outside each mask, and once all elements inside of each mask.
@@ -694,10 +691,9 @@ class Cellpose():
         return selected_masks
     
     
-    
 class CellSegmentation():
     '''
-     This class is intended to detect cells in FISH images using `Cellpose <https://github.com/MouseLand/cellpose>`_ . This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose. For a complete description of Cellpose check the `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
+    This class is intended to detect cells in FISH images using `Cellpose <https://github.com/MouseLand/cellpose>`_ . This class segments the nucleus and cytosol for every cell detected in the image. The class uses optimization to generate the meta-parameters used by cellpose. For a complete description of Cellpose check the `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
     
     Parameters
     
@@ -1048,7 +1044,6 @@ class BigFISH():
             rna_filtered = stack.log_filter(rna, sigma) # LoG filter
         except ValueError:
             print('Error during the log filter calculation, try using larger parameters values for the psf')
-            #rna_filtered = stack.gaussian_filter(rna, sigma) # Gaussian filter
             rna_filtered = stack.remove_background_gaussian(rna, sigma)
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
         threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
@@ -1070,7 +1065,14 @@ class BigFISH():
         ## PLOTTING
         if self.show_plot == True:
             try:
-                plot.plot_elbow(rna, voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), spot_radius= (self.psf_z, self.psf_yx, self.psf_yx) )
+                if not(self.image_name is None):
+                    path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
+                else:
+                    path_output_elbow = None 
+                plot.plot_elbow(rna, 
+                                voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
+                                spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
+                                path_output = path_output_elbow)
                 plt.show()
             except:
                 print('not showing elbow plot')
@@ -1094,7 +1096,7 @@ class BigFISH():
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
                 if not(self.image_name is None) and (i==central_slice): # saving only the central slice
-                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel)
+                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'.png'
                 else:
                     path_output = None 
                 plot.plot_detection(image_2D, 
@@ -1111,35 +1113,6 @@ class BigFISH():
                 plt.show()
                 del spots_to_plot, clusters_to_plot
         return [spotDectionCSV, clusterDectionCSV]
-
-
-class Intensity():
-    '''
-    This class is intended to calculate the average intensity in an spot and substract the intensity in background.
-    This class is still a work in progress.
-    
-    Parameters
-    
-    image : NumPy array
-        Array of images with dimensions [Z, Y, X, C] . 
-    dataframe : Pandas dataframe
-        Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
-    '''
-    def __init__(self,image,dataframe,spot_size):
-        self.dataframe = dataframe
-        self.image = image
-        self.spot_size = spot_size
-
-    def get_intensity(self):
-        '''
-        This method extracts data from the class SpotDetection and return the data as a dataframe.
-        
-        Returns
-        
-        dataframe : Pandas dataframe
-            Pandas dataframe with the following columns. image_id, cell_id, spot_id, nucleus_y, nucleus_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented.
-        '''
-        pass
 
 
 class DataProcessing():
@@ -1171,25 +1144,18 @@ class DataProcessing():
     def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, spot_type=0, dataframe =None,reset_cell_counter=False,image_counter=0):
         self.spotDectionCSV=spotDectionCSV 
         self.clusterDectionCSV=clusterDectionCSV
-        
         if isinstance(masks_complete_cells, list):
             self.masks_complete_cells=masks_complete_cells
         else:
             self.masks_complete_cells=Utilities().separate_masks(masks_complete_cells)
-        
         if isinstance(masks_nuclei, list):
             self.masks_nuclei=masks_nuclei
         else:
-            self.masks_nuclei=Utilities().separate_masks(masks_nuclei)
-        
-        
+            self.masks_nuclei=Utilities().separate_masks(masks_nuclei)        
         if isinstance(masks_cytosol_no_nuclei, list):
             self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
         else:
             self.masks_cytosol_no_nuclei= Utilities().separate_masks(masks_cytosol_no_nuclei)
-        
-        
-        
         self.dataframe=dataframe
         self.spot_type = spot_type
         self.reset_cell_counter = reset_cell_counter
@@ -1213,7 +1179,6 @@ class DataProcessing():
         def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0 ):
             # spotDectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDectionCSV   nc   x  [Z,Y,X,size,idx_foci]
-            
             # Removing TS from the image and calculating RNA in nucleus
             spots_no_ts, _, ts = multistack.remove_transcription_site(spotDectionCSV, clusterDectionCSV, mask_nuc, ndim=3)
             #rna_out_ts      [Z,Y,X,idx_foci]         Coordinates of the detected RNAs with shape. One coordinate per dimension (zyx or yx coordinates) plus the index of the foci assigned to the RNA. If no foci was assigned, value is -1. RNAs from transcription sites are removed.
@@ -1279,7 +1244,7 @@ class DataProcessing():
             array_complete[:,7] = cell_area      #'cell_area_px'
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
-            #df = df.astype(new_dtypes)
+            df = df.astype(new_dtypes)
             return df
         # Initializing Dataframe
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
@@ -1556,7 +1521,7 @@ class ReportPDF():
     .. image:: images/pdf_report.png
     
     This PDF file is generated, and it contains the processing steps for each image in the folder.
-       
+    
     '''    
     def __init__(self, directory, channels_with_FISH):
         self.directory = directory
@@ -1595,18 +1560,24 @@ class ReportPDF():
             pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-25)
             pdf.add_page()
             for id_channel, channel in enumerate(self.channels_with_FISH):
+                # Plotting the image with detected spots
                 temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel)+'.png' )
-                if id_channel ==0: 
-                    pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
-                    pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)
-                else: 
-                    for j in range(0, 12):
-                        pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
-                    pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L')
-                    pdf.image(str(temp_seg_name), x=0, y=HEIGHT/2, w=WIDTH-25)
-                    pdf.add_page()
-                if len(self.channels_with_FISH)==1:
-                    pdf.add_page()
+                pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
+                pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)                    
+                # adding some space
+                for j in range(0, 12):
+                    pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
+                # Plotting the elbow plot
+                try:
+                    temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
+                    pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                except:
+                    pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
+                #pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L')
+                #pdf.image(str(temp_seg_name), x=0, y=HEIGHT/2, w=WIDTH-25)
+                pdf.add_page()
+                #if len(self.channels_with_FISH)==1:
+                #    pdf.add_page()
         pdf_name =  'pdf_report_' + self.directory.name[13:] + '.pdf'
         pdf.output(pdf_name, 'F')
         return None
