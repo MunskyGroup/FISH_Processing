@@ -24,4 +24,4 @@ output__*
 slurm-*
 out-*
 masks_*
-test_kk
+tests/
