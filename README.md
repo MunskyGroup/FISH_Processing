@@ -6,7 +6,7 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
 
 >:warning: **This software is in a very early and experimental stage**: it is intended to be used for testing and debugging purposes!
 
-This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
+This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
 
 ## Code overview and architecture
 
@@ -120,9 +120,23 @@ pip install sphinx_rtd_theme
 pip install Pygments
 ```
 
+# Using this repository
+
+Most codes are accessible as notebook scripts or executables. 
+
+## To use the codes locally with an interactive environment, use the [notebooks folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/notebooks)
+
+- To process images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_pipeline.ipynb)
+
+- After processing the images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_data_interpretaton.ipynb) to analyze multiple datasets 
+
+## Executable codes are located in [cluster folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/cluster)
+
+- A [Bash script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/runner.sh) is used to execute a [python script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/pipeline_executable.py) containing the image processing pipeline. Please adapt these scripts to your specific configuration and target folders.
+
 # Licenses for dependencies
 
-Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/main/Licenses_Dependencies.md) with the licenses for BIG-FISH, Cellpose, and Pysmb.
+Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/main/Licenses_Dependencies.md) with the licenses for BIG-FISH, Cellpose, and PySMB.
 
 # Citation
 
