@@ -12,6 +12,10 @@ This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user
 
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/code_architecture.png alt="drawing" width="1200"/>
 
+# Documentation accessible in readthedocs
+
+The documentation is accessible in the following [link](https://readthedocs.com/FISH_Processing). 
+
 # Colab implementation
 
  * Implementation in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
