@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=all
-#SBATCH --ntasks=8
-#SBATCH --gres=gpu:4
+#SBATCH --ntasks=2
+#SBATCH --gres=gpu:1
 
 # module purge
 module load gnu9/9.4.0 

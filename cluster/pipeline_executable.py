@@ -46,7 +46,7 @@ sys.path.append(str(fa_dir))
 import fish_analyses as fa
 
 # Printing banner
-fa.Banner(show=True).print_banner()
+fa.Banner().print_banner()
 
 # Path to credentials
 #try:

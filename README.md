@@ -6,7 +6,7 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
 
 >:warning: **This software is in a very early and experimental stage**: it is intended to be used for testing and debugging purposes!
 
-This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user to transfer data between a Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
+This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
 
 ## Code overview and architecture
 
@@ -43,6 +43,12 @@ This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user
 The following instructions are intended to use the codes on the Keck Cluster.
 
 * Clone the repository to the cluster.
+```sh
+git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
+```
+
+If access is denied, please try using your Github token as follows:
+
 ```sh
 git clone --depth 1 https://<token>@github.com/MunskyGroup/FISH_Processing.git
 ```
