@@ -25,3 +25,4 @@ slurm-*
 out-*
 masks_*
 tests/
+results/

@@ -14,7 +14,7 @@ This repository uses [pysmb](https://github.com/miketeo/pysmb) to allow the user
 
 # Documentation accessible in readthedocs
 
-The documentation is accessible in the following [link](https://readthedocs.org/projects/FISH_Processing/). 
+The documentation is accessible in the following [link](https://fish-processing.readthedocs.io/en/latest/). 
 
 # Colab implementation
 
