@@ -29,11 +29,11 @@ The documentation is accessible in the following [link](https://fish-processing.
  conda create -n FISH_processing python=3.8 -y
  source activate FISH_processing
 ```
-* To install GPU for Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+* To install pytorch for GPU usage in Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```sh
  conda install pytorch cudatoolkit=10.2 -c pytorch -y
 ```
-* To install CPU for Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+* To install pytorch for CPU usage in Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```sh
  conda install pytorch -c pytorch
 ```
