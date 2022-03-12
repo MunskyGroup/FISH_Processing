@@ -95,6 +95,8 @@ Most codes are accessible as notebook scripts or executables.
 
 ### Output
 
+The code generates a repository with the quantification results, masks, metadata, and a pdf to easily visualize the complete pipeline output in all the processed images.
+
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/FISH_processing.gif alt="drawing" width="900"/>
 
 ## Miscellaneous instructions:
