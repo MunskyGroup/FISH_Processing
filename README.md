@@ -6,7 +6,7 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
 
 >:warning: **This software is in a very early and experimental stage**: it is intended to be used for testing and debugging purposes!
 
-This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
+Repository to process ​Fluorescence In Situ Hybridization (FISH) images. This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
 
 ## Code overview and architecture
 
@@ -51,13 +51,6 @@ The following instructions are intended to use the codes on the Keck Cluster.
 git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
 ```
 
-If access is denied, please try using your Github token as follows:
-
-```sh
-git clone --depth 1 https://<token>@github.com/MunskyGroup/FISH_Processing.git
-```
-where `<token>` is your Github access token. 
-
 * Move to the directory
 ```sh
 cd FISH_Processing 
@@ -85,6 +78,24 @@ cd FISH_Processing
 /opt/ohpc/pub/apps/anaconda3/bin/conda install pytorch cudatoolkit=10.2 -c pytorch -y
 pip install -r requirements.txt
 ```
+
+# Using this repository
+
+Most codes are accessible as notebook scripts or executables. 
+
+### To use the codes locally with an interactive environment, use the [notebooks folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/notebooks)
+
+- To process images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_pipeline.ipynb)
+
+- After processing the images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_data_interpretaton.ipynb) to analyze multiple datasets 
+
+### Executable codes are located in [cluster folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/cluster)
+
+- A [Bash script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/runner.sh) is used to execute a [python script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/pipeline_executable.py) containing the image processing pipeline. Please adapt these scripts to your specific configuration and target folders.
+
+### Output
+
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/FISH_processing.gif alt="drawing" width="900"/>
 
 ## Miscellaneous instructions:
 
@@ -119,20 +130,6 @@ pip install sphinx
 pip install sphinx_rtd_theme
 pip install Pygments
 ```
-
-# Using this repository
-
-Most codes are accessible as notebook scripts or executables. 
-
-## To use the codes locally with an interactive environment, use the [notebooks folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/notebooks)
-
-- To process images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_pipeline.ipynb)
-
-- After processing the images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_data_interpretaton.ipynb) to analyze multiple datasets 
-
-## Executable codes are located in [cluster folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/cluster)
-
-- A [Bash script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/runner.sh) is used to execute a [python script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/pipeline_executable.py) containing the image processing pipeline. Please adapt these scripts to your specific configuration and target folders.
 
 # Licenses for dependencies
 
