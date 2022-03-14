@@ -101,7 +101,7 @@ The code generates a repository with the quantification results, masks, metadata
 
 ## Miscellaneous instructions:
 
-To login to the NAS, it is needed to provide a configuration YML file with the format:
+To login to the NAS, it is needed to provide a configuration YAML file with the format:
 ```yml
     user:
         username: user_name
