@@ -60,9 +60,8 @@ maximum_parallel_iterations=3
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
 for folder in ${list_test[*]}; do
-     folder_new="${folder//\\//}"
-     output_names=''output__"${folder////__}"".txt"
-     nohup python3 ./pipeline_executable.py $folder_new $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $connect_to_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
+     output_names=""output__"${folder////__}"".txt"
+     nohup python3 ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $connect_to_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
      COUNTER=$((COUNTER+1))
      val1=$(($COUNTER%3)) 
      if [ $val1 -eq '0' ];then

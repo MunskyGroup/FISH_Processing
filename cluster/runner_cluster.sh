@@ -9,12 +9,10 @@ module load cudnn/8.3-10.2
 
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
 
-
 list_test=(\
 'Test/test_dir' \
 'Test/test_dir1' \
 ) 
-
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -35,14 +33,12 @@ connect_to_NAS=1
 path_to_masks_dir='None' #'Test/test_dir'
 optimization_segmentation_method=None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
-
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_ILB_Rep2[*]}; do
+for folder in ${list_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $connect_to_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
      wait
 done
-
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown

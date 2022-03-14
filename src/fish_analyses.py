@@ -705,7 +705,7 @@ class CellSegmentation():
         List with integers indicating the index of channels for the nucleus segmentation. The default is None. 
     diameter_cytosol : int, optional
         Average cytosol size in pixels. The default is 150.
-    diamter_nucleus : int, optional
+    diameter_nucleus : int, optional
         Average nucleus size in pixels. The default is 100.
     optimization_segmentation_method: str
         Method used for the segmentation. The options are: \'intensity_segmentation\', \'z_slice_segmentation\', \'gaussian_filter_segmentation\', and None.
@@ -716,12 +716,12 @@ class CellSegmentation():
     image_name : str or None.
         Name for the image with detected spots. The default is None.
     '''
-    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diamter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None):
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None):
         self.image = image
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.diameter_cytosol = diameter_cytosol
-        self.diamter_nucleus = diamter_nucleus
+        self.diameter_nucleus = diameter_nucleus
         self.show_plot = show_plot
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
@@ -772,7 +772,7 @@ class CellSegmentation():
             else:
                 masks_cyto = np.zeros_like(image[:, :, 0])
             if not (self.channels_with_nucleus is None):
-                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diamter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
+                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diameter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
             else:
                 masks_nuclei= np.zeros_like(image[:, :, 0])
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
@@ -1382,7 +1382,7 @@ class Metadata():
         List with integers indicating the index of channels for the FISH detection using.
     diameter_cytosol : int
         Average cytosol size in pixels. The default is 150.
-    diamter_nucleus : int
+    diameter_nucleus : int
         Average nucleus size in pixels. The default is 100.
     minimum_spots_cluster : int
         Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
@@ -1393,12 +1393,12 @@ class Metadata():
     file_name_str : str
         Name used for the metadata file. The final name has the format metadata_<<file_name_str>>.txt
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diamter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.channels_with_FISH = channels_with_FISH
-        self.diamter_nucleus = diamter_nucleus
+        self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
         self.list_voxels = list_voxels
         self.list_psfs = list_psfs
@@ -1437,7 +1437,7 @@ class Metadata():
                 fd.write('\n    channels_with_cytosol: ' + str(self.channels_with_cytosol) )
                 fd.write('\n    channels_with_nucleus: ' + str(self.channels_with_nucleus) )
                 fd.write('\n    channels_with_FISH: ' + str(self.channels_with_FISH) )
-                fd.write('\n    diamter_nucleus: ' + str(self.diamter_nucleus) )
+                fd.write('\n    diameter_nucleus: ' + str(self.diameter_nucleus) )
                 fd.write('\n    diameter_cytosol: ' + str(self.diameter_cytosol) )
                 fd.write('\n    FISH parameters')
                 for k in range (0,len(self.channels_with_FISH)):
@@ -1598,12 +1598,12 @@ class PipelineFISH():
     list_masks : List of Numpy or None.
         list of Numpy arrays where each array has values from 0 to n where n is the number of masks in  the image.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diamter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation'):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation'):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.channels_with_FISH = channels_with_FISH
-        self.diamter_nucleus = diamter_nucleus
+        self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
         if type(list_voxels[0]) != list:
             self.list_voxels = [list_voxels]
@@ -1662,7 +1662,7 @@ class PipelineFISH():
             temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
             print('CELL SEGMENTATION')
             if (self.masks_dir is None):
-                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diamter_nucleus=self.diamter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
+                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name).calculate_masks() 
             else:
                 # Paths to masks
                 mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
@@ -1703,7 +1703,7 @@ class PipelineFISH():
         else:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')
         # Creating the metadata
-        Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diamter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files).write_metadata()
+        Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files).write_metadata()
         # Creating a PDF report
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei
