@@ -4,9 +4,9 @@ Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
 
 # Description
 
->:warning: **This software is in a very early and experimental stage**: it is intended to be used for testing and debugging purposes!
-
 Repository to process ​Fluorescence In Situ Hybridization (FISH) images. This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
+
+>:warning: **This repository is in an early and experimental stage**. The code in this repository is used to process data in Dr. Brian Munsky Lab at CSU. The code depends on [Cellpose](https://github.com/MouseLand/cellpose) and [Big-FISH](https://github.com/fish-quant/big-fish) libraries. Please make sure to correctly cite these authors of these dependencies if you use this repository. 
 
 ## Code overview and architecture
 
