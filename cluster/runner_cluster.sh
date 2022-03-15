@@ -19,7 +19,6 @@ list_test=(\
 # Read them in the python file using: sys.argv. This return a list of strings. 
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 
-send_data_to_NAS=1       # If data sent back to NAS use 1.
 diamter_nucleus=120      # approximate nucleus size in pixels
 diameter_cytosol=220     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
@@ -29,14 +28,15 @@ cyto_channel=2           # Channel to pass to python for cytosol segmentation
 FISH_channel=1           # Channel to pass to python for spot detection
 FISH_second_channel='None'    # Channel to pass to python for spot detection in a second Channel, if 0 or None is ignored.
 path_to_config_file="$HOME/Desktop/config.yml"
-connect_to_NAS=1
+send_data_to_NAS=1       # If data sent back to NAS use 1.
+download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method=None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $connect_to_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
+     ~/.conda/envs/FISH_processing/bin/python ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
      wait
 done
 

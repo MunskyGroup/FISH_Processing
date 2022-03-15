@@ -1007,8 +1007,13 @@ class BigFISH():
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
     image_name : str or None.
         Name for the image with detected spots. The default is None.
+    save_all_images : Bool, optional.
+        If true, it shows a all planes for the FISH plot detection. The default is False.
+    display_spots_on_multiple_z_planes : Bool, optional.
+        If true, it shows a spots on the plane below and above the selected plane. The default is False.
+        
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False):
         self.image = image
         self.FISH_channel = FISH_channel
         self.voxel_size_z = voxel_size_z
@@ -1019,8 +1024,8 @@ class BigFISH():
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plot = show_plot
         self.image_name=image_name
-        self.display_all_images = False                 # Displays all the z-planes
-        self.display_spots_on_multiple_z_planes = False # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
+        self.save_all_images = save_all_images                                  # Displays all the z-planes
+        self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         
     def detect(self):
         '''
@@ -1077,12 +1082,17 @@ class BigFISH():
             except:
                 print('not showing elbow plot')
             central_slice = rna.shape[0]//2
-            if self.display_all_images:
+            
+            
+            if self.save_all_images:
                 range_plot_images = range(0, rna.shape[0])
             else:
                 range_plot_images = range(central_slice,central_slice+1)      
+            
+            
             for i in range_plot_images:
-                print('Z-Slice: ', str(i))
+                if i==central_slice:
+                    print('Z-Slice: ', str(i))
                 image_2D = rna_filtered[i,:,:]
                 if i > 1 and i<rna.shape[0]-1:
                     if self.display_spots_on_multiple_z_planes == True:
@@ -1095,10 +1105,19 @@ class BigFISH():
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-                if not(self.image_name is None) and (i==central_slice): # saving only the central slice
-                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'.png'
+                
+                if self.save_all_images:
+                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'_slice_'+ str(i) +'.png'
                 else:
-                    path_output = None 
+                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'.png'
+                    
+                if not(self.image_name is None) and (i==central_slice): # saving only the central slice
+                    show_figure_in_cli = True
+                else:
+                    show_figure_in_cli = False
+                    
+                
+                
                 plot.plot_detection(image_2D, 
                                 spots=[spots_to_plot, clusters_to_plot[:, :3]], 
                                 shape=["circle", "polygon"], 
@@ -1109,8 +1128,13 @@ class BigFISH():
                                 framesize=(15, 10), 
                                 contrast=True,
                                 rescale=True,
+                                show=show_figure_in_cli,
                                 path_output = path_output)
                 plt.show()
+                
+                
+                
+                
                 del spots_to_plot, clusters_to_plot
         return [spotDectionCSV, clusterDectionCSV]
 
@@ -1322,9 +1346,12 @@ class SpotDetection():
         If True, it shows a 2D maximum projection of the image and the detected spots. The default is False.
     image_name : str or None.
         Name for the image with detected spots. The default is None.
-        
+    save_all_images : Bool, optional.
+        If true, it shows a all planes for the FISH plot detection. The default is False.
+    display_spots_on_multiple_z_planes : Bool, optional.
+        If true, it shows a spots on the plane below and above the selected plane. The default is False.
     '''
-    def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None):
+    def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False):
         self.image = image
         self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
         self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
@@ -1349,6 +1376,9 @@ class SpotDetection():
         else:
             self.list_FISH_channels = FISH_channels
         self.image_name = image_name
+        self.save_all_images = save_all_images                                  # Displays all the z-planes
+        self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
+        
     def get_dataframe(self):
         for i in range(0,len(self.list_FISH_channels)):
             print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
@@ -1359,7 +1389,7 @@ class SpotDetection():
             voxel_size_yx = self.list_voxels[i][1]
             psf_z = self.list_psfs[i][0] 
             psf_yx = self.list_psfs[i][1]
-            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name).detect()
+            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes).detect()
             dataframe_FISH = DataProcessing(spotDectionCSV, clusterDectionCSV, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
@@ -1517,15 +1547,21 @@ class ReportPDF():
         Directory containing the images to include in the report.
     channels_with_FISH  : list of int
         List with integers indicating the index of channels for the FISH detection using.
-    
+    save_all_images : Bool, optional.
+        If true, it shows a all planes for the FISH plot detection. The default is True.
+    list_z_slices_per_image : int
+        List containing all z-slices for each figure.
+        
     .. image:: images/pdf_report.png
     
     This PDF file is generated, and it contains the processing steps for each image in the folder.
     
     '''    
-    def __init__(self, directory, channels_with_FISH):
+    def __init__(self, directory, channels_with_FISH,save_all_images,list_z_slices_per_image):
         self.directory = directory
         self.channels_with_FISH = channels_with_FISH
+        self.save_all_images=save_all_images
+        self.list_z_slices_per_image = list_z_slices_per_image
     def create_report(self):
         '''
         This method creates a PDF with the original images, images for cell segmentation and images for the spot detection.
@@ -1550,34 +1586,58 @@ class ReportPDF():
             pdf.cell(w=0, h=10, txt='Original image: ' + temp_file_name,ln =2,align = 'L')
             # code that returns the path of the original image
             temp_original_img_name = pathlib.Path().absolute().joinpath( self.directory, 'ori_' + temp_file_name +'.png' )
-            pdf.image(str(temp_original_img_name), x=0, y=20, w=WIDTH-25)
+            pdf.image(str(temp_original_img_name), x=0, y=20, w=WIDTH-30)
             # creating some space
             for text_idx in range(0, 12):
                 pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
             pdf.cell(w=0, h=10, txt='Cell segmentation: ' + temp_file_name,ln =1,align = 'L')
             # code that returns the path of the segmented image
             temp_segmented_img_name = pathlib.Path().absolute().joinpath( self.directory, 'seg_' + temp_file_name +'.png' )
-            pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-25)
-            pdf.add_page()
+            pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-30)
+            
+            # Code that plots the detected spots.
             for id_channel, channel in enumerate(self.channels_with_FISH):
-                # Plotting the image with detected spots
-                temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel)+'.png' )
-                pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
-                pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)                    
-                # adding some space
-                for j in range(0, 12):
-                    pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
-                # Plotting the elbow plot
-                try:
-                    temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
-                    pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
-                except:
-                    pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
-                #pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L')
-                #pdf.image(str(temp_seg_name), x=0, y=HEIGHT/2, w=WIDTH-25)
-                pdf.add_page()
-                #if len(self.channels_with_FISH)==1:
-                #    pdf.add_page()
+                if self.save_all_images==True:
+                    counter=1
+                    pdf.add_page() # adding a page
+                    for z_slice in range(0, self.list_z_slices_per_image[i]):
+                        temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel) + '_slice_'+ str(z_slice) +'.png' )
+                        # Plotting bottom image
+                        if counter%2==0: # Adding space if is an even counter
+                            # adding some space to plot the bottom image
+                            for j in range(0, 11):
+                                pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
+                            # Plotting the image
+                            pdf.cell(w=0, h=0, txt='FISH Ch_ ' + str(channel) + '_slice_'+ str(z_slice) +': '+ temp_file_name,ln =2,align = 'L') 
+                            pdf.image(str(temp_seg_name), x=0, y=HEIGHT//2, w=WIDTH-80)
+                            pdf.add_page()
+                        # plotting top image
+                        else:
+                            pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + '_slice_'+ str(z_slice) +': '+ temp_file_name,ln =2,align = 'L') 
+                            pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-80)
+                        counter=counter+1
+                    pdf.add_page()
+                    try:
+                        temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
+                        pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                    except:
+                        pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
+                    pdf.add_page()
+                else:
+                    # Plotting the image with detected spots
+                    temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel)+'.png' )
+                    pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
+                    pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)                    
+                    # adding some space
+                    for j in range(0, 12):
+                        pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
+                    # Plotting the elbow plot
+                    try:
+                        temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
+                        pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                    except:
+                        pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
+                    pdf.add_page()
         pdf_name =  'pdf_report_' + self.directory.name[13:] + '.pdf'
         pdf.output(pdf_name, 'F')
         return None
@@ -1597,9 +1657,14 @@ class PipelineFISH():
         list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
     list_masks : List of Numpy or None.
         list of Numpy arrays where each array has values from 0 to n where n is the number of masks in  the image.
+    save_all_images : Bool, optional.
+        If true, it shows a all planes for the FISH plot detection. The default is True.
+    display_spots_on_multiple_z_planes : Bool, optional.
+        If true, it shows a spots on the plane below and above the selected plane. The default is False.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation'):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
+        self.list_z_slices_per_image = [ img.shape[0] for img in self.list_images] # number of z-slices in the figure
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.channels_with_FISH = channels_with_FISH
@@ -1632,6 +1697,8 @@ class PipelineFISH():
             self.optimization_segmentation_method = None
         else:
             self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+        self.save_all_images = save_all_images                                  # Displays all the z-planes
+        self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         
     def run(self):
         # Prealocating arrays
@@ -1691,7 +1758,7 @@ class PipelineFISH():
                 tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
             print('SPOT DETECTION')
             temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
-            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name).get_dataframe()
+            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes).get_dataframe()
             dataframe = dataframe_FISH
             list_masks_complete_cells.append(masks_complete_cells)
             list_masks_nuclei.append(masks_nuclei)
@@ -1705,5 +1772,5 @@ class PipelineFISH():
         # Creating the metadata
         Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files).write_metadata()
         # Creating a PDF report
-        ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH).create_report()
+        ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH,save_all_images=self.save_all_images,list_z_slices_per_image=self.list_z_slices_per_image ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei

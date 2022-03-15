@@ -42,7 +42,7 @@ else:
 output_name = sys.argv[11]                              # Output file name
 # Path to credentials
 path_to_config_file = pathlib.Path(sys.argv[12])
-connect_to_NAS= int(sys.argv[13])
+download_data_from_NAS= int(sys.argv[13])
 path_to_masks_dir= sys.argv[14]
 if path_to_masks_dir == 'None':
   path_to_masks_dir = None
@@ -95,13 +95,12 @@ def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,sh
   return local_data_dir, masks_dir
 
 # Download data from NAS
-if connect_to_NAS == True:
+if download_data_from_NAS == True:
   share_name = 'share'
   local_data_dir, masks_dir= download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200)
 else:
   local_data_dir = data_folder_path 
   masks_dir = path_to_masks_dir 
-
 
 # Parameters for the code
 channels_with_cytosol = [nucleus_channel,cyto_channel]            # list or int indicating the channels where the cytosol is detectable
@@ -196,7 +195,7 @@ shutil.copyfile(pathlib.Path().absolute().joinpath(output_name),    pathlib.Path
 
 # Writing analyses data to NAS
 analysis_folder_name = 'analysis_'+ name_final_folder
-if connect_to_NAS == True:
+if send_data_to_NAS == True:
   shutil.make_archive(analysis_folder_name,'zip',pathlib.Path().absolute().joinpath(analysis_folder_name))
   local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(analysis_folder_name+'.zip')
   fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, data_folder_path)
@@ -213,7 +212,7 @@ if path_to_masks_dir == None:
 else: 
   mask_dir_complete_name = masks_dir.name
     
-if (connect_to_NAS == True) and (path_to_masks_dir == None) :
+if (send_data_to_NAS == True) and (path_to_masks_dir == None) :
   shutil.make_archive( mask_dir_complete_name , 'zip', pathlib.Path().absolute().joinpath(mask_dir_complete_name))
   local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(mask_dir_complete_name+'.zip')
   fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, data_folder_path)
@@ -234,8 +233,10 @@ if os.path.exists(str(final_dir_name)):
 pathlib.Path().absolute().joinpath(analysis_folder_name).rename(final_dir_name )
 
 # Moving masks to a subdirectory in 'analyses' folder
-if (connect_to_NAS == True) or (path_to_masks_dir == None):
+if (download_data_from_NAS == True) or (path_to_masks_dir == None):
   final_mask_dir_name = pathlib.Path().absolute().joinpath('analyses', mask_dir_complete_name)
+  if os.path.exists(str(final_mask_dir_name)):
+    shutil.rmtree(str(final_mask_dir_name))
   pathlib.Path().absolute().joinpath(mask_dir_complete_name).rename(final_mask_dir_name )
 
 # Delete local temporal files
