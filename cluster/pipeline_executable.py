@@ -25,7 +25,6 @@ warnings.filterwarnings("ignore")
 ######################################
 ## User passed arguments
 remote_folder = sys.argv[1]                             # Path to the remote Folder
-#remote_folder.replace('\\', '/')                        # Converting backslash to forward slash if needed 
 data_folder_path = pathlib.Path(remote_folder)
 send_data_to_NAS = int(sys.argv[2])                     # Flag to send data back to NAS
 diameter_nucleus = int(sys.argv[3])                      # approximate nucleus size in pixels
@@ -35,30 +34,23 @@ psf_yx_1 = int(sys.argv[6])      #150                   # Theoretical size of th
 nucleus_channel= int(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
 cyto_channel= int(sys.argv[8])                          # Channel to pass to python for cytosol segmentation
 FISH_channel= int(sys.argv[9])                          # Channel to pass to python for spot detection
-
-
 FISH_second_channel= sys.argv[10]                  # Channel to pass to python for spot detection
 if FISH_second_channel == 'None':
   FISH_second_channel = None
 else:
   FISH_second_channel= int(FISH_second_channel)
-
 output_name = sys.argv[11]                              # Output file name
 # Path to credentials
 path_to_config_file = pathlib.Path(sys.argv[12])
-
 connect_to_NAS= int(sys.argv[13])
-
 path_to_masks_dir= sys.argv[14]
 if path_to_masks_dir == 'None':
   path_to_masks_dir = None
 else:
   path_to_masks_dir = pathlib.Path(path_to_masks_dir )
-
 optimization_segmentation_method= pathlib.Path(sys.argv[15])
 if optimization_segmentation_method == 'None':
   optimization_segmentation_method = None
-
 
 # Deffining directories
 current_dir = pathlib.Path().absolute()
@@ -83,8 +75,9 @@ def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,sh
   local_data_dir = local_folder_path     # path to a folder with images.
   # Downloading masks from NAS
   if not (path_to_masks_dir is None):
-    local_folder_path_masks = pathlib.Path().absolute().joinpath('temp_masks_' + data_folder_path.name )
+    local_folder_path_masks = pathlib.Path().absolute().joinpath( path_to_masks_dir.stem  )
     zip_file_path = local_folder_path_masks.joinpath( path_to_masks_dir.stem +'.zip')
+    print(zip_file_path)
     fa.NASConnection(path_to_config_file,share_name = share_name).download_file(path_to_masks_dir, local_folder_path_masks,timeout=timeout)
     # Unzip downloaded images and update mask directory
     file_to_unzip = zipfile.ZipFile(str(zip_file_path)) # opens zip
@@ -98,7 +91,7 @@ def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,sh
     os.remove(zip_file_path)
     masks_dir = local_folder_path_masks
   else:
-      masks_dir = None
+    masks_dir = None
   return local_data_dir, masks_dir
 
 # Download data from NAS
@@ -111,7 +104,6 @@ else:
 
 
 # Parameters for the code
-#data_dir = local_folder_path     # path to a folder with images.
 channels_with_cytosol = [nucleus_channel,cyto_channel]            # list or int indicating the channels where the cytosol is detectable
 channels_with_nucleus = nucleus_channel                # list or int indicating the channels where the nucleus is detectable
 
@@ -120,7 +112,6 @@ if (FISH_second_channel==0) or (FISH_second_channel==None):
     channels_with_FISH = [FISH_channel]               # list or int with the channels with FISH spots that are used for the quantification
 else:
     channels_with_FISH = [FISH_channel,FISH_second_channel ]
-
 
 # Detecting if images need to be merged
 is_needed_to_merge_images = fa.MergeChannels(local_data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).checking_images()
@@ -210,35 +201,41 @@ if connect_to_NAS == True:
   local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(analysis_folder_name+'.zip')
   fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, data_folder_path)
   os.remove(pathlib.Path().absolute().joinpath(analysis_folder_name+'.zip'))
+  # Delete temporal images downloaded from NAS
+  shutil.rmtree(local_data_dir)
 
 # Writing masks to NAS
-if path_to_masks_dir == None:
-  mask_dir_complete_name = 'masks_'+ name_final_masks
-  mask_folder_created_by_pipeline = 'masks_'+ data_folder_path.name
+if path_to_masks_dir == None: 
+  mask_folder_created_by_pipeline = 'masks_'+ data_folder_path.name # default name by pipeline
+  name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
+  mask_dir_complete_name = 'masks_'+ name_final_masks # final name for masks dir
   shutil.move(mask_folder_created_by_pipeline, mask_dir_complete_name ) # remaing the masks dir
+else: 
+  mask_dir_complete_name = masks_dir.name
+    
 if (connect_to_NAS == True) and (path_to_masks_dir == None) :
   shutil.make_archive( mask_dir_complete_name , 'zip', pathlib.Path().absolute().joinpath(mask_dir_complete_name))
   local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(mask_dir_complete_name+'.zip')
   fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, data_folder_path)
   os.remove(pathlib.Path().absolute().joinpath(mask_dir_complete_name+'.zip'))
-else:
-  shutil.move(mask_folder_created_by_pipeline, mask_dir_complete_name )
-
 
 # Moving all results to "analyses" folder
 if not os.path.exists(str('analyses')):
-    os.makedirs(str('analyses'))
+  os.makedirs(str('analyses'))
+
 # Subfolder name
 final_dir_name =pathlib.Path().absolute().joinpath('analyses', analysis_folder_name)
+
 # Removing directory if exist
 if os.path.exists(str(final_dir_name)):
   shutil.rmtree(str(final_dir_name))
+
 # Movng results to a subdirectory in 'analyses' folder
 pathlib.Path().absolute().joinpath(analysis_folder_name).rename(final_dir_name )
 
 # Moving masks to a subdirectory in 'analyses' folder
-final_mask_dir_name = pathlib.Path().absolute().joinpath('analyses', mask_dir_complete_name)
-if path_to_masks_dir == None:
+if (connect_to_NAS == True) or (path_to_masks_dir == None):
+  final_mask_dir_name = pathlib.Path().absolute().joinpath('analyses', mask_dir_complete_name)
   pathlib.Path().absolute().joinpath(mask_dir_complete_name).rename(final_mask_dir_name )
 
 # Delete local temporal files

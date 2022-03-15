@@ -41,7 +41,7 @@ FISH_channel=1           # Channel to pass to python for spot detection
 FISH_second_channel='None'    # Channel to pass to python for spot detection in a second Channel, if 0 or None is ignored.
 path_to_config_file="$HOME/Desktop/config.yml"
 connect_to_NAS=1
-path_to_masks_dir='None' #'Test/test_dir'
+path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method=None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
 
@@ -63,7 +63,7 @@ for folder in ${list_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
      nohup python3 ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $connect_to_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
      COUNTER=$((COUNTER+1))
-     val1=$(($COUNTER%3)) 
+     val1=$(($COUNTER%maximum_parallel_iterations)) 
      if [ $val1 -eq '0' ];then
      wait
      fi
