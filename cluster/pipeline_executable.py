@@ -111,7 +111,6 @@ if isinstance(cyto_channel, list):
 else:
   channels_with_cytosol = [cyto_channel]            # list or int indicating the channels where the cytosol is detectable
 
-  
 channels_with_nucleus = nucleus_channel                # list or int indicating the channels where the nucleus is detectable
 
 # Deffining FISH Channels
@@ -124,6 +123,7 @@ else:
 is_needed_to_merge_images = fa.MergeChannels(local_data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).checking_images()
 if is_needed_to_merge_images == True:
   list_file_names, list_images, number_images, output_to_path = fa.MergeChannels(local_data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).merge()
+  local_data_dir_un_merged =local_data_dir
   local_data_dir = local_data_dir.joinpath('merged')
 
 # Parameters for FISH detection
@@ -254,3 +254,8 @@ shutil.rmtree(temp_results_folder_name)
 if (download_data_from_NAS == True):
     # Delete temporal images downloaded from NAS
     shutil.rmtree(local_data_dir)
+    if is_needed_to_merge_images == True:
+      shutil.rmtree(local_data_dir_un_merged)
+      
+# remove output_file
+os.remove(pathlib.Path().absolute().joinpath(output_name))
