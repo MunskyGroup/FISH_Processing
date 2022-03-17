@@ -21,9 +21,9 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 # Declare a string array
 
-#list_test=(\
-#'Test/test_dir' \
-#) 
+list_test_b=(\
+'Test/test_dir' \
+) 
 
 
 list_test=(\
@@ -54,7 +54,7 @@ path_to_config_file="$HOME/Desktop/config.yml"
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1 # If data is downloaded from NAS use 1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
-optimization_segmentation_method='None' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 #########for loop
 # over different parameters above
@@ -69,7 +69,7 @@ save_all_images=0 # If true, it shows a all planes for the FISH plot detection.
 maximum_parallel_iterations=2
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
-for folder in ${list_test[*]}; do
+for folder in ${list_test_b[*]}; do
      output_names=""output__"${folder////__}"".txt"
      nohup python3 ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images >> "$output_names" &
      COUNTER=$((COUNTER+1))

@@ -1624,9 +1624,10 @@ class ReportPDF():
             temp_segmented_img_name = pathlib.Path().absolute().joinpath( self.directory, 'seg_' + temp_file_name +'.png' )
             pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-30)
             
+            
             # Code that plots the detected spots.
-            for id_channel, channel in enumerate(self.channels_with_FISH):
-                if self.save_all_images==True:
+            if self.save_all_images==True:
+                for id_channel, channel in enumerate(self.channels_with_FISH):
                     counter=1
                     pdf.add_page() # adding a page
                     for z_slice in range(0, self.list_z_slices_per_image[i]):
@@ -1652,7 +1653,9 @@ class ReportPDF():
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
-                else:
+            else:
+                pdf.add_page()
+                for id_channel, channel in enumerate(self.channels_with_FISH):
                     # Plotting the image with detected spots
                     temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel)+'.png' )
                     pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
@@ -1667,6 +1670,7 @@ class ReportPDF():
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
+                
         pdf_name =  'pdf_report_' + self.directory.name[13:] + '.pdf'
         pdf.output(pdf_name, 'F')
         return None
