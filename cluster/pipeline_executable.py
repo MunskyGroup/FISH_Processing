@@ -17,6 +17,7 @@ import warnings
 import shutil
 import zipfile
 import os
+import json
 warnings.filterwarnings("ignore")
 #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" 
@@ -32,7 +33,7 @@ diameter_cytosol = int(sys.argv[4])  #250               # approximate cytosol si
 psf_z_1 = int(sys.argv[5])       #350                   # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx_1 = int(sys.argv[6])      #150                   # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel= int(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
-cyto_channel= int(sys.argv[8])                          # Channel to pass to python for cytosol segmentation
+cyto_channel= json.loads(sys.argv[8])                        # Channel to pass to python for cytosol segmentation
 FISH_channel= int(sys.argv[9])                          # Channel to pass to python for spot detection
 FISH_second_channel= sys.argv[10]                  # Channel to pass to python for spot detection
 if FISH_second_channel == 'None':
@@ -51,6 +52,8 @@ else:
 optimization_segmentation_method= pathlib.Path(sys.argv[15])
 if optimization_segmentation_method == 'None':
   optimization_segmentation_method = None
+
+save_all_images=int(sys.argv[16])
 
 # Deffining directories
 current_dir = pathlib.Path().absolute()
@@ -103,7 +106,12 @@ else:
   masks_dir = path_to_masks_dir 
 
 # Parameters for the code
-channels_with_cytosol = [nucleus_channel,cyto_channel]            # list or int indicating the channels where the cytosol is detectable
+if isinstance(cyto_channel, list):
+  channels_with_cytosol = [cyto_channel]            # list or int indicating the channels where the cytosol is detectable
+else:
+  channels_with_cytosol = [cyto_channel]            # list or int indicating the channels where the cytosol is detectable
+
+  
 channels_with_nucleus = nucleus_channel                # list or int indicating the channels where the nucleus is detectable
 
 # Deffining FISH Channels
@@ -129,7 +137,7 @@ minimum_spots_cluster = 2                # The number of spots in a neighborhood
 show_plots=True                          # Flag to display plots
 
 # Running the pipeline
-dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plot=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method ).run()
+dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plot=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images ).run()
 
 # Number of cells
 spot_type_selected = 0
@@ -242,3 +250,7 @@ if (download_data_from_NAS == True) or (path_to_masks_dir == None):
 # Delete local temporal files
 temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + data_folder_path.name)
 shutil.rmtree(temp_results_folder_name)
+
+if (download_data_from_NAS == True):
+    # Delete temporal images downloaded from NAS
+    shutil.rmtree(local_data_dir)

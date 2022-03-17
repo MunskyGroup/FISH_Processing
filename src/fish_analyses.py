@@ -594,7 +594,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 2, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
@@ -1011,9 +1011,12 @@ class BigFISH():
         If true, it shows a all planes for the FISH plot detection. The default is False.
     display_spots_on_multiple_z_planes : Bool, optional.
         If true, it shows a spots on the plane below and above the selected plane. The default is False.
-        
+    use_log_filter_for_spot_detection : bool, optional
+        Uses Big_FISH log_filter. The default is True.
+    threshold_for_spot_detection: scalar or None.
+        Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
         self.FISH_channel = FISH_channel
         self.voxel_size_z = voxel_size_z
@@ -1026,7 +1029,8 @@ class BigFISH():
         self.image_name=image_name
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
-        
+        self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        self.threshold_for_spot_detection=threshold_for_spot_detection
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
@@ -1044,14 +1048,26 @@ class BigFISH():
                         voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
                         object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), ndim=3)
         sigma = spot_radius_px
+        print('sigma_value (z,y,x) =', sigma)
         ## SPOT DETECTION
-        try:
-            rna_filtered = stack.log_filter(rna, sigma) # LoG filter
-        except ValueError:
-            print('Error during the log filter calculation, try using larger parameters values for the psf')
+        if self.use_log_filter_for_spot_detection== True:
+            try:
+                rna_filtered = stack.log_filter(rna, sigma) # LoG filter
+            except ValueError:
+                print('Error during the log filter calculation, try using larger parameters values for the psf')
+                rna_filtered = stack.remove_background_gaussian(rna, sigma)
+        else:
             rna_filtered = stack.remove_background_gaussian(rna, sigma)
-        mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection
-        threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
+        # Automatic threshold detection.
+        mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection        
+        
+        if not (self.threshold_for_spot_detection is None):
+            threshold = self.threshold_for_spot_detection
+        else:
+            threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
+        
+        print('Int threshold used for the detection of spots: ',threshold )
+        
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
         spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, spots=spots, 
@@ -1350,8 +1366,13 @@ class SpotDetection():
         If true, it shows a all planes for the FISH plot detection. The default is False.
     display_spots_on_multiple_z_planes : Bool, optional.
         If true, it shows a spots on the plane below and above the selected plane. The default is False.
+    use_log_filter_for_spot_detection : bool, optional
+        Uses Big_FISH log_filter. The default is True.
+    threshold_for_spot_detection: scalar or None.
+        Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
+    
     '''
-    def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False):
+    def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
         self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
         self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
@@ -1378,6 +1399,8 @@ class SpotDetection():
         self.image_name = image_name
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
+        self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        self.threshold_for_spot_detection=threshold_for_spot_detection
         
     def get_dataframe(self):
         for i in range(0,len(self.list_FISH_channels)):
@@ -1389,7 +1412,7 @@ class SpotDetection():
             voxel_size_yx = self.list_voxels[i][1]
             psf_z = self.list_psfs[i][0] 
             psf_yx = self.list_psfs[i][1]
-            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes).detect()
+            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).detect()
             dataframe_FISH = DataProcessing(spotDectionCSV, clusterDectionCSV, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
@@ -1427,7 +1450,10 @@ class Metadata():
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
-        self.channels_with_FISH = channels_with_FISH
+        if isinstance(channels_with_FISH, list): 
+            self.channels_with_FISH = channels_with_FISH
+        else:
+            self.channels_with_FISH = [channels_with_FISH]
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
         self.list_voxels = list_voxels
@@ -1559,7 +1585,10 @@ class ReportPDF():
     '''    
     def __init__(self, directory, channels_with_FISH,save_all_images,list_z_slices_per_image):
         self.directory = directory
-        self.channels_with_FISH = channels_with_FISH
+        if isinstance(channels_with_FISH, list): 
+            self.channels_with_FISH = channels_with_FISH
+        else:
+            self.channels_with_FISH = [channels_with_FISH]
         self.save_all_images=save_all_images
         self.list_z_slices_per_image = list_z_slices_per_image
     def create_report(self):
@@ -1661,8 +1690,13 @@ class PipelineFISH():
         If true, it shows a all planes for the FISH plot detection. The default is True.
     display_spots_on_multiple_z_planes : Bool, optional.
         If true, it shows a spots on the plane below and above the selected plane. The default is False.
+    use_log_filter_for_spot_detection : bool, optional
+        Uses Big_FISH log_filter. The default is True.
+    threshold_for_spot_detection: scalar or None.
+        Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
+    
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.list_z_slices_per_image = [ img.shape[0] for img in self.list_images] # number of z-slices in the figure
         self.channels_with_cytosol = channels_with_cytosol
@@ -1699,6 +1733,8 @@ class PipelineFISH():
             self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
+        self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        self.threshold_for_spot_detection=threshold_for_spot_detection
         
     def run(self):
         # Prealocating arrays
@@ -1758,7 +1794,7 @@ class PipelineFISH():
                 tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
             print('SPOT DETECTION')
             temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
-            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes).get_dataframe()
+            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
             dataframe = dataframe_FISH
             list_masks_complete_cells.append(masks_complete_cells)
             list_masks_nuclei.append(masks_nuclei)

@@ -21,13 +21,24 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 # Declare a string array
 
+#list_test=(\
+#'Test/test_dir' \
+#) 
+
+
 list_test=(\
-'Test/test_dir' \
-) 
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_wo_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_6h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_6h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_6h' \
+)
+
 
 #list_test=(\
 #'Test/test_dir' \
-#'Test/test_dir1' \
 #) 
 
 send_data_to_NAS=1       # If data sent back to NAS use 1.
@@ -36,15 +47,15 @@ diameter_cytosol=220     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel=0        # Channel to pass to python for nucleus segmentation
-cyto_channel=2           # Channel to pass to python for cytosol segmentation
+cyto_channel='[0,1,2]'     # Channel to pass to python for cytosol segmentation
 FISH_channel=1           # Channel to pass to python for spot detection
 FISH_second_channel='None'    # Channel to pass to python for spot detection in a second Channel, if 0 or None is ignored.
 path_to_config_file="$HOME/Desktop/config.yml"
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1 # If data is downloaded from NAS use 1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
-optimization_segmentation_method=None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
-
+optimization_segmentation_method='None' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 #########for loop
 # over different parameters above
 # pick ones with most cells, 3-4 for for these folders
@@ -55,12 +66,12 @@ optimization_segmentation_method=None # optimization_segmentation_method = 'inte
 # \\ backslash
 # / with
 # / slash
-maximum_parallel_iterations=3
+maximum_parallel_iterations=2
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
 for folder in ${list_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     nohup python3 ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method >> "$output_names" &
+     nohup python3 ./pipeline_executable.py "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx $nucleus_channel $cyto_channel $FISH_channel $FISH_second_channel "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images >> "$output_names" &
      COUNTER=$((COUNTER+1))
      val1=$(($COUNTER%maximum_parallel_iterations)) 
      if [ $val1 -eq '0' ];then
