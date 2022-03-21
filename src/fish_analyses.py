@@ -268,7 +268,7 @@ class NASConnection():
             list_files.append(file.filename)
         return list_files
 
-    def download_file(self, remote_file_path, local_folder_path, timeout=60):
+    def download_file(self, remote_file_path, local_folder_path, timeout=600):
         '''
         This method download an specific file
         
@@ -304,7 +304,7 @@ class NASConnection():
         print('Files downloaded to: ' + str(local_folder_path.joinpath(filename)))
         return None
     
-    def copy_files(self, remote_folder_path, local_folder_path, timeout=60, file_extension ='.tif'):
+    def copy_files(self, remote_folder_path, local_folder_path, timeout=600, file_extension ='.tif'):
         '''
         This method downloads tif files from NAS to a temporal folder in the local computer.
         
@@ -347,7 +347,7 @@ class NASConnection():
         print('Files downloaded to: ' + str(local_folder_path))
         return None
     
-    def write_files_to_NAS(self, local_file_to_send_to_NAS, remote_folder_path,  timeout=60):
+    def write_files_to_NAS(self, local_file_to_send_to_NAS, remote_folder_path,  timeout=600):
         '''
         This method writes files from a local computer to NAS 
         
