@@ -756,7 +756,7 @@ class CellSegmentation():
             min_size =np.amin( (size_mask_n,size_mask_c) )
             mask_combined =  mask_n + mask_c
             sum_mask = np.count_nonzero(mask_combined[mask_combined==2])
-            if sum_mask> min_size*0.8: # the element is inside if the two masks overlap over the 80% of the smaller mask.
+            if sum_mask> min_size*0.8 and min_size>2500: # the element is inside if the two masks overlap over the 80% of the smaller mask.
                 return 1
             else:
                 return 0
@@ -916,7 +916,7 @@ class CellSegmentation():
             # no optimization is applied if a 2D image is passed
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_normalized)
         # This functions makes zeros the border of the mask, it is used only for plotting.
-        def remove_border(img,px_to_remove = 5):
+        def remove_border(img,px_to_remove = 2):
             img[0:10, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
         # Plotting
