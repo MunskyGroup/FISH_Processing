@@ -30,7 +30,7 @@ path_to_config_file="$HOME/FISH_Processing/config.yml"
 send_data_to_NAS=0       # If data sent back to NAS use 1.
 download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
-optimization_segmentation_method=None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+optimization_segmentation_method='None' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 
 # ########### PYTHON PROGRAM #############################
