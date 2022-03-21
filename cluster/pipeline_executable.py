@@ -32,28 +32,24 @@ diameter_nucleus = int(sys.argv[3])                      # approximate nucleus s
 diameter_cytosol = int(sys.argv[4])  #250               # approximate cytosol size in pixels
 psf_z_1 = int(sys.argv[5])       #350                   # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx_1 = int(sys.argv[6])      #150                   # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-nucleus_channel= int(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
+nucleus_channel= json.loads(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
 cyto_channel= json.loads(sys.argv[8])                        # Channel to pass to python for cytosol segmentation
-FISH_channel= int(sys.argv[9])                          # Channel to pass to python for spot detection
-FISH_second_channel= sys.argv[10]                  # Channel to pass to python for spot detection
-if FISH_second_channel == 'None':
-  FISH_second_channel = None
-else:
-  FISH_second_channel= int(FISH_second_channel)
-output_name = sys.argv[11]                              # Output file name
+channels_with_FISH =json.loads(sys.argv[9])
+# Output file name
+output_name = sys.argv[10]  
 # Path to credentials
-path_to_config_file = pathlib.Path(sys.argv[12])
-download_data_from_NAS= int(sys.argv[13])
-path_to_masks_dir= sys.argv[14]
+path_to_config_file = pathlib.Path(sys.argv[11])
+download_data_from_NAS= int(sys.argv[12])
+path_to_masks_dir= sys.argv[13]
 if path_to_masks_dir == 'None':
   path_to_masks_dir = None
 else:
   path_to_masks_dir = pathlib.Path(path_to_masks_dir )
-optimization_segmentation_method= pathlib.Path(sys.argv[15])
+optimization_segmentation_method= pathlib.Path(sys.argv[14])
 if optimization_segmentation_method == 'None':
   optimization_segmentation_method = None
 
-save_all_images=int(sys.argv[16])
+save_all_images=int(sys.argv[15])
 
 # Deffining directories
 current_dir = pathlib.Path().absolute()
@@ -114,10 +110,10 @@ else:
 channels_with_nucleus = nucleus_channel                # list or int indicating the channels where the nucleus is detectable
 
 # Deffining FISH Channels
-if (FISH_second_channel==0) or (FISH_second_channel==None):
-    channels_with_FISH = [FISH_channel]               # list or int with the channels with FISH spots that are used for the quantification
-else:
-    channels_with_FISH = [FISH_channel,FISH_second_channel ]
+#if (FISH_second_channel==0) or (FISH_second_channel==None):
+#    channels_with_FISH = [FISH_channel]               # list or int with the channels with FISH spots that are used for the quantification
+#else:
+#    channels_with_FISH = [FISH_channel,FISH_second_channel ]
 
 # Detecting if images need to be merged
 is_needed_to_merge_images = fa.MergeChannels(local_data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).checking_images()
@@ -209,8 +205,11 @@ if send_data_to_NAS == True:
   fa.NASConnection(path_to_config_file,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, data_folder_path)
   os.remove(pathlib.Path().absolute().joinpath(analysis_folder_name+'.zip'))
   # Delete temporal images downloaded from NAS
-  shutil.rmtree(local_data_dir)
-
+  try:
+    shutil.rmtree(local_data_dir)
+  except:
+    pass
+  
 # Writing masks to NAS
 if path_to_masks_dir == None: 
   mask_folder_created_by_pipeline = 'masks_'+ data_folder_path.name # default name by pipeline
