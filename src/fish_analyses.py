@@ -756,7 +756,7 @@ class CellSegmentation():
             min_size =np.amin( (size_mask_n,size_mask_c) )
             mask_combined =  mask_n + mask_c
             sum_mask = np.count_nonzero(mask_combined[mask_combined==2])
-            if sum_mask> min_size*0.8 and min_size>2500: # the element is inside if the two masks overlap over the 80% of the smaller mask.
+            if (sum_mask> min_size*0.8) and (min_size>2500): # the element is inside if the two masks overlap over the 80% of the smaller mask.
                 return 1
             else:
                 return 0
@@ -777,7 +777,7 @@ class CellSegmentation():
                 masks_nuclei= np.zeros_like(image[:, :, 0])
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 # Function that removes masks that are not paired with a nucleus or cytosol
-                def remove_lonely_maks(masks_0, masks_1):
+                def remove_lonely_maks(masks_0, masks_1,is_nuc=None):
                     n_mask_0 = np.amax(masks_0)
                     n_mask_1 = np.amax(masks_1)
                     if (n_mask_0>0) and (n_mask_1>0):
@@ -787,6 +787,12 @@ class CellSegmentation():
                             for ind_1 in range(1,n_mask_1+1):
                                 tested_mask_1 = np.where(masks_1 == ind_1, 1, 0)
                                 array_paired[ind_1-1] = is_nucleus_in_cytosol(tested_mask_1, tested_mask_0)
+                                #remove_lonely_maks(masks_nuclei, masks_cyto,is_nuc='nuc')
+                                if (is_nuc =='nuc') and (np.count_nonzero(tested_mask_0) > np.count_nonzero(tested_mask_1) ):
+                                    # condition that rejects images with nucleus bigger than the cytosol
+                                    array_paired[ind_1-1] = 0
+                                elif (is_nuc is None ) and (np.count_nonzero(tested_mask_1) > np.count_nonzero(tested_mask_0) ):
+                                    array_paired[ind_1-1] = 0
                             if any (array_paired) == False: # If the cytosol is not associated with any mask.
                                 masks_0 = np.where(masks_0 == ind_0, 0, masks_0)
                             masks_with_pairs = masks_0
@@ -814,8 +820,13 @@ class CellSegmentation():
                 masks_cyto = remove_lonely_maks(masks_cyto, masks_nuclei)
                 masks_cyto = reorder_masks(masks_cyto)
                 # Masks nucleus
-                masks_nuclei = remove_lonely_maks(masks_nuclei, masks_cyto)
+                masks_nuclei = remove_lonely_maks(masks_nuclei, masks_cyto,is_nuc='nuc')
                 masks_nuclei = reorder_masks(masks_nuclei)
+                
+                #if np.amax(masks_nuclei)==np.amax(masks_cyto):    
+                #else:
+                
+                
                 # Iterate for each cyto mask
                 def matching_masks(masks_cyto,masks_nuclei):
                     n_mask_cyto = np.amax(masks_cyto)
@@ -944,8 +955,11 @@ class CellSegmentation():
                     temp_complete_mask = remove_border(tested_mask_cyto)
                     contuour_n = find_contours(temp_nucleus_mask, 0.5)
                     contuour_c = find_contours(temp_complete_mask, 0.5)
-                    axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
-                    axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                    try:
+                        axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                        axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                    except:
+                        pass
                     axes[3].set(title = 'Paired masks')
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
