@@ -51,6 +51,13 @@ if optimization_segmentation_method == 'None':
 
 save_all_images=int(sys.argv[15])
 
+threshold_for_spot_detection=sys.argv[16]
+if threshold_for_spot_detection == 'None':
+  threshold_for_spot_detection = None
+else:
+  threshold_for_spot_detection = int(threshold_for_spot_detection)
+
+
 # Deffining directories
 current_dir = pathlib.Path().absolute()
 fa_dir = current_dir.parents[0].joinpath('src')
@@ -64,7 +71,11 @@ fa.Banner().print_banner()
 share_name = 'share'
 
 # names for final folders
-name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)
+if not (threshold_for_spot_detection is None):
+  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)
+else:
+  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts'+str(threshold_for_spot_detection)
+
 name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
 
 def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
@@ -133,7 +144,7 @@ minimum_spots_cluster = 2                # The number of spots in a neighborhood
 show_plots=True                          # Flag to display plots
 
 # Running the pipeline
-dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plot=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images ).run()
+dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plot=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection ).run()
 
 # Number of cells
 spot_type_selected = 0

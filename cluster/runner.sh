@@ -33,6 +33,7 @@ psf_yx=120                         # Theoretical size of the PSF emitted by a [r
 nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
 cyto_channel='[0,1,2]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
+threshold_for_spot_detection=300
 list_cox_il=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_wo_IL-1B' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_2h' \
@@ -114,7 +115,7 @@ maximum_parallel_iterations=3
 COUNTER=0
 for folder in ${list_cox_il[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images >> "$output_names" &
+     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
      COUNTER=$((COUNTER+1))
      val1=$(($COUNTER%maximum_parallel_iterations)) 
      if [ $val1 -eq '0' ];then
