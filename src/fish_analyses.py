@@ -594,7 +594,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 5, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 10, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
@@ -731,7 +731,7 @@ class CellSegmentation():
             self.NUMBER_OPTIMIZATION_VALUES= 0
             self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         else:
-            self.NUMBER_OPTIMIZATION_VALUES= 6
+            self.NUMBER_OPTIMIZATION_VALUES= 10
             self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
     def calculate_masks(self):
@@ -885,13 +885,13 @@ class CellSegmentation():
         elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.image.shape[0]
-            list_idx = np.round(np.linspace(4, number_z_slices-4, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
+            list_idx = np.round(np.linspace(2, number_z_slices-2, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 array_number_paired_masks = np.zeros( len(list_idx) )
                 for idx, idx_value in enumerate(list_idx):
-                    test_image_optimization = np.amax(self.image[idx_value-2:idx_value+2,:,:,:],axis=0)  
+                    test_image_optimization = np.amax(self.image[idx_value-1:idx_value+1,:,:,:],axis=0)  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                     metric = np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) + np.count_nonzero(masks_nuclei)
                     try:
