@@ -621,9 +621,9 @@ class Cellpose():
         sys.stdout = open(os.devnull, "w")
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         if number_gpus ==0:
-            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = True) # model_type = 'cyto' or model_type = 'nuclei'
         else:
-            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = True) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -945,25 +945,28 @@ class CellSegmentation():
                 axes[2].imshow(masks_plot_nuc)
                 axes[2].set(title = 'Nuclei mask')
                 axes[3].imshow(im)
-                n_masks =np.amax(masks_complete_cells) 
+                n_masks =np.amax(masks_complete_cells)                 
                 for i in range(1, n_masks+1 ):
                     # Removing the borders just for plotting
-                    tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0)
-                    tested_mask_nuc = np.where(masks_nuclei == i, 1, 0)
+                    tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
+                    tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
                     # Remove border for plotting
                     temp_nucleus_mask= remove_border(tested_mask_nuc)
                     temp_complete_mask = remove_border(tested_mask_cyto)
                     contuour_n = find_contours(temp_nucleus_mask, 0.5)
                     contuour_c = find_contours(temp_complete_mask, 0.5)
                     try:
-                        axes[3].fill(contuour_n[0][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
-                        axes[3].fill(contuour_c[0][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                        for k in range(0,len(contuour_n)):
+                            axes[3].fill(contuour_n[k][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                        for j in range(0,len(contuour_c)):  
+                            axes[3].fill(contuour_c[j][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     except:
                         pass
                     axes[3].set(title = 'Paired masks')
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
                 plt.show()
+                
         else:
             if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
                 if self.show_plot == 1:
