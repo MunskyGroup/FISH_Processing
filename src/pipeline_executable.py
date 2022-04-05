@@ -51,11 +51,10 @@ if optimization_segmentation_method == 'None':
 
 save_all_images=int(sys.argv[15])
 
-threshold_for_spot_detection=sys.argv[16]
-if threshold_for_spot_detection == 'None':
+if sys.argv[16] == 'None':
   threshold_for_spot_detection = None
 else:
-  threshold_for_spot_detection = int(threshold_for_spot_detection)
+  threshold_for_spot_detection = int(sys.argv[16])
 
 
 # Deffining directories
