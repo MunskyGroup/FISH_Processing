@@ -594,7 +594,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 5, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimumm_probability = 0
@@ -731,7 +731,7 @@ class CellSegmentation():
             self.NUMBER_OPTIMIZATION_VALUES= 0
             self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         else:
-            self.NUMBER_OPTIMIZATION_VALUES= 5
+            self.NUMBER_OPTIMIZATION_VALUES= 6
             self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
     def calculate_masks(self):
@@ -891,7 +891,7 @@ class CellSegmentation():
                 list_sotring_number_paired_masks = []
                 array_number_paired_masks = np.zeros( len(list_idx) )
                 for idx, idx_value in enumerate(list_idx):
-                    test_image_optimization = np.amax(self.image[idx_value-3:idx_value+3,:,:,:],axis=0)  
+                    test_image_optimization = np.amax(self.image[idx_value-2:idx_value+2,:,:,:],axis=0)  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                     metric = np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) + np.count_nonzero(masks_nuclei)
                     try:
