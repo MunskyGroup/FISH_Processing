@@ -70,10 +70,10 @@ fa.Banner().print_banner()
 share_name = 'share'
 
 # names for final folders
-if not (threshold_for_spot_detection is None):
+if (threshold_for_spot_detection is None):
   name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)
 else:
-  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts'+str(threshold_for_spot_detection)
+  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts_'+str(threshold_for_spot_detection)
 
 name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
 

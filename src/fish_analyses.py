@@ -956,13 +956,13 @@ class CellSegmentation():
                     # Remove border for plotting
                     temp_nucleus_mask= remove_border(tested_mask_nuc)
                     temp_complete_mask = remove_border(tested_mask_cyto)
-                    contuour_n = find_contours(temp_nucleus_mask, 0.5, fully_connected='high', positive_orientation='high')
-                    contuour_c = find_contours(temp_complete_mask, 0.5, fully_connected='high', positive_orientation='high')
+                    contuour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high', positive_orientation='high')
+                    contuour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high', positive_orientation='high')
                     try:
                         for k in range(0,len(contuour_n)):
-                            axes[3].fill(contuour_n[k][:, 1], contuour_n[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                            axes[3].fill(contuour_n[k][:, 1], contuour_n[k][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
                         for j in range(0,len(contuour_c)):  
-                            axes[3].fill(contuour_c[j][:, 1], contuour_c[0][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                            axes[3].fill(contuour_c[j][:, 1], contuour_c[j][:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     except:
                         pass
                     axes[3].set(title = 'Paired masks')
