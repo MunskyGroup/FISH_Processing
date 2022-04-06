@@ -1673,7 +1673,7 @@ class ReportPDF():
                             temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
                             pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
                         else:
-                            pdf.cell(w=0, h=10, txt='Used threshold; '+str(self.threshold_for_spot_detection) ,ln =2,align = 'L')
+                            pdf.cell(w=0, h=10, txt='Used intensity threshold = '+str(self.threshold_for_spot_detection) ,ln =2,align = 'L')
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
@@ -1689,8 +1689,11 @@ class ReportPDF():
                         pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
                     # Plotting the elbow plot
                     try:
-                        temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
-                        pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                        if (self.threshold_for_spot_detection is None):
+                            temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
+                            pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                        else:
+                            pdf.cell(w=0, h=10, txt='Used intensity threshold = '+str(self.threshold_for_spot_detection) ,ln =2,align = 'L')
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
