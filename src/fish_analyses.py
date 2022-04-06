@@ -1603,7 +1603,7 @@ class ReportPDF():
     This PDF file is generated, and it contains the processing steps for each image in the folder.
     
     '''    
-    def __init__(self, directory, channels_with_FISH,save_all_images,list_z_slices_per_image):
+    def __init__(self, directory, channels_with_FISH,save_all_images,list_z_slices_per_image,threshold_for_spot_detection):
         self.directory = directory
         if isinstance(channels_with_FISH, list): 
             self.channels_with_FISH = channels_with_FISH
@@ -1611,6 +1611,7 @@ class ReportPDF():
             self.channels_with_FISH = [channels_with_FISH]
         self.save_all_images=save_all_images
         self.list_z_slices_per_image = list_z_slices_per_image
+        self.threshold_for_spot_detection=threshold_for_spot_detection
     def create_report(self):
         '''
         This method creates a PDF with the original images, images for cell segmentation and images for the spot detection.
@@ -1668,8 +1669,11 @@ class ReportPDF():
                         counter=counter+1
                     pdf.add_page()
                     try:
-                        temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
-                        pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                        if (self.threshold_for_spot_detection is None):
+                            temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
+                            pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
+                        else:
+                            pdf.cell(w=0, h=10, txt='Used threshold; '+str(self.threshold_for_spot_detection) ,ln =2,align = 'L')
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
@@ -1832,5 +1836,5 @@ class PipelineFISH():
         # Creating the metadata
         Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files).write_metadata()
         # Creating a PDF report
-        ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH,save_all_images=self.save_all_images,list_z_slices_per_image=self.list_z_slices_per_image ).create_report()
+        ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH,save_all_images=self.save_all_images,list_z_slices_per_image=self.list_z_slices_per_image,threshold_for_spot_detection=self.threshold_for_spot_detection ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei
