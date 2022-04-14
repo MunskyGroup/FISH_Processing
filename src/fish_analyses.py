@@ -1495,7 +1495,7 @@ class Metadata():
         important_modules = [ 'tqdm', 'torch','tifffile', 'setuptools', 'scipy', 'scikit-learn', 'scikit-image', 'PyYAML', 'pysmb', 'pyfiglet', 'pip', 'Pillow', 'pandas', 'opencv-python-headless', 'numpy', 'numba', 'natsort', 'mrc', 'matplotlib', 'llvmlite', 'jupyter-core', 'jupyter-client', 'joblib', 'ipython', 'ipython-genutils', 'ipykernel', 'cellpose', 'big-fish']
         def create_data_file(filename):
             if sys.platform == 'linux' or sys.platform == 'darwin':
-                os.system('touch' + filename)
+                os.system('touch  ' + filename)
             elif sys.platform == 'win32':
                 os.system('echo , > ' + filename)
         number_spaces_pound_sign = 75

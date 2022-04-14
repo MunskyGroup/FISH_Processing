@@ -115,7 +115,7 @@ path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 maximum_parallel_iterations=4
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
-for folder in ${list_cox_il[*]}; do
+for folder in ${list_test_b[*]}; do
      output_names=""output__"${folder////__}"".txt"
      nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
      COUNTER=$((COUNTER+1))
