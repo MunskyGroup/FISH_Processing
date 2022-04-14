@@ -10,8 +10,7 @@ module load cudnn/8.3-10.2
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
 
 list_test=(\
-'Test/test_dir' \
-'Test/test_dir1' \
+"$HOME/FISH_Processing/dataBases/test_data" \
 ) 
 
 # ########### PROGRAM ARGUMENTS #############################
@@ -28,7 +27,7 @@ cyto_channel='[1,2]'           # Channel to pass to python for cytosol segmentat
 FISH_channel='[1]'           # Channel to pass to python for spot detection
 path_to_config_file="$HOME/FISH_Processing/config.yml"
 send_data_to_NAS=0       # If data sent back to NAS use 1.
-download_data_from_NAS=1
+download_data_from_NAS=0
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='None' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
@@ -52,7 +51,7 @@ done
 #done
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown
+# run as: sbatch runner_cluster_test.sh /dev/null 2>&1 & disown
 
 exit 0
 

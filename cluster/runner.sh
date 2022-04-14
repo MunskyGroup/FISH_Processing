@@ -25,32 +25,33 @@ list_test_b=(\
 'Test/test_dir' \
 ) 
 
+#diameter_nucleus=90               # approximate nucleus size in pixels
+#diameter_cytosol=140               # approximate cytosol size in pixels
+#psf_z=350                          # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+#psf_yx=120                         # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+#nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
+#cyto_channel='[0,2]'           # Channel to pass to python for cytosol segmentation
+#FISH_channel='[1]'           # Channel to pass to python for spot detection
+#threshold_for_spot_detection=400#
+#list_cox_il=(\
+#'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_wo_IL-1B' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_2h' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_6h' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_2h' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_6h' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_2h' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_6h' \
+#)
 
-diameter_nucleus=110               # approximate nucleus size in pixels
-diameter_cytosol=250               # approximate cytosol size in pixels
+<< ////
+diameter_nucleus=90               # approximate nucleus size in pixels
+diameter_cytosol=180               # approximate cytosol size in pixels
 psf_z=350                          # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120                         # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='[0,1,2]'           # Channel to pass to python for cytosol segmentation
+cyto_channel='[0,2]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
-threshold_for_spot_detection=300
-list_cox_il=(\
-'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_wo_IL-1B' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_2h' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_6h' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_2h' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_6h' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_2h' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_6h' \
-)
-
-#diameter_nucleus=120               # approximate nucleus size in pixels
-#diameter_cytosol=220               # approximate cytosol size in pixels
-#psf_z=300                          # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-#psf_yx=140                         # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-#nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-#cyto_channel='[2]'           # Channel to pass to python for cytosol segmentation
-#FISH_channel='[1]'           # Channel to pass to python for spot detection
+threshold_for_spot_detection='None'
 list_cox_dex=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220324/GAPDH-Cy3_COX-2-Cy5_WO_Dex_IL1B' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220324/GAPDH-Cy3_COX-2-Cy5_10min_100nM_DEX' \
@@ -60,16 +61,26 @@ list_cox_dex=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220328/GAPDH-Cy3_COX-2-Cy5_60min_100nM_DEX' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220328/GAPDH-Cy3_COX-2-Cy5_2h_100nM_DEX' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220328/GAPDH-Cy3_COX-2-Cy5_4h_100nM_DEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_wo_IL-1B' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_30ng_ml_IL-1B_6h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220314/GAPDH-Cy3_COX-2-Cy5_100ng_ml_IL-1B_6h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220315/GAPDH-Cy3_COX-2-Cy5_300ng_ml_IL-1B_6h' \
 )
+////
 
-#diameter_nucleus=100                # approximate nucleus size in pixels
-#diameter_cytosol=180                # approximate cytosol size in pixels
-#psf_z=300                           # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-#psf_yx=140                          # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-#nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-#cyto_channel='[2]'           # Channel to pass to python for cytosol segmentation
-#FISH_channel='[1]'           # Channel to pass to python for spot detection
-list_cox_il_tp=(\
+
+diameter_nucleus=90               # approximate nucleus size in pixels
+diameter_cytosol=140               # approximate cytosol size in pixels
+psf_z=350                          # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=120                         # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
+cyto_channel='[0,2]'           # Channel to pass to python for cytosol segmentation
+FISH_channel='[1]'           # Channel to pass to python for spot detection
+threshold_for_spot_detection='None'
+list_cox_il=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220324/GAPDH-Cy3_COX-2-Cy5_WO_Dex_IL1B' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220328/GAPDH-Cy3_COX-2-Cy5_6min_30ng_mL_IL1B' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220328/GAPDH-Cy3_COX-2-Cy5_12min_30ng_mL_IL1B' \
@@ -84,15 +95,6 @@ list_cox_il_tp=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220331/GAPDH-Cy3_COX-2-Cy5_3h_30ng_mL_IL1B' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220401/GAPDH-Cy3_COX-2-Cy5_4h_30ng_mL_IL1B' \
 )
-
-
-#diameter_nucleus=120      # approximate nucleus size in pixels
-#diameter_cytosol=220     # approximate cytosol size in pixels
-#psf_z=300                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-#psf_yx=150               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-#nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-#cyto_channel='[2]'           # Channel to pass to python for cytosol segmentation
-#FISH_channel='[1]'           # Channel to pass to python for spot detection
 path_to_config_file="$HOME/Desktop/config.yml"
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1 # If data is downloaded from NAS use 1
@@ -110,7 +112,7 @@ path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 # \\ backslash
 # / with
 # / slash
-maximum_parallel_iterations=3
+maximum_parallel_iterations=4
 # ########### PYTHON PROGRAM #############################
 COUNTER=0
 for folder in ${list_cox_il[*]}; do
@@ -139,12 +141,11 @@ conda deactivate
 # To check if the process is still running
 # ps -ef | grep python3
 # ps -ef | grep python3 | grep "pipeline_"
-# ps -ef | grep "python3 ./pipeline_executable.py *" | awk '{print $2}'   # Processes running the pipeline.
+# ps -ef | grep python3 | grep "pipeline_" | awk '{print $2}'   # Processes running the pipeline.
 # kill $(ps -ef | grep python3 | grep "pipeline_" | awk '{print $2}')
 
 
 # nvidia-smi | grep 'Default'
-# top -u luisub | grep 'python3'
 
 # To remove files
 # ls *.tif
