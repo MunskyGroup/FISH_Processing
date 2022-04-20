@@ -888,12 +888,13 @@ class CellSegmentation():
             number_z_slices = self.image.shape[0]
             list_idx = np.round(np.linspace(2, number_z_slices-2, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
+            num_zlices_range = 2  # range to consider above and below a selected z-slice
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 array_number_paired_masks = np.zeros( len(list_idx) )
                 for idx, idx_value in enumerate(list_idx):
-                    test_image_optimization = np.amax(self.image[idx_value-2:idx_value+2,:,:,:],axis=0)  
+                    test_image_optimization = np.amax(self.image[idx_value-num_zlices_range:idx_value+num_zlices_range,:,:,:],axis=0)  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                     metric = np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) + np.count_nonzero(masks_nuclei)
                     try:
@@ -904,7 +905,7 @@ class CellSegmentation():
             else:
                 selected_threshold = list_idx[0]
             # Running the mask selection once a threshold is obtained
-            test_image_optimization = np.amax(self.image[selected_threshold-3:selected_threshold+3,:,:,:],axis=0) 
+            test_image_optimization = np.amax(self.image[selected_threshold-num_zlices_range:selected_threshold+num_zlices_range,:,:,:],axis=0) 
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
         
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3):
