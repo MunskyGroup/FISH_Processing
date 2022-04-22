@@ -656,14 +656,15 @@ class Cellpose():
             n_masks = np.amax(masks)
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 size_mask = []
-                intensity_in_mask =[]
+                #intensity_in_mask =[]
                 temp_img = self.image.copy()
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
                     size_mask.append(np.sum(masks == nm)) # creating a list with the size of each mask
-                    temp_bool_mask = masks == nm 
-                    intensity_in_mask.append(   np.sum ( temp_bool_mask*temp_img[0]  ) )
+                    #temp_bool_mask = masks == nm 
+                    #intensity_in_mask.append(   np.sum ( temp_bool_mask*temp_img[0]  ) )
                 number_masks= np.amax(masks)
-                metric = np.sum(  np.multiply (np.asarray(size_mask), np.asarray(intensity_in_mask))  ) * number_masks
+                #metric = np.sum(  np.multiply (np.asarray(size_mask), np.asarray(intensity_in_mask))  ) * number_masks
+                metric = np.sum(np.asarray(size_mask)) * number_masks
                 return metric
             if n_masks == 1: # do nothing if only a single mask is detected per image.
                 return np.sum(masks == 1)
