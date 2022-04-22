@@ -18,6 +18,8 @@ import shutil
 import zipfile
 import os
 import json
+import time
+from random import randint
 warnings.filterwarnings("ignore")
 #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" 
@@ -103,9 +105,13 @@ def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,sh
     masks_dir = None
   return local_data_dir, masks_dir
 
+MINWAIT=10
+MAXWAIT=100
+
 # Download data from NAS
 if download_data_from_NAS == True:
   share_name = 'share'
+  time.sleep(randint(MINWAIT,MAXWAIT))
   local_data_dir, masks_dir= download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200)
 else:
   local_data_dir = data_folder_path 
