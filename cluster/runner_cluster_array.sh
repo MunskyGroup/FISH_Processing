@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=FISH
-# #SBATCH --output=out-%j.out
+#SBATCH --output=out-%j.out
 #SBATCH --error=out-%j.err
 #SBATCH --partition=all
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=2
+#SBATCH --gres=gpu:2
 #SBATCH -a 0-7    # Including the last element 
 
 # module purge
@@ -61,18 +61,16 @@ save_all_images=0 # If true, it shows a all planes for the FISH plot detection.
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 threshold_for_spot_detection='None'
 
-for idx in {0..7} # Including the last element 
-do
+for idx in {0..7}; do # Including the last element 
     folder=${list_Dex_R1[idx]}
     output_names=output_${SLURM_ARRAY_TASK_ID}
-    ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
-
+    ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection --output_name=output_${SLURM_ARRAY_TASK_ID} 
 done
 
 
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster_array.sh
+# run as: sbatch runner_cluster_array.sh /dev/null 2>&1 & disown
 
 exit 0
 
