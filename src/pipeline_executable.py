@@ -105,9 +105,8 @@ def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,sh
     masks_dir = None
   return local_data_dir, masks_dir
 
-MINWAIT=10
-MAXWAIT=100
-
+MINWAIT=60
+MAXWAIT=120
 # Download data from NAS
 if download_data_from_NAS == True:
   share_name = 'share'
@@ -211,7 +210,7 @@ pathlib.Path().absolute().joinpath('dataframe_' + data_folder_path.name +'.csv')
 #pdf_path 
 pathlib.Path().absolute().joinpath('pdf_report_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'pdf_report_'+ data_folder_path.name +'.pdf'))
 # copy output file
-shutil.copyfile(pathlib.Path().absolute().joinpath(output_name),    pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder), output_name) )
+#shutil.copyfile(pathlib.Path().absolute().joinpath(output_name),    pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder), output_name) )
 
 # Writing analyses data to NAS
 analysis_folder_name = 'analysis_'+ name_final_folder
@@ -264,13 +263,22 @@ if (download_data_from_NAS == True) or (path_to_masks_dir == None):
 
 # Delete local temporal files
 temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + data_folder_path.name)
-shutil.rmtree(temp_results_folder_name)
-
+try:
+  shutil.rmtree(temp_results_folder_name)
+except:
+  pass
+    
 if (download_data_from_NAS == True):
     # Delete temporal images downloaded from NAS
-    shutil.rmtree(local_data_dir)
+    try:
+      shutil.rmtree(local_data_dir)
+    except:
+      pass
     if is_needed_to_merge_images == True:
-      shutil.rmtree(local_data_dir_un_merged)
+      try:
+        shutil.rmtree(local_data_dir_un_merged)
+      except:
+        pass
       
 # remove output_file
-os.remove(pathlib.Path().absolute().joinpath(output_name))
+#os.remove(pathlib.Path().absolute().joinpath(output_name))

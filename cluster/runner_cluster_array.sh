@@ -45,7 +45,7 @@ list_Dex_R2=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220214/GAPDH-Cy3_NFKBIA-Cy5_4h_100nM_DEX_Rep2' )
 
 
-diamter_nucleus=100      # approximate nucleus size in pixels
+diameter_nucleus=100      # approximate nucleus size in pixels
 diameter_cytosol=180     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
@@ -64,7 +64,7 @@ threshold_for_spot_detection='None'
 for idx in {0..7}; do # Including the last element 
     folder=${list_Dex_R1[idx]}
     output_names=output_${SLURM_ARRAY_TASK_ID}
-    ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection --output_name=output_${SLURM_ARRAY_TASK_ID} 
+    ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection --output_name=output_${SLURM_ARRAY_TASK_ID} 
 done
 
 
