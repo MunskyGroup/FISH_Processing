@@ -105,13 +105,13 @@ def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,sh
     masks_dir = None
   return local_data_dir, masks_dir
 
-MINWAIT=60
+MINWAIT=0
 MAXWAIT=120
 # Download data from NAS
 if download_data_from_NAS == True:
   share_name = 'share'
   time.sleep(randint(MINWAIT,MAXWAIT))
-  local_data_dir, masks_dir= download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200)
+  local_data_dir, masks_dir= download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=360)
 else:
   local_data_dir = data_folder_path 
   masks_dir = path_to_masks_dir 

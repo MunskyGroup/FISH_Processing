@@ -596,10 +596,10 @@ class Cellpose():
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 15, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
+    def __init__(self, image:np.ndarray, num_iterations:int = 10, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
         self.image = image
         self.num_iterations = num_iterations
-        self.minimumm_probability = 0
+        self.minimumm_probability = -4
         self.maximum_probability = 4
         self.channels = channels
         self.diameter = diameter
@@ -607,6 +607,7 @@ class Cellpose():
         self.selection_method = selection_method # options are 'max_area' or 'max_cells'
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.CELLPOSE_PROBABILITY = 0.6
+        self.flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimumm_probability, self.maximum_probability, self.num_iterations), 2) )
         self.use_brute_force = use_brute_force
     def calculate_masks(self):
@@ -629,7 +630,7 @@ class Cellpose():
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter,flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -645,21 +646,21 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks =0
             return np.amax(masks)
         
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 size_mask = []
                 #intensity_in_mask =[]
-                temp_img = self.image.copy()
+                #temp_img = self.image.copy()
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
                     size_mask.append(np.sum(masks == nm)) # creating a list with the size of each mask
                     #temp_bool_mask = masks == nm 
@@ -742,9 +743,9 @@ class CellSegmentation():
             self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         else:
             if self.use_brute_force == 1:
-                self.NUMBER_OPTIMIZATION_VALUES= 15
-            else:
                 self.NUMBER_OPTIMIZATION_VALUES= 7
+            else:
+                self.NUMBER_OPTIMIZATION_VALUES= 5
             self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
     def calculate_masks(self):
@@ -890,32 +891,59 @@ class CellSegmentation():
             image_copy = image_normalized.copy()
             image_temp = RemoveExtrema(image_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_temp)
-        
         elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.image.shape[0]
-            list_idx = np.round(np.linspace(2, number_z_slices-2, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
+            num_slices_range = 4  # range to consider above and below a selected z-slice
+            list_idx = np.round(np.linspace(num_slices_range, number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
-            num_slices_range = 2  # range to consider above and below a selected z-slice
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sotring_number_paired_masks = []
                 array_number_paired_masks = np.zeros( len(list_idx) )
+                # performing the segmentation on a maximum projection
+                test_image_optimization = np.amax(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
+                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
+                metric_max = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                #print(' metric_max ',metric_max , ' num_cells ' , np.amax(masks_complete_cells) )
+                # performing segmentation for a subsection of z-slices
                 for idx, idx_value in enumerate(list_idx):
                     test_image_optimization = np.amax(self.image[idx_value-num_slices_range:idx_value+num_slices_range,:,:,:],axis=0)  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-                    metric = np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) + np.count_nonzero(masks_nuclei)
+                    metric = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
                     try:
                         array_number_paired_masks[idx] = metric
                     except:
                         array_number_paired_masks[idx] = 0
-                selected_threshold = list_idx[np.argmax(array_number_paired_masks)]
+                    #print('slice ', idx_value ,' metric ',metric , ' num_cells ' , np.amax(masks_complete_cells) )
+                #print(' ')
+                #print(array_number_paired_masks)
+                if np.any (array_number_paired_masks> metric_max):
+                    selected_index = list_idx[np.argmax(array_number_paired_masks)]
+                else:
+                    selected_index = None
             else:
-                selected_threshold = list_idx[0]
+                selected_index = None
             # Running the mask selection once a threshold is obtained
-            test_image_optimization = np.amax(self.image[selected_threshold-num_slices_range:selected_threshold+num_slices_range,:,:,:],axis=0) 
+            if not(selected_index is None):
+                test_image_optimization = np.amax(self.image[selected_index-num_slices_range:selected_index+num_slices_range,:,:,:],axis=0) 
+            else:
+                test_image_optimization = np.amax(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-        
+            
+            #metric = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+            #print('slice ', selected_index ,' metric ',metric , ' num_cells ' , np.amax(masks_complete_cells) )
+        elif (self.optimization_segmentation_method == 'center_slize') and (len(self.image.shape) > 3):
+            # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
+            number_z_slices = self.image.shape[0]
+            center_slice = number_z_slices//2
+            num_slices_range = np.min( (5,center_slice-1))  # range to consider above and below a selected z-slice
+            # Optimization based on slice
+            test_image_optimization = np.amax(self.image[center_slice-num_slices_range:center_slice+num_slices_range,:,:,:],axis=0) 
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
+            #metric = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+            #print(' metric ',metric , ' num_cells ' , np.amax(masks_complete_cells) )
+
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.image.shape[0]//2
