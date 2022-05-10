@@ -646,14 +646,14 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter =self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter =self.diameter, min_size = 200, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks =0
             return np.amax(masks)
         
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = 200, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -866,11 +866,11 @@ class CellSegmentation():
             else:
                 if not (self.channels_with_cytosol is None):
                     masks_complete_cells = masks_cyto
-                    masks_nuclei = np.zeros_like(masks_cyto) 
-                    masks_cytosol_no_nuclei =np.zeros_like(masks_cyto) 
+                    masks_nuclei = None 
+                    masks_cytosol_no_nuclei = None
                 if not (self.channels_with_nucleus is None):
-                    masks_complete_cells = np.zeros_like(masks_nuclei) 
-                    masks_cytosol_no_nuclei =np.zeros_like(masks_nuclei) 
+                    masks_complete_cells = masks_nuclei
+                    masks_cytosol_no_nuclei = None
             return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3):
@@ -905,7 +905,6 @@ class CellSegmentation():
                 test_image_optimization = np.amax(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                 metric_max = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
-                #print(' metric_max ',metric_max , ' num_cells ' , np.amax(masks_complete_cells) )
                 # performing segmentation for a subsection of z-slices
                 for idx, idx_value in enumerate(list_idx):
                     test_image_optimization = np.amax(self.image[idx_value-num_slices_range:idx_value+num_slices_range,:,:,:],axis=0)  
@@ -915,9 +914,6 @@ class CellSegmentation():
                         array_number_paired_masks[idx] = metric
                     except:
                         array_number_paired_masks[idx] = 0
-                    #print('slice ', idx_value ,' metric ',metric , ' num_cells ' , np.amax(masks_complete_cells) )
-                #print(' ')
-                #print(array_number_paired_masks)
                 if np.any (array_number_paired_masks> metric_max):
                     selected_index = list_idx[np.argmax(array_number_paired_masks)]
                 else:
@@ -930,10 +926,7 @@ class CellSegmentation():
             else:
                 test_image_optimization = np.amax(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-            
-            #metric = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
-            #print('slice ', selected_index ,' metric ',metric , ' num_cells ' , np.amax(masks_complete_cells) )
-        elif (self.optimization_segmentation_method == 'center_slize') and (len(self.image.shape) > 3):
+        elif (self.optimization_segmentation_method == 'center_slice') and (len(self.image.shape) > 3):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.image.shape[0]
             center_slice = number_z_slices//2
@@ -941,9 +934,6 @@ class CellSegmentation():
             # Optimization based on slice
             test_image_optimization = np.amax(self.image[center_slice-num_slices_range:center_slice+num_slices_range,:,:,:],axis=0) 
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-            #metric = ( np.amax(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.amax(masks_nuclei) * np.count_nonzero(masks_nuclei) )
-            #print(' metric ',metric , ' num_cells ' , np.amax(masks_complete_cells) )
-
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.image.shape[0]//2
@@ -1006,10 +996,10 @@ class CellSegmentation():
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
                 plt.show()
-                
         else:
             if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
                 if self.show_plot == 1:
+                    masks_plot_cyto= masks_complete_cells 
                     n_channels = np.amin([3, image_normalized.shape[2]])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
                     im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels])
@@ -1022,6 +1012,7 @@ class CellSegmentation():
                     plt.show()
             if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 if self.show_plot == 1:
+                    masks_plot_nuc = masks_nuclei    
                     n_channels = np.amin([3, image_normalized.shape[2]])
                     _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
                     im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels])
@@ -1071,7 +1062,7 @@ class BigFISH():
     use_log_filter_for_spot_detection : bool, optional
         Uses Big_FISH log_filter. The default is True.
     threshold_for_spot_detection: scalar or None.
-        Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
+        Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     '''
     def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
@@ -1094,9 +1085,9 @@ class BigFISH():
         
         Returns
         
-        clusterDectionCSV : np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
+        clusterDetectionCSV : np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
             One coordinate per dimension for the centroid of the cluster (zyx or yx coordinates), the number of spots detected in the clusters, and its index.
-        spotDectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
+        spotDetectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
             Coordinates of the detected spots. One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
         '''
         rna=self.image[:,:,:,self.FISH_channel]
@@ -1117,14 +1108,11 @@ class BigFISH():
             rna_filtered = stack.remove_background_gaussian(rna, sigma)
         # Automatic threshold detection.
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection        
-        
         if not (self.threshold_for_spot_detection is None):
             threshold = self.threshold_for_spot_detection
         else:
             threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
-        
         print('Int threshold used for the detection of spots: ',threshold )
-        
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
         spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, spots=spots, 
@@ -1138,8 +1126,8 @@ class BigFISH():
                                             voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
                                             radius= self.cluster_radius, nb_min_spots = self.minimum_spots_cluster)
         # Saving results with new variable names
-        spotDectionCSV = spots_post_clustering
-        clusterDectionCSV = clusters
+        spotDetectionCSV = spots_post_clustering
+        clusterDetectionCSV = clusters
         ## PLOTTING
         if self.show_plot == True:
             try:
@@ -1155,14 +1143,10 @@ class BigFISH():
             except:
                 print('not showing elbow plot')
             central_slice = rna.shape[0]//2
-            
-            
             if self.save_all_images:
                 range_plot_images = range(0, rna.shape[0])
             else:
                 range_plot_images = range(central_slice,central_slice+1)      
-            
-            
             for i in range_plot_images:
                 if i==central_slice:
                     print('Z-Slice: ', str(i))
@@ -1178,7 +1162,6 @@ class BigFISH():
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-                
                 if self.save_all_images:
                     path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'_slice_'+ str(i) +'.png'
                 else:
@@ -1187,10 +1170,7 @@ class BigFISH():
                 if not(self.image_name is None) and (i==central_slice): # saving only the central slice
                     show_figure_in_cli = True
                 else:
-                    show_figure_in_cli = False
-                    
-                
-                
+                    show_figure_in_cli = False                
                 plot.plot_detection(image_2D, 
                                 spots=[spots_to_plot, clusters_to_plot[:, :3]], 
                                 shape=["circle", "polygon"], 
@@ -1204,12 +1184,8 @@ class BigFISH():
                                 show=show_figure_in_cli,
                                 path_output = path_output)
                 plt.show()
-                
-                
-                
-                
                 del spots_to_plot, clusters_to_plot
-        return [spotDectionCSV, clusterDectionCSV]
+        return [spotDetectionCSV, clusterDetectionCSV]
 
 
 class DataProcessing():
@@ -1219,9 +1195,9 @@ class DataProcessing():
     
     Parameters
     
-    spotDectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
+    spotDetectionCSV: np.int64 Array with shape (nb_clusters, 5) or (nb_clusters, 4). 
         One coordinate per dimension for the cluster\'s centroid (zyx or yx coordinates), the number of spots detected in the clusters, and its index.
-    clusterDectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
+    clusterDetectionCSV : np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
         Coordinates of the detected spots . One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
     masks_complete_cells : List of NumPy arrays or a single NumPy array
         Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
@@ -1229,6 +1205,10 @@ class DataProcessing():
         Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
     masks_cytosol_no_nuclei : List of NumPy arrays or a single NumPy array
         Masks for every cell detected in the image. The list contains the mask arrays consisting of one or multiple Numpy arrays with format [Y, X].
+    channels_with_cytosol : List of int
+        List with integers indicating the index of channels for the cytosol segmentation. The default is None.
+    channels_with_nucleus : list of int
+        List with integers indicating the index of channels for the nucleus segmentation. The default is None. 
     spot_type : int, optional
         A label indicating the spot type, this counter starts at zero, increasing with the number of channels containing FISH spots. The default is zero.
     dataframe : Pandas dataframe or None.
@@ -1238,18 +1218,20 @@ class DataProcessing():
     image_counter : int, optional
         counter for the number of images in the folder. The default is zero.
     '''
-    def __init__(self,spotDectionCSV, clusterDectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, spot_type=0, dataframe =None,reset_cell_counter=False,image_counter=0):
-        self.spotDectionCSV=spotDectionCSV 
-        self.clusterDectionCSV=clusterDectionCSV
-        if isinstance(masks_complete_cells, list):
+    def __init__(self,spotDetectionCSV, clusterDetectionCSV,masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei,  channels_with_cytosol,channels_with_nucleus   , spot_type=0, dataframe =None,reset_cell_counter=False,image_counter=0):
+        self.spotDetectionCSV=spotDetectionCSV 
+        self.clusterDetectionCSV=clusterDetectionCSV
+        self.channels_with_cytosol=channels_with_cytosol
+        self.channels_with_nucleus=channels_with_nucleus
+        if isinstance(masks_complete_cells, list) or (masks_complete_cells is None):
             self.masks_complete_cells=masks_complete_cells
         else:
             self.masks_complete_cells=Utilities().separate_masks(masks_complete_cells)
-        if isinstance(masks_nuclei, list):
+        if isinstance(masks_nuclei, list) or (masks_nuclei is None):
             self.masks_nuclei=masks_nuclei
         else:
             self.masks_nuclei=Utilities().separate_masks(masks_nuclei)        
-        if isinstance(masks_cytosol_no_nuclei, list):
+        if isinstance(masks_cytosol_no_nuclei, list) or (masks_cytosol_no_nuclei is None):
             self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
         else:
             self.masks_cytosol_no_nuclei= Utilities().separate_masks(masks_cytosol_no_nuclei)
@@ -1273,26 +1255,42 @@ class DataProcessing():
             else:
                 centroid_y,centroid_x = 0,0
             return  mask_area, centroid_y, centroid_x
-        def data_to_df( df, spotDectionCSV, clusterDectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0 ):
-            # spotDectionCSV      nrna x  [Z,Y,X,idx_foci]
-            # clusterDectionCSV   nc   x  [Z,Y,X,size,idx_foci]
+        def data_to_df( df, spotDetectionCSV, clusterDetectionCSV, mask_nuc = None, mask_cytosol_only=None, nuc_area = 0, cyto_area =0, cell_area=0, centroid_y=0, centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0 ):
+            # spotDetectionCSV      nrna x  [Z,Y,X,idx_foci]
+            # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus
-            spots_no_ts, _, ts = multistack.remove_transcription_site(spotDectionCSV, clusterDectionCSV, mask_nuc, ndim=3)
+            if not (self.channels_with_nucleus is None):
+                spots_no_ts, _, ts = multistack.remove_transcription_site(spotDetectionCSV, clusterDetectionCSV, mask_nuc, ndim=3)
+            else:
+                spots_no_ts, ts = spotDetectionCSV, None
             #rna_out_ts      [Z,Y,X,idx_foci]         Coordinates of the detected RNAs with shape. One coordinate per dimension (zyx or yx coordinates) plus the index of the foci assigned to the RNA. If no foci was assigned, value is -1. RNAs from transcription sites are removed.
             #foci            [Z,Y,X,size, idx_foci]   One coordinate per dimension for the foci centroid (zyx or yx coordinates), the number of RNAs detected in the foci and its index.
             #ts              [Z,Y,X,size,idx_ts]      One coordinate per dimension for the transcription site centroid (zyx or yx coordinates), the number of RNAs detected in the transcription site and its index.
-            spots_nuc, _ = multistack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
-            # Detecting spots in the nucleus
-            spots_cytosol_only, _ = multistack.identify_objects_in_region(mask_cytosol_only, spotDectionCSV[:,:3], ndim=3)
+            if not (self.channels_with_nucleus is None):
+                spots_nuc, _ = multistack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
+            else:
+                spots_nuc = None
+            # Detecting spots in the cytosol
+            if not (self.channels_with_cytosol is None) :
+                spots_cytosol_only, _ = multistack.identify_objects_in_region(mask_cytosol_only, spotDetectionCSV[:,:3], ndim=3)
+            else:
+                spots_cytosol_only = None
             # coord_innp  Coordinates of the objects detected inside the region.
             # coord_outnp Coordinates of the objects detected outside the region.
             # ts                     n x [Z,Y,X,size,idx_ts]
             # spots_nuc              n x [Z,Y,X]
             # spots_cytosol_only     n x [Z,Y,X]
             number_columns = len(df. columns)
-            num_ts = ts.shape[0]
-            num_nuc = spots_nuc.shape[0]
-            num_cyt = spots_cytosol_only.shape[0] 
+            if not(spots_nuc is None):
+                num_ts = ts.shape[0]
+                num_nuc = spots_nuc.shape[0]
+            else:
+                num_ts = 0
+                num_nuc = 0
+            if not(spots_cytosol_only is None) :
+                num_cyt = spots_cytosol_only.shape[0] 
+            else:
+                num_cyt = 0
             array_ts =                  np.zeros( ( num_ts,number_columns)  )
             array_spots_nuc =           np.zeros( ( num_nuc,number_columns) )
             array_spots_cytosol_only =  np.zeros( ( num_cyt  ,number_columns) )
@@ -1302,32 +1300,43 @@ class DataProcessing():
             spot_idx_cyt = np.arange(num_ts + num_nuc,   num_ts + num_nuc + num_cyt  ,1 )
             spot_idx = np.concatenate((spot_idx_ts,  spot_idx_nuc, spot_idx_cyt ))
             # Populating arrays
-            array_ts[:,8:11] = ts[:,:3]         # populating coord 
-            array_ts[:,11] = 1                  # is_nuc
-            array_ts[:,12] = 1                  # is_cluster
-            array_ts[:,13] =  ts[:,3]           # cluster_size
-            array_ts[:,14] = spot_type          # spot_type
-            array_ts[:,15] = is_cell_in_border  # is_cell_fragmented
-            array_spots_nuc[:,8:11] = spots_nuc[:,:3]   # populating coord 
-            array_spots_nuc[:,11] = 1                   # is_nuc
-            array_spots_nuc[:,12] = 0                   # is_cluster
-            array_spots_nuc[:,13] = 0                   # cluster_size
-            array_spots_nuc[:,14] =  spot_type          # spot_type
-            array_spots_nuc[:,15] =  is_cell_in_border  # is_cell_fragmented
-            array_spots_cytosol_only[:,8:11] = spots_cytosol_only[:,:3]    # populating coord 
-            array_spots_cytosol_only[:,11] = 0                             # is_nuc
-            array_spots_cytosol_only[:,12] = 0                             # is_cluster
-            array_spots_cytosol_only[:,13] =  0                            # cluster_size
-            array_spots_cytosol_only[:,14] =  spot_type                    # spot_type
-            array_spots_cytosol_only[:,15] =  is_cell_in_border            # is_cell_fragmented
+            if not (self.channels_with_nucleus is None):
+                array_ts[:,8:11] = ts[:,:3]         # populating coord 
+                array_ts[:,11] = 1                  # is_nuc
+                array_ts[:,12] = 1                  # is_cluster
+                array_ts[:,13] =  ts[:,3]           # cluster_size
+                array_ts[:,14] = spot_type          # spot_type
+                array_ts[:,15] = is_cell_in_border  # is_cell_fragmented
+                array_ts[:,16] = 0                  # flag empty cell
+                
+                array_spots_nuc[:,8:11] = spots_nuc[:,:3]   # populating coord 
+                array_spots_nuc[:,11] = 1                   # is_nuc
+                array_spots_nuc[:,12] = 0                   # is_cluster
+                array_spots_nuc[:,13] = 0                   # cluster_size
+                array_spots_nuc[:,14] =  spot_type          # spot_type
+                array_spots_nuc[:,15] =  is_cell_in_border  # is_cell_fragmented
+                array_spots_nuc[:,16] =  0                  # flag empty cell
+            if not (self.channels_with_cytosol is None) :
+                array_spots_cytosol_only[:,8:11] = spots_cytosol_only[:,:3]    # populating coord 
+                array_spots_cytosol_only[:,11] = 0                             # is_nuc
+                array_spots_cytosol_only[:,12] = 0                             # is_cluster
+                array_spots_cytosol_only[:,13] = 0                            # cluster_size
+                array_spots_cytosol_only[:,14] =  spot_type                    # spot_type
+                array_spots_cytosol_only[:,15] =  is_cell_in_border            # is_cell_fragmented
+                array_spots_cytosol_only[:,16] =  0                             # flag empty cell
             # concatenate array
-            array_complete = np.vstack((array_ts, array_spots_nuc, array_spots_cytosol_only))
-            # Saves a dataframe with zeros when no spots  are detected on the cell.
+            if not (self.channels_with_nucleus is None) and not (self.channels_with_cytosol is None):
+                array_complete = np.vstack((array_ts, array_spots_nuc, array_spots_cytosol_only))
+            elif not (self.channels_with_nucleus is None) and (self.channels_with_cytosol is None):
+                array_complete = np.vstack((array_ts, array_spots_nuc))
+            elif (self.channels_with_nucleus is None) and not (self.channels_with_cytosol is None):
+                array_complete = array_spots_cytosol_only
+            # Saves a dataframe with zeros when no spots are detected on the cell.
             if array_complete.size ==0:
                 array_complete = np.zeros( ( 1,number_columns)  )
                 # if NO spots are detected populate  with -1
                 array_complete[:,2] = -1     # spot_id
-                array_complete[:,8:11] = -1
+                array_complete[:,8:16] = -1
             else:
                 # if spots are detected populate  the reported  array
                 array_complete[:,2] = spot_idx.T     # spot_id
@@ -1340,33 +1349,54 @@ class DataProcessing():
             array_complete[:,6] = cyto_area      # cyto_area_px
             array_complete[:,7] = cell_area      #'cell_area_px'
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
-            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
+            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int,'flag_empty_cell':int}
             df = df.astype(new_dtypes)
             return df
+        if not (self.masks_nuclei is None):
+            n_masks = len(self.masks_nuclei)
+        else:
+            n_masks = len(self.masks_complete_cells)  
         # Initializing Dataframe
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
             new_dataframe = self.dataframe
             counter_total_cells = np.amax( self.dataframe['cell_id'].values) +1
         elif (not ( self.dataframe is None)) and (self.reset_cell_counter == True):    # IF dataframe exist and reset is passed
             new_dataframe = self.dataframe
-            counter_total_cells = np.amax( self.dataframe['cell_id'].values) - len(self.masks_nuclei) +1   # restarting the counter for the number of cells
+            counter_total_cells = np.amax( self.dataframe['cell_id'].values) - n_masks +1   # restarting the counter for the number of cells
         else: # IF the dataframe does not exist.
-            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
+            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented','flag_empty_cell'])
             counter_total_cells = 0
         # loop for each cell in image
-        n_masks = len(self.masks_nuclei)
         for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-            nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
-            cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei[id_cell],calculate_centroid=False)
-            cell_area, _, _                          = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=False)
-            tested_mask =  self.masks_nuclei[id_cell]
+            if not (self.channels_with_nucleus in  (None, [None])):
+                nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
+                selected_mask_nuc = self.masks_nuclei[id_cell]
+                tested_mask =  self.masks_nuclei[id_cell]
+            else:
+                nuc_area, nuc_centroid_y, nuc_centroid_x = 0,0,0
+                selected_mask_nuc = None
+            if not (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
+                cyto_area, _ ,_                          = mask_selector(self.masks_cytosol_no_nuclei[id_cell],calculate_centroid=False)
+                slected_masks_cytosol_no_nuclei = self.masks_cytosol_no_nuclei[id_cell]
+            else:
+                cyto_area =0
+                slected_masks_cytosol_no_nuclei = None
+            if not (self.channels_with_cytosol in (None, [None])):
+                cell_area, _, _                          = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=False)
+                tested_mask =  self.masks_complete_cells[id_cell]
+            else:
+                cell_area = 0
+            # case where no nucleus is passed and only cytosol
+            if (self.channels_with_nucleus in  (None, [None])) and not (self.channels_with_cytosol in (None, [None])):
+                slected_masks_cytosol_no_nuclei = self.masks_complete_cells[id_cell]
+            
             is_cell_in_border =  np.any( np.concatenate( ( tested_mask[:,0],tested_mask[:,-1],tested_mask[0,:],tested_mask[-1,:] ) ) )   
             # Data extraction
             new_dataframe = data_to_df(new_dataframe, 
-                                self.spotDectionCSV, 
-                                self.clusterDectionCSV, 
-                                mask_nuc = self.masks_nuclei[id_cell], 
-                                mask_cytosol_only=self.masks_cytosol_no_nuclei[id_cell], 
+                                self.spotDetectionCSV, 
+                                self.clusterDetectionCSV, 
+                                mask_nuc = selected_mask_nuc, 
+                                mask_cytosol_only=slected_masks_cytosol_no_nuclei, 
                                 nuc_area=nuc_area,
                                 cyto_area=cyto_area, 
                                 cell_area=cell_area, 
@@ -1393,6 +1423,10 @@ class SpotDetection():
         Array of images with dimensions [Z, Y, X, C] .
     FISH_channels : int, or List
         List of channels with FISH spots that are used for the quantification
+    channels_with_cytosol : List of int
+        List with integers indicating the index of channels for the cytosol segmentation. The default is None.
+    channels_with_nucleus : list of int
+        List with integers indicating the index of channels for the nucleus segmentation. The default is None. 
     cluster_radius : int, optional
         Maximum distance between two samples for one to be considered as in the neighborhood of the other. Radius expressed in nanometer.
     minimum_spots_cluster : int, optional
@@ -1429,11 +1463,24 @@ class SpotDetection():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
     
     '''
-    def __init__(self,image,  FISH_channels , cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
-        self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
-        self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
-        self.list_masks_cytosol_no_nuclei = Utilities().separate_masks(masks_cytosol_no_nuclei)
+        self.channels_with_cytosol=channels_with_cytosol
+        self.channels_with_nucleus=channels_with_nucleus
+        if not (masks_complete_cells is None) and (masks_nuclei is None):
+            self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
+        else:
+            self.list_masks_complete_cells = Utilities().separate_masks(masks_nuclei)
+            
+        if not (masks_nuclei is None):    
+            self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
+        else:
+            self.list_masks_nuclei = None
+        
+        if not (masks_complete_cells is None) and not (masks_nuclei is None):
+            self.list_masks_cytosol_no_nuclei = Utilities().separate_masks(masks_cytosol_no_nuclei)
+        else:
+            self.list_masks_cytosol_no_nuclei = None
         self.FISH_channels = FISH_channels
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
@@ -1469,8 +1516,8 @@ class SpotDetection():
             voxel_size_yx = self.list_voxels[i][1]
             psf_z = self.list_psfs[i][0] 
             psf_yx = self.list_psfs[i][1]
-            [spotDectionCSV, clusterDectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).detect()
-            dataframe_FISH = DataProcessing(spotDectionCSV, clusterDectionCSV, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
+            [spotDetectionCSV, clusterDetectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).detect()
+            dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
         return dataframe_FISH
@@ -1838,33 +1885,53 @@ class PipelineFISH():
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force).calculate_masks() 
             else:
                 # Paths to masks
-                mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
-                mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
-                mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
-                masks_complete_cells = imread(str( mask_cyto_path   )) 
-                masks_nuclei = imread(str(mask_nuc_path)) 
-                masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))                
+                if not (self.channels_with_nucleus is None):
+                    mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
+                    masks_nuclei = imread(str(mask_nuc_path)) 
+                    
+                if not (self.channels_with_cytosol is None):
+                    mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
+                    masks_complete_cells = imread(str( mask_cyto_path   )) 
+                    
+                if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+                    mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
+                    masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
+                
                 # Plotting masks
-                _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
-                axes[0].imshow(masks_complete_cells)
-                axes[0].set(title = 'Cytosol mask')
-                axes[1].imshow(masks_nuclei)
-                axes[1].set(title = 'Nuclei mask')
-                axes[2].imshow(masks_cytosol_no_nuclei)
-                axes[2].set(title = 'Cytosol only')
+                if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+                    _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
+                    axes[0].imshow(masks_complete_cells)
+                    axes[0].set(title = 'Cytosol mask')
+                    axes[1].imshow(masks_nuclei)
+                    axes[1].set(title = 'Nuclei mask')
+                    axes[2].imshow(masks_cytosol_no_nuclei)
+                    axes[2].set(title = 'Cytosol only')
+                if not (self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
+                    _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
+                    axes[0].imshow(masks_complete_cells)
+                    axes[0].set(title = 'Cytosol mask')
+                if (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+                    _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
+                    axes[0].imshow(masks_nuclei)
+                    axes[0].set(title = 'Nuclei mask')
                 plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
                 plt.show()
+                
             # saving masks
             if self.save_masks_as_file ==True:
-                mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
-                mask_nuc_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_nuclei_' + temp_file_name +'.tif' )
-                mask_cyto_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_' + temp_file_name +'.tif' )
-                tifffile.imwrite(mask_cyto_path, masks_complete_cells)
-                tifffile.imwrite(mask_nuc_path, masks_nuclei)
-                tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
+                if not (self.channels_with_nucleus is None):
+                    mask_nuc_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_nuclei_' + temp_file_name +'.tif' )
+                    tifffile.imwrite(mask_nuc_path, masks_nuclei)
+                if not (self.channels_with_cytosol is None):
+                    mask_cyto_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_' + temp_file_name +'.tif' )
+                    tifffile.imwrite(mask_cyto_path, masks_complete_cells)
+                if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+                    mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
+                    tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
+            
             print('SPOT DETECTION')
             temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
-            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
+            dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,self.channels_with_cytosol,self.channels_with_nucleus,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
             dataframe = dataframe_FISH
             list_masks_complete_cells.append(masks_complete_cells)
             list_masks_nuclei.append(masks_nuclei)

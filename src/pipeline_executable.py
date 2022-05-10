@@ -21,10 +21,6 @@ import json
 import time
 from random import randint
 warnings.filterwarnings("ignore")
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1" 
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-#os.environ["CUDA_VISIBLE_DEVICES"] = str(np.random.randint(0,2,1))
 ######################################
 ## User passed arguments
 remote_folder = sys.argv[1]                             # Path to the remote Folder
@@ -34,39 +30,57 @@ diameter_nucleus = int(sys.argv[3])                      # approximate nucleus s
 diameter_cytosol = int(sys.argv[4])  #250               # approximate cytosol size in pixels
 psf_z_1 = int(sys.argv[5])       #350                   # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx_1 = int(sys.argv[6])      #150                   # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-nucleus_channel= json.loads(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
-cyto_channel= json.loads(sys.argv[8])                        # Channel to pass to python for cytosol segmentation
+# Segmentation Channels
+if sys.argv[7] in ('None', 'none',['None'],['none'],[None]):
+  channels_with_nucleus = None
+else:
+  channels_with_nucleus= json.loads(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
+
+if sys.argv[8] in ('None', 'none',['None'],['none'],[None]):
+  channels_with_cytosol =None
+else:
+  channels_with_cytosol= json.loads(sys.argv[8])                        # Channel to pass to python for cytosol segmentation
+
+
+if channels_with_cytosol in ('None', 'none',['None'],['none'],[None]):
+  channels_with_cytosol=None
+if channels_with_nucleus in ('None', 'none',['None'],['none'],[None]):
+  channels_with_nucleus=None
+# Parameters for the code
+if not isinstance(channels_with_cytosol, list) and not (channels_with_cytosol is None):
+  channels_with_cytosol = [channels_with_cytosol]            # list or int indicating the channels where the cytosol is detectable
+if not isinstance(channels_with_nucleus, list) and not (channels_with_nucleus is None):
+  channels_with_nucleus = [channels_with_nucleus]            # list or int indicating the channels where the cytosol is detectable
+# FISH Channels
 channels_with_FISH =json.loads(sys.argv[9])
+if not isinstance(channels_with_FISH, list):
+  channels_with_FISH = [channels_with_FISH]            # list or int indicating the channels where the cytosol is detectable
 # Output file name
 output_name = sys.argv[10]  
 # Path to credentials
 path_to_config_file = pathlib.Path(sys.argv[11])
 download_data_from_NAS= int(sys.argv[12])
 path_to_masks_dir= sys.argv[13]
-if path_to_masks_dir == 'None':
+# Path to directory with masks
+if path_to_masks_dir in ('None', 'none',['None'],['none'],[None]):
   path_to_masks_dir = None
 else:
   path_to_masks_dir = pathlib.Path(path_to_masks_dir )
 optimization_segmentation_method= pathlib.Path(sys.argv[14])
-if optimization_segmentation_method == 'None':
+# Additional parameters
+if optimization_segmentation_method in ('None', 'none',['None'],['none'],[None]):
   optimization_segmentation_method = None
-
 save_all_images=int(sys.argv[15])
-
-if sys.argv[16] == 'None':
+if sys.argv[16] in ('None', 'none',['None'],['none'],[None]):
   threshold_for_spot_detection = None
 else:
   threshold_for_spot_detection = int(sys.argv[16])
-
-
 # Deffining directories
 current_dir = pathlib.Path().absolute()
 fa_dir = current_dir.parents[0].joinpath('src')
-
 # Importing fish_analyses module
 sys.path.append(str(fa_dir))
 import fish_analyses as fa
-
 # Printing banner
 fa.Banner().print_banner()
 share_name = 'share'
@@ -76,9 +90,7 @@ if (threshold_for_spot_detection is None):
   name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts_auto'
 else:
   name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts_'+str(threshold_for_spot_detection)
-
 name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
-
 def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
   # Downloading data from NAS
   local_folder_path = pathlib.Path().absolute().joinpath('temp_' + data_folder_path.name)
@@ -116,19 +128,6 @@ else:
   local_data_dir = data_folder_path 
   masks_dir = path_to_masks_dir 
 
-# Parameters for the code
-if isinstance(cyto_channel, list):
-  channels_with_cytosol = [cyto_channel]            # list or int indicating the channels where the cytosol is detectable
-else:
-  channels_with_cytosol = [cyto_channel]            # list or int indicating the channels where the cytosol is detectable
-
-channels_with_nucleus = nucleus_channel                # list or int indicating the channels where the nucleus is detectable
-
-# Deffining FISH Channels
-#if (FISH_second_channel==0) or (FISH_second_channel==None):
-#    channels_with_FISH = [FISH_channel]               # list or int with the channels with FISH spots that are used for the quantification
-#else:
-#    channels_with_FISH = [FISH_channel,FISH_second_channel ]
 
 # Detecting if images need to be merged
 is_needed_to_merge_images = fa.MergeChannels(local_data_dir, substring_to_detect_in_file_name = '.*_C0.tif', save_figure =1).checking_images()
@@ -140,7 +139,6 @@ if is_needed_to_merge_images == True:
 # Parameters for FISH detection
 voxel_size_z = 500                       # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx = 103                      # Microscope conversion px to nanometers in the xy axis.
-
 list_voxels = [ [voxel_size_z,voxel_size_yx  ]  ]
 list_psfs = [ [psf_z_1, psf_yx_1] ]
 # Cluster Detection
@@ -155,17 +153,18 @@ spot_type_selected = 0
 number_cells = dataframe_FISH['cell_id'].nunique()
 print(number_cells)
 # Number of spots
-number_of_spots_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i)  & (dataframe_FISH['spot_type']==spot_type_selected) ].spot_id) for i in range(0, number_cells)]
+number_of_spots_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i)  & (dataframe_FISH['spot_type']==spot_type_selected)  & (dataframe_FISH['flag_empty_cell']==0)  ].spot_id) for i in range(0, number_cells)]
 # Number of spots in cytosol
-number_of_spots_per_cell_cytosol = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) & (dataframe_FISH['is_nuc']==False) & (dataframe_FISH['spot_type']==spot_type_selected) ].spot_id) for i in range(0, number_cells)]
+number_of_spots_per_cell_cytosol = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) & (dataframe_FISH['is_nuc']==False) & (dataframe_FISH['spot_type']==spot_type_selected)  & (dataframe_FISH['flag_empty_cell']==0)  ].spot_id) for i in range(0, number_cells)]
 # Number of spots in nucleus
-number_of_spots_per_cell_nucleus = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) &  (dataframe_FISH['is_cluster']==False) & (dataframe_FISH['is_nuc']==True) & (dataframe_FISH['spot_type']==spot_type_selected)    ].spot_id) for i in range(0, number_cells)]
+number_of_spots_per_cell_nucleus = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) &  (dataframe_FISH['is_cluster']==False) & (dataframe_FISH['is_nuc']==True) & (dataframe_FISH['spot_type']==spot_type_selected) & (dataframe_FISH['flag_empty_cell']==0)    ].spot_id) for i in range(0, number_cells)]
 # Number of TS per cell.
-number_of_TS_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) &  (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True) & (dataframe_FISH['spot_type']==spot_type_selected) & (dataframe_FISH['cluster_size'] >=4) ].spot_id) for i in range(0, number_cells)]
+number_of_TS_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) &  (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True) & (dataframe_FISH['spot_type']==spot_type_selected) & (dataframe_FISH['cluster_size'] >=4) & (dataframe_FISH['flag_empty_cell']==0)  ].spot_id) for i in range(0, number_cells)]
 # Number of RNA in a TS
 ts_size =  dataframe_FISH.loc[   (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True)  & (dataframe_FISH['spot_type']==spot_type_selected)   ].cluster_size.values
 # Size of each cell
 cell_size = dataframe_FISH.loc[  (dataframe_FISH['spot_id']==0)  ].cell_area_px.values
+
 
 # Plotting intensity distributions
 plt.style.use('ggplot')  # ggplot  #default
