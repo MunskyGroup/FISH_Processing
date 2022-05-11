@@ -7,7 +7,7 @@ Authors: Luis U. Aguilera, Joshua Cook, and Brian Munsky.
 If you use this repository, make sure to cite:
 
 `Big-FISH <https://github.com/fish-quant/big-fish>`_ :
-Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
+Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular tool for smFISH image analysis." RNA (2022): rna-079073.
 
 `Cellpose <https://github.com/MouseLand/cellpose>`_ :
 Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
@@ -1360,7 +1360,7 @@ class DataProcessing():
             new_dataframe = self.dataframe
             counter_total_cells = np.amax( self.dataframe['cell_id'].values) - n_masks +1   # restarting the counter for the number of cells
         else: # IF the dataframe does not exist.
-            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented','flag_empty_cell'])
+            new_dataframe = pd.DataFrame( columns=['image_id', 'cell_id', 'spot_id','nucleus_y', 'nucleus_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'])
             counter_total_cells = 0
         # loop for each cell in image
         for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.

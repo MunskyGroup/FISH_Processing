@@ -142,7 +142,7 @@ Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/mai
 If you use this repository, make sure to cite BIG-FISH and Cellpose:
 
 - [Big-FISH](https://github.com/fish-quant/big-fish):
-Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular analysis tool for smFISH image analysis." Biorxiv (2021).
+Imbert, Arthur, et al. "FISH-quant v2: a scalable and modular tool for smFISH image analysis." RNA (2022): rna-079073.
 
 - [Cellpose](https://github.com/MouseLand/cellpose):
  Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmentation." Nature Methods 18.1 (2021): 100-106.
