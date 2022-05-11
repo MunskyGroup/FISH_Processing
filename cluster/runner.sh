@@ -104,7 +104,7 @@ diameter_cytosol=200               # approximate cytosol size in pixels
 psf_z=350                          # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120                         # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='None' #'[0,2]'           # Channel to pass to python for cytosol segmentation
+cyto_channel='[0,2]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
 threshold_for_spot_detection='None'
 

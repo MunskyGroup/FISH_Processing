@@ -1307,15 +1307,12 @@ class DataProcessing():
                 array_ts[:,13] =  ts[:,3]           # cluster_size
                 array_ts[:,14] = spot_type          # spot_type
                 array_ts[:,15] = is_cell_in_border  # is_cell_fragmented
-                array_ts[:,16] = 0                  # flag empty cell
-                
                 array_spots_nuc[:,8:11] = spots_nuc[:,:3]   # populating coord 
                 array_spots_nuc[:,11] = 1                   # is_nuc
                 array_spots_nuc[:,12] = 0                   # is_cluster
                 array_spots_nuc[:,13] = 0                   # cluster_size
                 array_spots_nuc[:,14] =  spot_type          # spot_type
                 array_spots_nuc[:,15] =  is_cell_in_border  # is_cell_fragmented
-                array_spots_nuc[:,16] =  0                  # flag empty cell
             if not (self.channels_with_cytosol is None) :
                 array_spots_cytosol_only[:,8:11] = spots_cytosol_only[:,:3]    # populating coord 
                 array_spots_cytosol_only[:,11] = 0                             # is_nuc
@@ -1323,7 +1320,6 @@ class DataProcessing():
                 array_spots_cytosol_only[:,13] = 0                            # cluster_size
                 array_spots_cytosol_only[:,14] =  spot_type                    # spot_type
                 array_spots_cytosol_only[:,15] =  is_cell_in_border            # is_cell_fragmented
-                array_spots_cytosol_only[:,16] =  0                             # flag empty cell
             # concatenate array
             if not (self.channels_with_nucleus is None) and not (self.channels_with_cytosol is None):
                 array_complete = np.vstack((array_ts, array_spots_nuc, array_spots_cytosol_only))
@@ -1349,7 +1345,7 @@ class DataProcessing():
             array_complete[:,6] = cyto_area      # cyto_area_px
             array_complete[:,7] = cell_area      #'cell_area_px'
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
-            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int,'flag_empty_cell':int}
+            new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
             df = df.astype(new_dtypes)
             return df
         if not (self.masks_nuclei is None):
