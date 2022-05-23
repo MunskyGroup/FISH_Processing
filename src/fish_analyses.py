@@ -776,7 +776,10 @@ class CellSegmentation():
                 return 0
         ##### IMPLEMENTATION #####
         if len(self.image.shape) > 3:  # [ZYXC]
-            image_normalized = np.amax(self.image[3:-3,:,:,:],axis=0)    # taking the mean value
+            if self.image.shape[0] ==1:
+                image_normalized = self.image[0,:,:,:]
+            else:
+                image_normalized = np.amax(self.image[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
             image_normalized = self.image # [YXC] 
         # Function to find masks
@@ -873,7 +876,7 @@ class CellSegmentation():
                     masks_cytosol_no_nuclei = None
             return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         # OPTIMIZATION METHODS FOR SEGMENTATION
-        if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3):
+        if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 tested_thresholds = np.round(np.linspace(0, 3, self.NUMBER_OPTIMIZATION_VALUES), 0)
@@ -891,7 +894,7 @@ class CellSegmentation():
             image_copy = image_normalized.copy()
             image_temp = RemoveExtrema(image_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_temp)
-        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3):
+        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.image.shape[0]
             num_slices_range = 4  # range to consider above and below a selected z-slice
@@ -926,7 +929,7 @@ class CellSegmentation():
             else:
                 test_image_optimization = np.amax(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-        elif (self.optimization_segmentation_method == 'center_slice') and (len(self.image.shape) > 3):
+        elif (self.optimization_segmentation_method == 'center_slice') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             number_z_slices = self.image.shape[0]
             center_slice = number_z_slices//2
@@ -934,7 +937,7 @@ class CellSegmentation():
             # Optimization based on slice
             test_image_optimization = np.amax(self.image[center_slice-num_slices_range:center_slice+num_slices_range,:,:,:],axis=0) 
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-        elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3):
+        elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             half_z_slices = self.image.shape[0]//2
             list_sigmas = np.round(np.linspace(0.5, 20, self.NUMBER_OPTIMIZATION_VALUES), 1) 
@@ -1654,8 +1657,11 @@ class PlotImages():
         _, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=self.figsize)
         rescaled_image = stack.rescale(self.image[:,:,:,:], channel_to_stretch=None, stretching_percentile=99)
         for i in range (0,number_channels ):
-            img_2D = stack.focus_projection(rescaled_image[3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') # maximum projection 
-            img_2D = stack.gaussian_filter(img_2D,sigma=2)
+            try:
+                img_2D = stack.focus_projection(rescaled_image[3:-3,:,:,i], proportion=0.5, neighborhood_size=5, method='median') # maximum projection 
+                img_2D = stack.gaussian_filter(img_2D,sigma=2)
+            except:
+                img_2D = rescaled_image[0,:,:,i]
             axes[i].imshow( img_2D ,cmap='viridis') 
             axes[i].set_title('Channel_'+str(i))
         plt.savefig(self.image_name,bbox_inches='tight')
@@ -1809,7 +1815,12 @@ class PipelineFISH():
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
     def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False):
-        self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
+        list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
+        if len(list_images[0].shape) < 4:
+            list_images_extended = [ np.expand_dims(img,axis=0) for img in list_images ] 
+            self.list_images = list_images_extended
+        else:
+            self.list_images = list_images
         self.list_z_slices_per_image = [ img.shape[0] for img in self.list_images] # number of z-slices in the figure
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
