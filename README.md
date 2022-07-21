@@ -14,7 +14,7 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 
 # Documentation accessible in readthedocs
 
-The documentation is accessible in the following [link](https://fish-processing.readthedocs.io/en/latest/). 
+The documentation is accessible at the following [link](https://fish-processing.readthedocs.io/en/latest/). 
 
 # Colab implementation
 

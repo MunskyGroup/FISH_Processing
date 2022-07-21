@@ -180,7 +180,7 @@ class Utilities():
             for i in range(0, image.shape[2]):  # iterate for each channel
                 image_new[:,:,i]= (image[:,:,i]/ image[:,:,i].max()) *255
                 image_new = np.uint8(image_new)
-        # padding with zeros the channel dimenssion.
+        # padding with zeros the channel dimension.
         while image_new.shape[2]<3:
             zeros_plane = np.zeros_like(image_new[:,:,0])
             image_new = np.concatenate((image_new,zeros_plane[:,:,np.newaxis]),axis=2)
@@ -223,7 +223,7 @@ class NASConnection():
         # SERVER NAME
         self.share_name = share_name
         self.server_name, _, _ = socket.gethostbyaddr(remote_address)
-        # Deffining the connection to NAS
+        # Defining the connection to NAS
         self.conn = SMBConnection(username=usr, password=pwd, domain=domain, my_name=local_name, remote_name=self.server_name, is_direct_tcp=True)
     def connect_to_server(self,timeout=60):
         '''
@@ -599,7 +599,7 @@ class Cellpose():
     def __init__(self, image:np.ndarray, num_iterations:int = 10, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
         self.image = image
         self.num_iterations = num_iterations
-        self.minimumm_probability = -4
+        self.minimum_probability = -4
         self.maximum_probability = 4
         self.channels = channels
         self.diameter = diameter
@@ -608,7 +608,7 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.CELLPOSE_PROBABILITY = 0.6
         self.flow_threshold = 0.4 # default is 0.4
-        self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimumm_probability, self.maximum_probability, self.num_iterations), 2) )
+        self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 2) )
         self.use_brute_force = use_brute_force
     def calculate_masks(self):
         '''
@@ -630,7 +630,7 @@ class Cellpose():
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter,flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter,flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -646,14 +646,14 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter =self.diameter, min_size = 200, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter =self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks =0
             return np.amax(masks)
         
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = 200, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -684,7 +684,7 @@ class Cellpose():
             evaluated_metric_for_masks = np.asarray(list_metrics_masks)
         if not (self.selection_method is None) and (np.amax(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
-            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = 800, channels = self.channels, progress = None)
         else:
             if len(self.image.shape) >= 3:
                 selected_masks = np.zeros_like(self.image[:,:,0])
@@ -693,7 +693,7 @@ class Cellpose():
             print('No cells detected on the image')
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
-            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = -1, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None)
         sys.stdout.close()
         sys.stdout = old_stdout
         return selected_masks

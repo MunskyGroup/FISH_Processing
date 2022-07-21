@@ -40,8 +40,6 @@ if sys.argv[8] in ('None', 'none',['None'],['none'],[None]):
   channels_with_cytosol =None
 else:
   channels_with_cytosol= json.loads(sys.argv[8])                        # Channel to pass to python for cytosol segmentation
-
-
 if channels_with_cytosol in ('None', 'none',['None'],['none'],[None]):
   channels_with_cytosol=None
 if channels_with_nucleus in ('None', 'none',['None'],['none'],[None]):
@@ -163,7 +161,7 @@ number_of_TS_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i
 # Number of RNA in a TS
 ts_size =  dataframe_FISH.loc[   (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True)  & (dataframe_FISH['spot_type']==spot_type_selected)  & (dataframe_FISH['is_cell_fragmented']!=-1) ].cluster_size.values
 # Size of each cell
-cell_size = dataframe_FISH.loc[  (dataframe_FISH['spot_id']==0)  ].cell_area_px.values
+cell_size = dataframe_FISH.loc[  (dataframe_FISH['spot_id']==0)  |  (dataframe_FISH['spot_id']==-1)  ].cell_area_px.values
 
 
 # Plotting intensity distributions
