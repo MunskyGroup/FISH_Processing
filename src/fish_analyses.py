@@ -1390,21 +1390,34 @@ class DataProcessing():
                 slected_masks_cytosol_no_nuclei = self.masks_complete_cells[id_cell]
             
             is_cell_in_border =  np.any( np.concatenate( ( tested_mask[:,0],tested_mask[:,-1],tested_mask[0,:],tested_mask[-1,:] ) ) )   
+            
+            
+            
             # Data extraction
-            new_dataframe = data_to_df(new_dataframe, 
-                                self.spotDetectionCSV, 
-                                self.clusterDetectionCSV, 
-                                mask_nuc = selected_mask_nuc, 
-                                mask_cytosol_only=slected_masks_cytosol_no_nuclei, 
-                                nuc_area=nuc_area,
-                                cyto_area=cyto_area, 
-                                cell_area=cell_area, 
-                                centroid_y = nuc_centroid_y, 
-                                centroid_x = nuc_centroid_x,
-                                image_counter=self.image_counter,
-                                is_cell_in_border = is_cell_in_border,
-                                spot_type = self.spot_type ,
-                                cell_counter =counter_total_cells)
+            try:
+                new_dataframe = data_to_df(new_dataframe, 
+                                    self.spotDetectionCSV, 
+                                    self.clusterDetectionCSV, 
+                                    mask_nuc = selected_mask_nuc, 
+                                    mask_cytosol_only=slected_masks_cytosol_no_nuclei, 
+                                    nuc_area=nuc_area,
+                                    cyto_area=cyto_area, 
+                                    cell_area=cell_area, 
+                                    centroid_y = nuc_centroid_y, 
+                                    centroid_x = nuc_centroid_x,
+                                    image_counter=self.image_counter,
+                                    is_cell_in_border = is_cell_in_border,
+                                    spot_type = self.spot_type ,
+                                    cell_counter =counter_total_cells)
+            except:
+                print(selected_mask_nuc.max())
+                print(slected_masks_cytosol_no_nuclei.max())
+                print(new_dataframe)
+                print('spots')
+                print(self.spotDetectionCSV)
+                print('cluster')
+                print(self.clusterDetectionCSV)
+            
             counter_total_cells +=1
         return new_dataframe
 
