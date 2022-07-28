@@ -602,7 +602,7 @@ class Cellpose():
         #self.minimum_probability = -4
         #self.maximum_probability = 4
         self.minimum_probability = 0.1
-        self.maximum_probability = 1.5
+        self.maximum_probability = 1
         self.channels = channels
         self.diameter = diameter
         self.model_type = model_type # options are 'cyto' or 'nuclei'
@@ -687,7 +687,7 @@ class Cellpose():
             evaluated_metric_for_masks = np.asarray(list_metrics_masks)
         if not (self.selection_method is None) and (np.amax(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
-            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = selected_conditions , diameter = self.diameter, min_size = 800, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.image, normalize = True, flow_threshold = selected_conditions , diameter = self.diameter, min_size = 800, channels = self.channels, progress = None)
         else:
             if len(self.image.shape) >= 3:
                 selected_masks = np.zeros_like(self.image[:,:,0])
