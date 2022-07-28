@@ -599,15 +599,18 @@ class Cellpose():
     def __init__(self, image:np.ndarray, num_iterations:int = 10, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
         self.image = image
         self.num_iterations = num_iterations
-        self.minimum_probability = -4
-        self.maximum_probability = 4
+        #self.minimum_probability = -4
+        #self.maximum_probability = 4
+        self.minimum_probability = 0.1
+        self.maximum_probability = 1.5
         self.channels = channels
         self.diameter = diameter
         self.model_type = model_type # options are 'cyto' or 'nuclei'
         self.selection_method = selection_method # options are 'max_area' or 'max_cells'
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
-        self.CELLPOSE_PROBABILITY = 0.6
-        self.flow_threshold = 0.4 # default is 0.4
+        #self.CELLPOSE_PROBABILITY =  0.6
+        #self.CELLPOSE_PROBABILITY =  0
+        self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 2) )
         self.use_brute_force = use_brute_force
     def calculate_masks(self):
@@ -630,7 +633,7 @@ class Cellpose():
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter,flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, flow_threshold = optimization_parameter, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -646,14 +649,14 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter =self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, flow_threshold = optimization_parameter, diameter =self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks =0
             return np.amax(masks)
         
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = optimization_parameter, flow_threshold=self.flow_threshold, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
+                masks, _, _, _ = model.eval(self.image, normalize = True, flow_threshold = optimization_parameter,diameter = self.diameter, min_size = 800, channels = self.channels, progress = None,net_avg=self.use_brute_force,augment=self.use_brute_force)
             except:
                 masks = 0
             n_masks = np.amax(masks)
@@ -693,7 +696,7 @@ class Cellpose():
             print('No cells detected on the image')
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
-            selected_masks, _, _, _ = model.eval(self.image, normalize = True, mask_threshold = self.CELLPOSE_PROBABILITY, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None)
+            selected_masks, _, _, _ = model.eval(self.image, normalize = True, flow_threshold = self.default_flow_threshold, diameter = self.diameter, min_size = 800, channels = self.channels, progress = None)
         sys.stdout.close()
         sys.stdout = old_stdout
         return selected_masks
