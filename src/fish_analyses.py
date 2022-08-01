@@ -631,9 +631,9 @@ class Cellpose():
         #sys.stdout = open(os.devnull, "w")
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         if number_gpus ==0:
-            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = True) # model_type = 'cyto' or model_type = 'nuclei'
         else:
-            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = True) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -667,14 +667,15 @@ class Cellpose():
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 size_mask = []
                 for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                    size_mask.append(np.sum(masks == nm)) # creating a list with the size of each mask
+                    approximated_radius = np.sqrt(np.sum(masks == nm)/np.pi)  # a=  pi r2
+                    size_mask.append(approximated_radius) # creating a list with the size of each mask
                 number_masks= np.max(masks)
                 size_masks_array = np.array(size_mask)
                 #if np.any( size_masks_array > ((self.diameter)**2) ) : # making sure that the mask is not larger than 1.5 times the selected diameter
                 #    metric = 0
                 #else:
+                #metric = np.median(size_masks_array).astype(int) * number_masks
                 metric = np.median(size_masks_array).astype(int) * number_masks
-                    
                 return metric
             if n_masks == 1: # do nothing if only a single mask is detected per image.
                 return np.sum(masks == 1)
@@ -743,11 +744,12 @@ class CellSegmentation():
         self.NUMBER_OF_CORES = 1 # number of cores for parallel computing.
         self.use_brute_force = use_brute_force
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+        self.number_z_slices = image.shape[0]
         if number_gpus ==0:
             self.NUMBER_OPTIMIZATION_VALUES= 0
             self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         else:
-            self.NUMBER_OPTIMIZATION_VALUES= 10
+            self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,15))
             self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 
     def calculate_masks(self):
@@ -784,6 +786,27 @@ class CellSegmentation():
                 image_normalized = np.max(self.image[3:-3,:,:,:],axis=0)    # taking the mean value
         else:
             image_normalized = self.image # [YXC] 
+        
+        # Function to calculate the approximated radius in a mask
+        def approximated_radius(masks,diameter=100):
+            n_masks = np.max(masks)
+            if n_masks > 1: # detecting if more than 1 mask are detected per cell
+                size_mask = []
+                for nm in range (1, n_masks+1): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                    approximated_radius = np.sqrt(np.sum(masks == nm)/np.pi)  # a=  pi r2
+                    #if  approximated_radius < diameter:
+                    size_mask.append(approximated_radius) # creating a list with the size of each mask
+                    #else:
+                    #    size_mask.append(0)
+                array_radii =np.array(size_mask)
+            else:
+                array_radii = np.sqrt(np.sum(masks == 1)/np.pi)
+            if np.any(array_radii > diameter) |  np.any(array_radii < 10):
+                masks_radii = 0
+            else:
+                masks_radii= np.prod (array_radii)
+            return masks_radii
+        
         # Function to find masks
         def function_to_find_masks (image):                    
             if not (self.channels_with_cytosol is None):
@@ -896,11 +919,14 @@ class CellSegmentation():
             image_copy = image_normalized.copy()
             image_temp = RemoveExtrema(image_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_temp)
-        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
+        
+        
+        
+        elif (self.optimization_segmentation_method == 'z_slice_segmentation_marker') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
-            number_z_slices = self.image.shape[0]
+            #number_z_slices = self.image.shape[0]
             num_slices_range = 3  # range to consider above and below a selected z-slice
-            list_idx = np.round(np.linspace(num_slices_range, number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
+            list_idx = np.round(np.linspace(num_slices_range, self.number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
@@ -908,17 +934,73 @@ class CellSegmentation():
                 array_number_paired_masks = np.zeros( len(list_idx) )
                 # performing the segmentation on a maximum projection
                 test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
-                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-                metric_max = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)                
+                median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
+                median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
+                #metric_max = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                #metric_max = ( np.max(masks_complete_cells) * median_radii_complete_cells_complete_cells) * ( np.max(masks_nuclei) * median_radii_nuclei )
+                metric_max =  median_radii_nuclei * median_radii_complete_cells_complete_cells
                 # performing segmentation for a subsection of z-slices
                 for idx, idx_value in enumerate(list_idx):
-                    test_image_optimization = np.max(self.image[idx_value-num_slices_range:idx_value+num_slices_range,:,:,:],axis=0)  
+                    test_image_optimization = self.image[idx_value,:,:,:]
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
-                    metric = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                    median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
+                    median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
+                    #metric = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                    #metric = ( np.max(masks_complete_cells) * median_radii_complete_cells_complete_cells) * ( np.max(masks_nuclei) * median_radii_nuclei )
+                    metric = median_radii_nuclei * median_radii_complete_cells_complete_cells
+
                     try:
                         array_number_paired_masks[idx] = metric
                     except:
                         array_number_paired_masks[idx] = 0
+                #print(array_number_paired_masks)
+                if np.any (array_number_paired_masks> metric_max):
+                    selected_index = list_idx[np.argmax(array_number_paired_masks)]
+                else:
+                    selected_index = None
+            else:
+                selected_index = None
+            # Running the mask selection once a threshold is obtained
+            if not(selected_index is None):
+                test_image_optimization = self.image[selected_index,:,:,:]
+            else:
+                test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization) 
+        
+        
+        elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
+            # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
+            #number_z_slices = self.image.shape[0]
+            num_slices_range = 3  # range to consider above and below a selected z-slice
+            list_idx = np.round(np.linspace(num_slices_range, self.number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
+            list_idx = np.unique(list_idx)  #list(set(list_idx))
+            # Optimization based on slice
+            if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+                list_sorting_number_paired_masks = []
+                array_number_paired_masks = np.zeros( len(list_idx) )
+                # performing the segmentation on a maximum projection
+                test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
+                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)                
+                median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
+                median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
+                #metric_max = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                #metric_max = ( np.max(masks_complete_cells) * median_radii_complete_cells_complete_cells) * ( np.max(masks_nuclei) * median_radii_nuclei )
+                metric_max =  median_radii_nuclei * median_radii_complete_cells_complete_cells
+                # performing segmentation for a subsection of z-slices
+                for idx, idx_value in enumerate(list_idx):
+                    test_image_optimization = np.max(self.image[idx_value-num_slices_range:idx_value+num_slices_range,:,:,:],axis=0)  
+                    masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
+                    median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
+                    median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
+                    #metric = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
+                    #metric = ( np.max(masks_complete_cells) * median_radii_complete_cells_complete_cells) * ( np.max(masks_nuclei) * median_radii_nuclei )
+                    metric =  median_radii_nuclei * median_radii_complete_cells_complete_cells
+                    try:
+                        array_number_paired_masks[idx] = metric
+                    except:
+                        array_number_paired_masks[idx] = 0
+                #print(array_number_paired_masks)
                 if np.any (array_number_paired_masks> metric_max):
                     selected_index = list_idx[np.argmax(array_number_paired_masks)]
                 else:
@@ -931,10 +1013,14 @@ class CellSegmentation():
             else:
                 test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)        
+        
+        
+        
+        
         elif (self.optimization_segmentation_method == 'center_slice') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
-            number_z_slices = self.image.shape[0]
-            center_slice = number_z_slices//2
+            #number_z_slices = self.image.shape[0]
+            center_slice = self.number_z_slices//2
             num_slices_range = np.min( (5,center_slice-1))  # range to consider above and below a selected z-slice
             # Optimization based on slice
             #test_image_optimization = np.max(self.image[center_slice-num_slices_range:center_slice+num_slices_range,:,:,:],axis=0) 
