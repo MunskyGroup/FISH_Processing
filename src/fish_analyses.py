@@ -918,22 +918,20 @@ class CellSegmentation():
             # Running the mask selection once a threshold is obtained
             image_copy = image_normalized.copy()
             image_temp = RemoveExtrema(image_copy,min_percentile=selected_threshold,max_percentile=100-selected_threshold,selected_channels=self.channels_with_cytosol).remove_outliers() 
-            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_temp)
-        
-        
+            masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_temp)        
         
         elif (self.optimization_segmentation_method == 'z_slice_segmentation_marker') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             #number_z_slices = self.image.shape[0]
-            num_slices_range = 3  # range to consider above and below a selected z-slice
-            list_idx = np.round(np.linspace(num_slices_range, self.number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
+            #num_slices_range = 0  # range to consider above and below a selected z-slice
+            list_idx = np.round(np.linspace(0, self.number_z_slices, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
             # Optimization based on slice
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
                 list_sorting_number_paired_masks = []
                 array_number_paired_masks = np.zeros( len(list_idx) )
                 # performing the segmentation on a maximum projection
-                test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
+                test_image_optimization = np.max(self.image[:,:,:,:],axis=0)  
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)                
                 median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
                 median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
@@ -949,7 +947,6 @@ class CellSegmentation():
                     #metric = ( np.max(masks_complete_cells) * np.count_nonzero(masks_complete_cells) ) + ( np.max(masks_nuclei) * np.count_nonzero(masks_nuclei) )
                     #metric = ( np.max(masks_complete_cells) * median_radii_complete_cells_complete_cells) * ( np.max(masks_nuclei) * median_radii_nuclei )
                     metric = median_radii_nuclei * median_radii_complete_cells_complete_cells
-
                     try:
                         array_number_paired_masks[idx] = metric
                     except:
@@ -1014,9 +1011,7 @@ class CellSegmentation():
                 test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)        
         
-        
-        
-        
+                
         elif (self.optimization_segmentation_method == 'center_slice') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             #number_z_slices = self.image.shape[0]
@@ -1116,6 +1111,7 @@ class CellSegmentation():
                         plt.savefig(self.image_name,bbox_inches='tight')
                     plt.show()
             print('No paired masks were detected for this image')
+        
         return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei 
 
 
@@ -1891,6 +1887,12 @@ class ReportPDF():
         return None
 
 
+
+
+
+
+
+
 class PipelineFISH():
     '''
     This class is intended to perform complete FISH analyses including cell segmentation and spot detection.
@@ -1959,7 +1961,9 @@ class PipelineFISH():
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        #if not (threshold_for_spot_detection is None):
         self.threshold_for_spot_detection=threshold_for_spot_detection
+        
         self.use_brute_force =use_brute_force
         
     def run(self):
@@ -1992,12 +1996,12 @@ class PipelineFISH():
             print('CELL SEGMENTATION')
             if (self.masks_dir is None):
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force).calculate_masks() 
+            
             else:
                 # Paths to masks
                 if not (self.channels_with_nucleus is None):
                     mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
                     masks_nuclei = imread(str(mask_nuc_path)) 
-                    
                 if not (self.channels_with_cytosol is None):
                     mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
                     masks_complete_cells = imread(str( mask_cyto_path   )) 
@@ -2005,7 +2009,6 @@ class PipelineFISH():
                 if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
                     mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                     masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
-                
                 # Plotting masks
                 if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
                     _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
@@ -2025,6 +2028,8 @@ class PipelineFISH():
                     axes[0].set(title = 'Nuclei mask')
                 plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
                 plt.show()
+            
+            
                 
             # saving masks
             if self.save_masks_as_file ==True:
