@@ -962,7 +962,7 @@ class CellSegmentation():
             if not(selected_index is None):
                 test_image_optimization = self.image[selected_index,:,:,:]
             else:
-                test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
+                test_image_optimization = np.max(self.image[:,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization) 
         
         
