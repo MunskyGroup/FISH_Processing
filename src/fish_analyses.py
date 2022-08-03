@@ -1837,7 +1837,7 @@ class ReportPDF():
                 pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-30)
             else:
                 pdf.cell(w=0, h=20, txt='Segmentation was not possible for image: ' + temp_file_name,ln =1,align = 'L')
-            
+                pdf.add_page()
             # Code that plots the detected spots.
             if (self.save_all_images==True) and (self.list_segmentation_succesful[i]==True):
                 for id_channel, channel in enumerate(self.channels_with_FISH):
