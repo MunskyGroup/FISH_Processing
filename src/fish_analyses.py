@@ -597,7 +597,7 @@ class Cellpose():
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 5, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
+    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
         self.image = image
         self.num_iterations = num_iterations
         #self.minimum_probability = -4
@@ -671,10 +671,6 @@ class Cellpose():
                     size_mask.append(approximated_radius) # creating a list with the size of each mask
                 number_masks= np.max(masks)
                 size_masks_array = np.array(size_mask)
-                #if np.any( size_masks_array > ((self.diameter)**2) ) : # making sure that the mask is not larger than 1.5 times the selected diameter
-                #    metric = 0
-                #else:
-                #metric = np.median(size_masks_array).astype(int) * number_masks
                 metric = np.median(size_masks_array).astype(int) * number_masks
                 return metric
             if n_masks == 1: # do nothing if only a single mask is detected per image.
@@ -725,20 +721,20 @@ class CellSegmentation():
         Method used for the segmentation. The options are: \'intensity_segmentation\', \'z_slice_segmentation\', \'gaussian_filter_segmentation\', and None.
     remove_fragmented_cells: bool, optional
         If true, it removes masks in the border of the image. The default is False.
-    show_plot : bool, optional
+    show_plots : bool, optional
         If true, it shows a plot with the detected masks. The default is True.
     image_name : str or None.
         Name for the image with detected spots. The default is None.
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plot: bool = True, image_name = None,use_brute_force=False):
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,use_brute_force=False):
         self.image = image
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
         self.diameter_cytosol = diameter_cytosol
         self.diameter_nucleus = diameter_nucleus
-        self.show_plot = show_plot
+        self.show_plots = show_plots
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
         self.NUMBER_OF_CORES = 1 # number of cores for parallel computing.
@@ -1037,66 +1033,73 @@ class CellSegmentation():
             return img
         # Plotting
         if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-            if self.show_plot == 1:
-                n_channels = np.min([3, image_normalized.shape[2]])
-                _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels],min_percentile=1, max_percentile=95)  
+            
+            n_channels = np.min([3, image_normalized.shape[2]])
+            _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
+            im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels],min_percentile=1, max_percentile=95)  
+            masks_plot_cyto= masks_complete_cells 
+            masks_plot_nuc = masks_nuclei              
+            axes[0].imshow(im)
+            axes[0].set(title = 'All channels')
+            axes[1].imshow(masks_plot_cyto)
+            axes[1].set(title = 'Cytosol mask')
+            axes[2].imshow(masks_plot_nuc)
+            axes[2].set(title = 'Nuclei mask')
+            axes[3].imshow(im)
+            n_masks =np.max(masks_complete_cells)                 
+            for i in range(1, n_masks+1 ):
+                # Removing the borders just for plotting
+                tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
+                tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
+                # Remove border for plotting
+                temp_nucleus_mask= remove_border(tested_mask_nuc)
+                temp_complete_mask = remove_border(tested_mask_cyto)
+                temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
+                temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
+                contours_connected_n = np.vstack((temp_contour_n))
+                contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
+                contours_connected_c = np.vstack((temp_contour_c))
+                contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
+                axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                axes[3].set(title = 'Paired masks')
+            if not(self.image_name is None):
+                plt.savefig(self.image_name,bbox_inches='tight')
+            if self.show_plots == 1:
+                plt.show()
+            else:
+                plt.close()
+        else:
+            if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
                 masks_plot_cyto= masks_complete_cells 
-                masks_plot_nuc = masks_nuclei              
+                n_channels = np.min([3, image_normalized.shape[2]])
+                _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
+                im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels],min_percentile=1, max_percentile=95)
                 axes[0].imshow(im)
                 axes[0].set(title = 'All channels')
                 axes[1].imshow(masks_plot_cyto)
                 axes[1].set(title = 'Cytosol mask')
-                axes[2].imshow(masks_plot_nuc)
-                axes[2].set(title = 'Nuclei mask')
-                axes[3].imshow(im)
-                n_masks =np.max(masks_complete_cells)                 
-                for i in range(1, n_masks+1 ):
-                    # Removing the borders just for plotting
-                    tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
-                    tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
-                    # Remove border for plotting
-                    temp_nucleus_mask= remove_border(tested_mask_nuc)
-                    temp_complete_mask = remove_border(tested_mask_cyto)
-                    temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
-                    temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
-                    contours_connected_n = np.vstack((temp_contour_n))
-                    contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
-                    contours_connected_c = np.vstack((temp_contour_c))
-                    contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
-                    axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
-                    axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
-                    axes[3].set(title = 'Paired masks')
                 if not(self.image_name is None):
                     plt.savefig(self.image_name,bbox_inches='tight')
-                plt.show()
-        else:
-            if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
-                if self.show_plot == 1:
-                    masks_plot_cyto= masks_complete_cells 
-                    n_channels = np.min([3, image_normalized.shape[2]])
-                    _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels],min_percentile=1, max_percentile=95)
-                    axes[0].imshow(im)
-                    axes[0].set(title = 'All channels')
-                    axes[1].imshow(masks_plot_cyto)
-                    axes[1].set(title = 'Cytosol mask')
-                    if not(self.image_name is None):
-                        plt.savefig(self.image_name,bbox_inches='tight')
+                if self.show_plots == 1:
                     plt.show()
+                else:
+                    plt.close()
             if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-                if self.show_plot == 1:
-                    masks_plot_nuc = masks_nuclei    
-                    n_channels = np.min([3, image_normalized.shape[2]])
-                    _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                    im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels],min_percentile=1, max_percentile=95)
-                    axes[0].imshow(im)
-                    axes[0].set(title = 'All channels')
-                    axes[1].imshow(masks_plot_nuc)
-                    axes[1].set(title = 'Nuclei mask')
-                    if not(self.image_name is None):
-                        plt.savefig(self.image_name,bbox_inches='tight')
+                masks_plot_nuc = masks_nuclei    
+                n_channels = np.min([3, image_normalized.shape[2]])
+                _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
+                im = Utilities().convert_to_int8(image_normalized[ :, :, 0:n_channels],min_percentile=1, max_percentile=95)
+                axes[0].imshow(im)
+                axes[0].set(title = 'All channels')
+                axes[1].imshow(masks_plot_nuc)
+                axes[1].set(title = 'Nuclei mask')
+                if not(self.image_name is None):
+                    plt.savefig(self.image_name,bbox_inches='tight')
+                if self.show_plots == 1:
                     plt.show()
+                else:
+                    plt.close()
             print('No paired masks were detected for this image')
         
         return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei 
@@ -1126,7 +1129,7 @@ class BigFISH():
         Maximum distance between two samples for one to be considered as in the neighborhood of the other. Radius expressed in nanometer.
     minimum_spots_cluster : int, optional
         Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
-    show_plot : bool, optional
+    show_plots : bool, optional
         If True shows a 2D maximum projection of the image and the detected spots. The default is False
     image_name : str or None.
         Name for the image with detected spots. The default is None.
@@ -1139,7 +1142,7 @@ class BigFISH():
     threshold_for_spot_detection: scalar or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plot =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
         self.FISH_channel = FISH_channel
         self.voxel_size_z = voxel_size_z
@@ -1148,7 +1151,7 @@ class BigFISH():
         self.psf_yx = psf_yx
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
-        self.show_plot = show_plot
+        self.show_plots = show_plots
         self.image_name=image_name
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
@@ -1204,62 +1207,68 @@ class BigFISH():
         spotDetectionCSV = spots_post_clustering
         clusterDetectionCSV = clusters
         ## PLOTTING
-        if self.show_plot == True:
-            try:
-                if not(self.image_name is None):
-                    path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
-                else:
-                    path_output_elbow = None 
-                plot.plot_elbow(rna, 
-                                voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
-                                spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
-                                path_output = path_output_elbow)
-                plt.show()
-            except:
-                print('not showing elbow plot')
-            central_slice = rna.shape[0]//2
-            if self.save_all_images:
-                range_plot_images = range(0, rna.shape[0])
+        #if self.show_plots == True:
+        try:
+            if not(self.image_name is None):
+                path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
             else:
-                range_plot_images = range(central_slice,central_slice+1)      
-            for i in range_plot_images:
-                if i==central_slice:
-                    print('Z-Slice: ', str(i))
-                image_2D = rna_filtered[i,:,:]
-                if i > 1 and i<rna.shape[0]-1:
-                    if self.display_spots_on_multiple_z_planes == True:
-                        # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane-1
-                        clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
-                        spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ]
-                    else:
-                        clusters_to_plot = clusters[clusters[:,0]==i]
-                        spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                path_output_elbow = None 
+            plot.plot_elbow(rna, 
+                            voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
+                            spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
+                            path_output = path_output_elbow, show=self.show_plots )
+            if self.show_plots ==True:
+                plt.show()
+            else:
+                plt.close()
+        except:
+            print('not showing elbow plot')
+        central_slice = rna.shape[0]//2
+        if self.save_all_images:
+            range_plot_images = range(0, rna.shape[0])
+        else:
+            range_plot_images = range(central_slice,central_slice+1)      
+        for i in range_plot_images:
+            if i==central_slice:
+                print('Z-Slice: ', str(i))
+            image_2D = rna_filtered[i,:,:]
+            if i > 1 and i<rna.shape[0]-1:
+                if self.display_spots_on_multiple_z_planes == True:
+                    # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane-1
+                    clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
+                    spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ]
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
                     spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
-                if self.save_all_images:
-                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'_slice_'+ str(i) +'.png'
-                else:
-                    path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'.png'
-                    
-                if not(self.image_name is None) and (i==central_slice): # saving only the central slice
-                    show_figure_in_cli = True
-                else:
-                    show_figure_in_cli = False                
-                plot.plot_detection(image_2D, 
-                                spots=[spots_to_plot, clusters_to_plot[:, :3]], 
-                                shape=["circle", "polygon"], 
-                                radius=[3, 6], 
-                                color=["orangered", "blue"],
-                                linewidth=[1, 1], 
-                                fill=[False, False], 
-                                framesize=(15, 10), 
-                                contrast=True,
-                                rescale=True,
-                                show=show_figure_in_cli,
-                                path_output = path_output)
+            else:
+                clusters_to_plot = clusters[clusters[:,0]==i]
+                spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+            if self.save_all_images:
+                path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'_slice_'+ str(i) +'.png'
+            else:
+                path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'.png'
+                
+            if not(self.image_name is None) and (i==central_slice) and (self.show_plots ==True): # saving only the central slice
+                show_figure_in_cli = True
+            else:
+                show_figure_in_cli = False                
+            plot.plot_detection(image_2D, 
+                            spots=[spots_to_plot, clusters_to_plot[:, :3]], 
+                            shape=["circle", "polygon"], 
+                            radius=[3, 6], 
+                            color=["orangered", "blue"],
+                            linewidth=[1, 1], 
+                            fill=[False, False], 
+                            framesize=(15, 10), 
+                            contrast=True,
+                            rescale=True,
+                            show=show_figure_in_cli,
+                            path_output = path_output)
+            if self.show_plots ==True:
                 plt.show()
-                del spots_to_plot, clusters_to_plot
+            else:
+                plt.close()
+            del spots_to_plot, clusters_to_plot
         return [spotDetectionCSV, clusterDetectionCSV]
 
 
@@ -1533,7 +1542,7 @@ class SpotDetection():
         List with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
         psf_z is the size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
         psf_yx is the size of the PSF emitted by a spot in the yx plan in nanometers.
-    show_plot : bool, optional
+    show_plots : bool, optional
         If True, it shows a 2D maximum projection of the image and the detected spots. The default is False.
     image_name : str or None.
         Name for the image with detected spots. The default is None.
@@ -1547,7 +1556,7 @@ class SpotDetection():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
     
     '''
-    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plot=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None,image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
         self.channels_with_cytosol=channels_with_cytosol
         self.channels_with_nucleus=channels_with_nucleus
@@ -1570,7 +1579,7 @@ class SpotDetection():
         self.minimum_spots_cluster = minimum_spots_cluster
         self.dataframe = dataframe
         self.image_counter = image_counter
-        self.show_plot = show_plot
+        self.show_plots = show_plots
         if type(list_voxels[0]) != list:
             self.list_voxels = [list_voxels]
         else:
@@ -1600,7 +1609,7 @@ class SpotDetection():
             voxel_size_yx = self.list_voxels[i][1]
             psf_z = self.list_psfs[i][0] 
             psf_yx = self.list_psfs[i][1]
-            [spotDetectionCSV, clusterDetectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plot=self.show_plot,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).detect()
+            [spotDetectionCSV, clusterDetectionCSV] = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plots=self.show_plots,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).detect()
             dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
@@ -1733,10 +1742,11 @@ class PlotImages():
     figsize : tuple with figure size, optional.
         Tuple with format (x_size, y_size). the default is (8.5, 5).
     '''
-    def __init__(self,image,figsize=(8.5, 5),image_name='temp'):
+    def __init__(self,image,figsize=(8.5, 5),image_name='temp',show_plots=True):
         self.image = image
         self.figsize = figsize
         self.image_name = image_name
+        self.show_plots = show_plots
         
     def plot(self):
         '''
@@ -1753,7 +1763,10 @@ class PlotImages():
             axes[i].set_title('Channel_'+str(i))
             axes[i].grid(color='k', ls = '-.', lw = 0.5)
         plt.savefig(self.image_name,bbox_inches='tight')
-        plt.show()
+        if self.show_plots ==True:
+            plt.show()
+        else:
+            plt.close()
         return None
 
 
@@ -1907,7 +1920,7 @@ class PipelineFISH():
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plot=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False):
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         if len(list_images[0].shape) < 4:
             list_images_extended = [ np.expand_dims(img,axis=0) for img in list_images ] 
@@ -1929,7 +1942,7 @@ class PipelineFISH():
         else:
             self.list_psfs = list_psfs
         self.minimum_spots_cluster = minimum_spots_cluster
-        self.show_plot = show_plot
+        self.show_plots = show_plots
         self.CLUSTER_RADIUS = 500
         self.data_dir = data_dir
         if not(file_name_str is None):
@@ -1983,12 +1996,12 @@ class PipelineFISH():
             print(self.list_files_names[i])
             temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
             temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
-            PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name ).plot()            
+            PlotImages(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name, show_plots = self.show_plots).plot()            
             # Cell segmentation
             temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
             print('CELL SEGMENTATION')
             if (self.masks_dir is None):
-                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plot=self.show_plot,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force).calculate_masks() 
+                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force).calculate_masks() 
             # test if segmentation was succcesful
                 if np.sum([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()]) > NUMBER_OF_PIXELS_IN_MASK:
                     segmentation_succesful = True
@@ -2024,7 +2037,10 @@ class PipelineFISH():
                     axes[0].imshow(masks_nuclei)
                     axes[0].set(title = 'Nuclei mask')
                 plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
-                plt.show()
+                if self.show_plots == True:
+                    plt.show()
+                else:
+                    plt.close()
                 
             # saving masks
             if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
@@ -2041,7 +2057,7 @@ class PipelineFISH():
             print('SPOT DETECTION')
             if segmentation_succesful==True:
                 temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
-                dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,self.channels_with_cytosol,self.channels_with_nucleus,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plot=self.show_plot,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
+                dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,self.channels_with_cytosol,self.channels_with_nucleus,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=i, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plots=self.show_plots,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
                 dataframe = dataframe_FISH
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
