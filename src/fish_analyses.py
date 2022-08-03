@@ -1990,8 +1990,8 @@ class PipelineFISH():
             if not os.path.exists(masks_folder_name):
                 os.makedirs(masks_folder_name)        
         # Running the pipeline.
+        counter=0
         for i in range (0, self.number_images ):
-            counter=0
             print( ' ############### ' )
             print( '       IMAGE : '+ str(i) )
             print( ' ############### \n ' )
