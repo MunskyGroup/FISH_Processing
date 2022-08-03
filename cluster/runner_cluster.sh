@@ -1,7 +1,8 @@
 #!/bin/bash
+NUMBER_OF_CORES=4
 #SBATCH --partition=all
-#SBATCH --ntasks=2
-#SBATCH --gres=gpu:1
+#SBATCH --ntasks=$NUMBER_OF_CORES
+#SBATCH --gres=gpu:$NUMBER_OF_CORES
 
 # module purge
 module load gnu9/9.4.0 
@@ -43,7 +44,7 @@ threshold_for_spot_detection='None'
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_linda[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
+     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait
 done
 

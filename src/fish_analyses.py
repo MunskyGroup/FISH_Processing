@@ -728,7 +728,7 @@ class CellSegmentation():
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,use_brute_force=False):
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,use_brute_force=False,NUMBER_OF_CORES=1):
         self.image = image
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -737,7 +737,7 @@ class CellSegmentation():
         self.show_plots = show_plots
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
-        self.NUMBER_OF_CORES = 1 # number of cores for parallel computing.
+        #self.NUMBER_OF_CORES = 4 # number of cores for parallel computing.
         self.use_brute_force = use_brute_force
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         self.number_z_slices = image.shape[0]
@@ -749,7 +749,7 @@ class CellSegmentation():
             self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
-        
+        self.NUMBER_OF_CORES=NUMBER_OF_CORES
     def calculate_masks(self):
         '''
         This method performs the process of cell detection for FISH images using **Cellpose**.
@@ -1722,7 +1722,7 @@ class Metadata():
                 fd.write('\nREPRODUCIBILITY ')
                 fd.write('\n    Platform: \n')
                 fd.write('        Python: ' + str(platform.python_version()) )
-                fd.write('\n    Dependancies: ')
+                fd.write('\n    Dependencies: ')
                 # iterating for all modules
                 for module_name in installed_modules:
                     if any(module_name[0:4] in s for s in important_modules):
@@ -1923,7 +1923,7 @@ class PipelineFISH():
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1):
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         if len(list_images[0].shape) < 4:
             list_images_extended = [ np.expand_dims(img,axis=0) for img in list_images ] 
@@ -1970,7 +1970,7 @@ class PipelineFISH():
         self.threshold_for_spot_detection=threshold_for_spot_detection
         
         self.use_brute_force =use_brute_force
-        
+        self.NUMBER_OF_CORES=NUMBER_OF_CORES
     def run(self):
         
         NUMBER_OF_PIXELS_IN_MASK = 10000
@@ -2006,7 +2006,7 @@ class PipelineFISH():
             temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
             print('CELL SEGMENTATION')
             if (self.masks_dir is None):
-                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force).calculate_masks() 
+                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks() 
             # test if segmentation was succcesful
                 if np.sum([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()]) > NUMBER_OF_PIXELS_IN_MASK:
                     segmentation_succesful = True

@@ -73,7 +73,10 @@ if sys.argv[16] in ('None', 'none',['None'],['none'],[None]):
   threshold_for_spot_detection = None
 else:
   threshold_for_spot_detection = int(sys.argv[16])
-# Deffining directories
+
+NUMBER_OF_CORES=int(sys.argv[17])
+
+# Defining directories
 current_dir = pathlib.Path().absolute()
 fa_dir = current_dir.parents[0].joinpath('src')
 # Importing fish_analyses module
@@ -144,7 +147,7 @@ minimum_spots_cluster = 2                # The number of spots in a neighborhood
 show_plots=True                          # Flag to display plots
 
 # Running the pipeline
-dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,use_brute_force=True ).run()
+dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,use_brute_force=True,NUMBER_OF_CORES=NUMBER_OF_CORES).run()
 
 # Number of cells
 spot_type_selected = 0
