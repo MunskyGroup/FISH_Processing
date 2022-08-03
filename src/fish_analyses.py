@@ -2061,7 +2061,6 @@ class PipelineFISH():
             
             print('SPOT DETECTION')
             if segmentation_succesful==True:
-                counter+=1
                 temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
                 dataframe_FISH = SpotDetection(self.list_images[i],self.channels_with_FISH,self.channels_with_cytosol,self.channels_with_nucleus,cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, dataframe=dataframe,image_counter=counter, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plots=self.show_plots,image_name = temp_detection_img_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
                 dataframe = dataframe_FISH
@@ -2069,6 +2068,7 @@ class PipelineFISH():
                 list_masks_nuclei.append(masks_nuclei)
                 list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
                 list_counter_cell_id.append(counter)
+                counter+=1
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
                 
             # appending cell segmentation flag
