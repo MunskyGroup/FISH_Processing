@@ -1713,7 +1713,7 @@ class Metadata():
                 counter=0
                 for indx, img_name in enumerate (self.list_files_names):
                     if self.list_segmentation_succesful[indx]== True:
-                        fd.write('\n        '+ img_name +  '   - Cell ID:  ' + str(self.list_counter_cell_id[counter]) )
+                        fd.write('\n        '+ img_name +  '   - Image Id Number:  ' + str(self.list_counter_cell_id[counter]) )
                         counter+=1
                     else:
                         fd.write('\n        '+ img_name + ' ===> image ignored for error during segmentation.')
