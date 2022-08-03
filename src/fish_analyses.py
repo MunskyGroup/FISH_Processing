@@ -1643,7 +1643,7 @@ class Metadata():
     file_name_str : str
         Name used for the metadata file. The final name has the format metadata_<<file_name_str>>.txt
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True,list_counter_cell_id=[]):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -1665,6 +1665,7 @@ class Metadata():
             self.filename = './metadata_'+ str(data_dir.name[5:]) +'.txt'
         self.data_dir = data_dir
         self.list_segmentation_succesful =list_segmentation_succesful
+        self.list_counter_cell_id=list_counter_cell_id
     def write_metadata(self):
         '''
         This method writes the metadata file.
@@ -1709,9 +1710,11 @@ class Metadata():
                 
                 # for loop for all the images.
                 fd.write('\n    Images in the directory :'  )
+                counter=0
                 for indx, img_name in enumerate (self.list_files_names):
                     if self.list_segmentation_succesful[indx]== True:
-                        fd.write('\n        '+ img_name)
+                        fd.write('\n        '+ img_name +  '   - Cell ID:  ' + str(self.list_counter_cell_id[counter]) )
+                        counter+=1
                     else:
                         fd.write('\n        '+ img_name + ' ===> image ignored for error during segmentation.')
                 fd.write('\n')  
@@ -1977,6 +1980,7 @@ class PipelineFISH():
         list_masks_nuclei=[]
         list_masks_cytosol_no_nuclei=[]
         list_segmentation_succesful=[]
+        list_counter_cell_id=[]
         # temp_results_images
         temp_folder_name = str('temp_results_'+ self.name_for_files)
         if not os.path.exists(temp_folder_name):
@@ -2064,7 +2068,9 @@ class PipelineFISH():
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
                 list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
+                list_counter_cell_id.append(counter)
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
+                
             # appending cell segmentation flag
             list_segmentation_succesful.append(segmentation_succesful)
         
@@ -2074,7 +2080,7 @@ class PipelineFISH():
         elif np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')
         # Creating the metadata
-        Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files,list_segmentation_succesful=list_segmentation_succesful).write_metadata()
+        Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files,list_segmentation_succesful=list_segmentation_succesful,list_counter_cell_id=list_counter_cell_id).write_metadata()
         # Creating a PDF report
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name) , channels_with_FISH=self.channels_with_FISH, save_all_images=self.save_all_images, list_z_slices_per_image=self.list_z_slices_per_image,threshold_for_spot_detection=self.threshold_for_spot_detection,list_segmentation_succesful=list_segmentation_succesful ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei
