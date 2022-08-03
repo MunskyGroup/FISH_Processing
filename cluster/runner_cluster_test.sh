@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=all
 #SBATCH --ntasks=2
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 
 # module purge
 module load gnu9/9.4.0 
@@ -12,6 +12,7 @@ module load cudnn/8.3-10.2
 list_test=(\
 "$HOME/FISH_Processing/dataBases/test_data" \
 ) 
+NUMBER_OF_CORES=2
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -36,7 +37,7 @@ threshold_for_spot_detection='None'
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
+     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait
 done
 

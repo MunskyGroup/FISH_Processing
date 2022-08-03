@@ -1,8 +1,8 @@
 #!/bin/bash
-NUMBER_OF_CORES=4
 #SBATCH --partition=all
-#SBATCH --ntasks=$NUMBER_OF_CORES
-#SBATCH --gres=gpu:$NUMBER_OF_CORES
+#SBATCH --ntasks=4
+#SBATCH --gres=gpu:4
+#SBATCH --job-name=testing
 
 # module purge
 module load gnu9/9.4.0 
@@ -16,25 +16,29 @@ list_test=(\
 ) 
 
 list_linda=(\
-'Test/test_dir' \
-'Test/test_dir1' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220728/RPE_GoldMedium_32P_COX-2_WOstm_Cyto543_560' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220728/RPE_GoldMedium_32P_COX-2_30ng_mL_IL-1B-1h_Cyto543_560' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220728/RPE_GoldMedium_32P_COX-2_30ng_mL_IL-1B-2h_Cyto543_560' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220801/RPE_GoldMedium_32P_COX-2_30ng_mL_IL-1B-4h_Cyto543_560' \
 ) 
+
 
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
 # Read them in the python file using: sys.argv. This return a list of strings. 
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
+NUMBER_OF_CORES=4
 
 diameter_nucleus=100      # approximate nucleus size in pixels
 diameter_cytosol=180     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='[0,2]'           # Channel to pass to python for cytosol segmentation
+nucleus_channel='[0,0]'        # Channel to pass to python for nucleus segmentation
+cyto_channel='[2,0]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
 path_to_config_file="$HOME/FISH_Processing/config.yml"
-send_data_to_NAS=1       # If data sent back to NAS use 1.
+send_data_to_NAS=0       # If data sent back to NAS use 1.
 download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
