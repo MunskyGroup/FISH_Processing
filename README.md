@@ -2,6 +2,10 @@
 
 Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
 
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
+[![Documentation Status](https://readthedocs.org/projects/rsnaped/badge/?version=latest)](https://fish-processing.readthedocs.io/en/latest/)
+
 # Description
 
 Repository to automatically process ​Fluorescence In Situ Hybridization (FISH) images. This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
@@ -12,17 +16,15 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/code_architecture.png alt="drawing" width="1200"/>
 
-# Documentation accessible in readthedocs
-
-The documentation is accessible at the following [link](https://fish-processing.readthedocs.io/en/latest/). 
-
-# Colab implementation
-
- * Implementation in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
 
 # Installation 
 
 ## Installation on a local computer
+
+* Clone the repository.
+```sh
+git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
+```
 
 * To create a virtual environment, navigate to the location of the requirements file, and use:
 ```sh
@@ -36,6 +38,7 @@ The documentation is accessible at the following [link](https://fish-processing.
 * To install pytorch for CPU usage in Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```sh
  conda install pytorch -c pytorch
+ 
 ```
 * To include the rest of the requirements use:
 ```sh
