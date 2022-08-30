@@ -149,22 +149,25 @@ show_plots=True                          # Flag to display plots
 # Running the pipeline
 dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,use_brute_force=True,NUMBER_OF_CORES=NUMBER_OF_CORES).run()
 
-# Number of cells
-spot_type_selected = 0
-number_cells = dataframe_FISH['cell_id'].nunique()
-print(number_cells)
-# Number of spots
-number_of_spots_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i)  & (dataframe_FISH['spot_type']==spot_type_selected) & (dataframe_FISH['is_cell_fragmented']!=-1)   ].spot_id) for i in range(0, number_cells)]
-# Number of spots in cytosol
-number_of_spots_per_cell_cytosol = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) & (dataframe_FISH['is_nuc']==False) & (dataframe_FISH['spot_type']==spot_type_selected)  & (dataframe_FISH['is_cell_fragmented']!=-1)  ].spot_id) for i in range(0, number_cells)]
-# Number of spots in nucleus
-number_of_spots_per_cell_nucleus = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) &  (dataframe_FISH['is_cluster']==False) & (dataframe_FISH['is_nuc']==True) & (dataframe_FISH['spot_type']==spot_type_selected) & (dataframe_FISH['is_cell_fragmented']!=-1)    ].spot_id) for i in range(0, number_cells)]
-# Number of TS per cell.
-number_of_TS_per_cell = [len( dataframe_FISH.loc[  (dataframe_FISH['cell_id']==i) &  (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True) & (dataframe_FISH['spot_type']==spot_type_selected) & (dataframe_FISH['cluster_size'] >=minimum_spots_cluster) & (dataframe_FISH['is_cell_fragmented']!=-1)  ].spot_id) for i in range(0, number_cells)]
-# Number of RNA in a TS
-ts_size =  dataframe_FISH.loc[   (dataframe_FISH['is_cluster']==True) & (dataframe_FISH['is_nuc']==True)  & (dataframe_FISH['spot_type']==spot_type_selected)  & (dataframe_FISH['is_cell_fragmented']!=-1) ].cluster_size.values
-# Size of each cell
-cell_size = dataframe_FISH.loc[  (dataframe_FISH['spot_id']==0)  |  (dataframe_FISH['spot_id']==-1)  ].cell_area_px.values
+
+
+def extracting_data_from_df (df,spot_type_selected=0):
+    number_cells = df['cell_id'].nunique()
+    # Number of spots
+    number_of_spots_per_cell = [len( df.loc[  (df['cell_id']==i)  & (df['spot_type']==spot_type_selected) & (df['is_cell_fragmented']!=-1)  ].spot_id) for i in range(0, number_cells)]
+    # Number of spots in cytosol
+    number_of_spots_per_cell_cytosol = [len( df.loc[  (df['cell_id']==i) & (df['is_nuc']==False) & (df['spot_type']==spot_type_selected) & (df['is_cell_fragmented']!=-1) ].spot_id) for i in range(0, number_cells)]
+    # Number of spots in nucleus
+    number_of_spots_per_cell_nucleus = [len( df.loc[  (df['cell_id']==i) &  (df['is_cluster']==False) & (df['is_nuc']==True) & (df['spot_type']==spot_type_selected)  & (df['is_cell_fragmented']!=-1)   ].spot_id) for i in range(0, number_cells)]
+    # Number of TS per cell.
+    number_of_TS_per_cell = [len( df.loc[  (df['cell_id']==i) &  (df['is_cluster']==True) & (df['is_nuc']==True) & (df['spot_type']==spot_type_selected) & (df['cluster_size'] >=minimum_spots_cluster) & (df['is_cell_fragmented']!=-1) ].spot_id) for i in range(0, number_cells)]
+    # Number of RNA in a TS
+    ts_size =  df.loc[   (df['is_cluster']==True) & (df['is_nuc']==True)  & (df['spot_type']==spot_type_selected) & (df['is_cell_fragmented']!=-1)  ].cluster_size.values
+    # Size of each cell
+    cell_size = [df.loc[df['cell_id']==i].cell_area_px.values[0] for i in range(0, number_cells)]
+    return number_of_spots_per_cell,number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus,number_of_TS_per_cell,ts_size,cell_size 
+  
+number_of_spots_per_cell,number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus,number_of_TS_per_cell,ts_size,cell_size = extracting_data_from_df (df=dataframe_FISH,spot_type_selected=0)
 
 
 # Plotting intensity distributions

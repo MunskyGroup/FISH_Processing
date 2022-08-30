@@ -1469,11 +1469,7 @@ class DataProcessing():
             # case where no nucleus is passed and only cytosol
             if (self.channels_with_nucleus in  (None, [None])) and not (self.channels_with_cytosol in (None, [None])):
                 slected_masks_cytosol_no_nuclei = self.masks_complete_cells[id_cell]
-            
             is_cell_in_border =  np.any( np.concatenate( ( tested_mask[:,0],tested_mask[:,-1],tested_mask[0,:],tested_mask[-1,:] ) ) )   
-            
-            
-            
             # Data extraction
             try:
                 new_dataframe = data_to_df(new_dataframe, 
@@ -1498,7 +1494,6 @@ class DataProcessing():
                 print(self.spotDetectionCSV)
                 print('cluster')
                 print(self.clusterDetectionCSV)
-            
             counter_total_cells +=1
         return new_dataframe
 
@@ -1968,13 +1963,10 @@ class PipelineFISH():
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
         #if not (threshold_for_spot_detection is None):
         self.threshold_for_spot_detection=threshold_for_spot_detection
-        
         self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
     def run(self):
-        
-        NUMBER_OF_PIXELS_IN_MASK = 10000
-        
+        MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 10000
         # Prealocating arrays
         list_masks_complete_cells=[]
         list_masks_nuclei=[]
@@ -2008,7 +2000,14 @@ class PipelineFISH():
             if (self.masks_dir is None):
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks() 
             # test if segmentation was succcesful
-                if np.sum([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()]) > NUMBER_OF_PIXELS_IN_MASK:
+                if (self.channels_with_cytosol  is None):
+                    detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
+                if (self.channels_with_nucleus  is None):
+                    detected_mask_pixels = np.count_nonzero([masks_complete_cells.flatten()])
+                if not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
+                    detected_mask_pixels =np.count_nonzero([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()])
+                
+                if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
                     segmentation_succesful = True
                 else:
                     segmentation_succesful = False                
@@ -2046,7 +2045,6 @@ class PipelineFISH():
                     plt.show()
                 else:
                     plt.close()
-                
             # saving masks
             if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
                 if not (self.channels_with_nucleus is None):
@@ -2058,7 +2056,6 @@ class PipelineFISH():
                 if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
                     mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                     tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
-            
             print('SPOT DETECTION')
             if segmentation_succesful==True:
                 temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
@@ -2070,10 +2067,8 @@ class PipelineFISH():
                 list_counter_cell_id.append(counter)
                 counter+=1
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
-                
             # appending cell segmentation flag
             list_segmentation_succesful.append(segmentation_succesful)
-        
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
