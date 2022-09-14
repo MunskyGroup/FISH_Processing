@@ -614,7 +614,7 @@ class Cellpose():
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
         self.use_brute_force = use_brute_force
-        self.MINIMUM_CELL_AREA = 2000
+        self.MINIMUM_CELL_AREA = 10000
     def calculate_masks(self):
         '''
         This method performs the process of image masking using **Cellpose**.
