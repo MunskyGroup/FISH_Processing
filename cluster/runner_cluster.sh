@@ -22,7 +22,12 @@ list_linda=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220801/RPE_GoldMedium_32P_COX-2_30ng_mL_IL-1B-4h_Cyto543_560' \
 ) 
 
-
+list_linda2=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20220914/A549_COX2_30ngmL_IL1B_2h_GoldMedia' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220914/A549_COX2_woSTM_GoldMedia' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220914/A549_NFKBIA_100nMDEX_2h' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220914/A549_NFKBIA_woSTM' \
+) 
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -30,15 +35,15 @@ list_linda=(\
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 NUMBER_OF_CORES=4
 
-diameter_nucleus=100      # approximate nucleus size in pixels
-diameter_cytosol=180     # approximate cytosol size in pixels
+diameter_nucleus=90      # approximate nucleus size in pixels
+diameter_cytosol=200     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel='[0,0]'        # Channel to pass to python for nucleus segmentation
 cyto_channel='[2,0]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
 path_to_config_file="$HOME/FISH_Processing/config.yml"
-send_data_to_NAS=0       # If data sent back to NAS use 1.
+send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
@@ -46,7 +51,7 @@ save_all_images=0 # If true, it shows a all planes for the FISH plot detection.
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 threshold_for_spot_detection='None'
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_linda[*]}; do
+for folder in ${list_linda2[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait

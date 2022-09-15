@@ -603,7 +603,7 @@ class Cellpose():
         #self.minimum_probability = -4
         #self.maximum_probability = 4
         self.minimum_probability = 0.1
-        self.maximum_probability = 0.9
+        self.maximum_probability = 0.8
         self.channels = channels
         self.diameter = diameter
         self.model_type = model_type # options are 'cyto' or 'nuclei'
@@ -614,7 +614,7 @@ class Cellpose():
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
         self.use_brute_force = use_brute_force
-        self.MINIMUM_CELL_AREA = 10000
+        self.MINIMUM_CELL_AREA = 4000
     def calculate_masks(self):
         '''
         This method performs the process of image masking using **Cellpose**.
