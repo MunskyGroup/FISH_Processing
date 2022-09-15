@@ -603,7 +603,7 @@ class Cellpose():
         #self.minimum_probability = -4
         #self.maximum_probability = 4
         self.minimum_probability = 0.1
-        self.maximum_probability = 0.8
+        self.maximum_probability = 0.9
         self.channels = channels
         self.diameter = diameter
         self.model_type = model_type # options are 'cyto' or 'nuclei'
