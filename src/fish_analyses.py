@@ -1724,7 +1724,7 @@ class Metadata():
         self.file_name_str=file_name_str
         self.minimum_spots_cluster = minimum_spots_cluster
         if  (not str(data_dir.name)[0:5] ==  'temp_') and (self.file_name_str is None):
-            self.filename = 'metadata_'+ str(data_dir.name) +'.txt'
+            self.filename = 'metadata_'+ str(data_dir.name).replace(" ", "")  +'.txt'
         elif not(self.file_name_str is None):
             self.filename = 'metadata_'+ str(file_name_str).replace(" ", "") +'.txt'
         else:
@@ -1967,7 +1967,7 @@ class ReportPDF():
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()                
-        pdf_name =  'pdf_report_' + self.directory.name[13:] + '.pdf'
+        pdf_name =  'pdf_report_' + self.directory.name[13:].replace(" ", "") + '.pdf'
         pdf.output(pdf_name, 'F')
         return None
 
