@@ -220,7 +220,10 @@ class NASConnection():
         remote_address = conf['user']['remote_address']
         domain = conf['user']['domain']
         # LOCAL NAME
-        local_name = socket.gethostbyname(socket.gethostname())
+        try:
+            local_name = socket.gethostbyname(socket.gethostname())
+        except:
+            local_name = socket.gethostname()
         # SERVER NAME
         self.share_name = share_name
         self.server_name, _, _ = socket.gethostbyaddr(remote_address)
