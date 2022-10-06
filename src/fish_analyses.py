@@ -785,8 +785,8 @@ class CellSegmentation():
                 image_normalized = self.image[0,:,:,:]
             else:
                 center_slice = self.number_z_slices//2
-                image_normalized = self.image[center_slice,:,:,:]
-                #image_normalized = np.max(self.image[3:-3,:,:,:],axis=0)    # taking the mean value
+                #image_normalized = self.image[center_slice,:,:,:]
+                image_normalized = np.max(self.image[:,:,:,:],axis=0)    # taking the mean value
         else:
             image_normalized = self.image # [YXC] 
         
@@ -1999,14 +1999,31 @@ class PipelineFISH():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
+    list_selected_z_slices : list or None
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None):
+        
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
+        
         if len(list_images[0].shape) < 4:
             list_images_extended = [ np.expand_dims(img,axis=0) for img in list_images ] 
-            self.list_images = list_images_extended
+            list_images = list_images_extended
+        else:
+            list_images = list_images
+        
+        # Trimming the z-slices in each image based on 
+        list_images_trimmed = []
+        if not (list_selected_z_slices is None):
+            
+            number_images = len(list_images)
+            for i in range (number_images):
+                if len(list_selected_z_slices) > list_images[i].shape[0]:
+                    raise ValueError("Error: You are selecting z-slices that are outside the size of your image. In PipelineFISH, please use this option list_selected_z_slices=None ")
+                list_images_trimmed.append(list_images[i][list_selected_z_slices,:,:,:]   )
+            self.list_images = list_images_trimmed
         else:
             self.list_images = list_images
+        
         self.list_z_slices_per_image = [ img.shape[0] for img in self.list_images] # number of z-slices in the figure
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -2040,6 +2057,10 @@ class PipelineFISH():
             self.optimization_segmentation_method = None
         else:
             self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+        
+        if np.min(self.list_z_slices_per_image) < 5:
+            self.optimization_segmentation_method = 'center_slice'
+        
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
@@ -2047,7 +2068,6 @@ class PipelineFISH():
         self.threshold_for_spot_detection=threshold_for_spot_detection
         self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
-        
         
     def run(self):
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 10000
