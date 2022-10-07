@@ -963,10 +963,9 @@ class CellSegmentation():
             return img
         # Plotting
         if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-            
             n_channels = np.min([3, image_normalized.shape[2]])
             _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-            im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True, min_percentile=1, max_percentile=95)  
+            im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
             masks_plot_cyto= masks_complete_cells 
             masks_plot_nuc = masks_nuclei              
             axes[0].imshow(im)
@@ -1921,7 +1920,7 @@ class PipelineFISH():
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     list_selected_z_slices : list or None
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
         
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         
@@ -1988,6 +1987,7 @@ class PipelineFISH():
         self.threshold_for_spot_detection=threshold_for_spot_detection
         self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
+        self.save_filtered_images= save_filtered_images
         
     def run(self):
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 10000
@@ -2093,9 +2093,10 @@ class PipelineFISH():
                 list_counter_cell_id.append(counter)
                 counter+=1
                 # saving FISH images
-                for j in range(len(self.channels_with_FISH)):
-                    filtered_image_path = pathlib.Path().absolute().joinpath( filtered_folder_name, 'filter_Ch_' + str(self.channels_with_FISH[j]) +'_'+ temp_file_name +'.tif' )
-                    tifffile.imwrite(filtered_image_path, list_fish_images[j])
+                if self.save_filtered_images == True:
+                    for j in range(len(self.channels_with_FISH)):
+                        filtered_image_path = pathlib.Path().absolute().joinpath( filtered_folder_name, 'filter_Ch_' + str(self.channels_with_FISH[j]) +'_'+ temp_file_name +'.tif' )
+                        tifffile.imwrite(filtered_image_path, list_fish_images[j])
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images
                 
             # appending cell segmentation flag
@@ -2181,8 +2182,13 @@ class Utilities():
         rescale : bool, optional
             If True it rescales the image to stretch intensity values to a 95 percentile, and then rescale the min and max intensity to 0 and 255. The default is True. 
         '''
+        
         if rescale == True:
-            image = RemoveExtrema(image,min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
+            im_zeros = np.zeros_like(image)
+            for ch in range( image.shape[2]):
+                im_zeros[:,:,ch] = RemoveExtrema(image[:,:,ch],min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
+            image = im_zeros
+            #image = RemoveExtrema(image,min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
         image_new= np.zeros_like(image)
         for i in range(0, image.shape[2]):  # iterate for each channel
             image_new[:,:,i]= (image[:,:,i]/ image[:,:,i].max()) *255
@@ -2197,6 +2203,8 @@ class Utilities():
         # This function iterates over all zip files in a remote directory and download them to a local directory
         list_remote_files=[]
         list_local_files =[]
+        if (isinstance(list_dirs, tuple)==False) and (isinstance(list_dirs, list)==False):
+            list_dirs = [list_dirs]
         for folder in list_dirs:
             list_files = NASConnection(path_to_config_file,share_name = share_name).read_files(folder,timeout=60)
             for file in list_files:
@@ -2306,6 +2314,38 @@ class Utilities():
                 df[col] = np.where(df[col]>=max_data_value, np.nan, df[col])
         return df
 
+    def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
+        '''
+        This method is inteded to download data from a NAS. to a local directory.
+        path_to_config_file
+        data_folder_path
+        path_to_masks_dir
+        share_name,timeout
+        '''
+        # Downloading data from NAS
+        local_folder_path = pathlib.Path().absolute().joinpath('temp_' + data_folder_path.name)
+        NASConnection(path_to_config_file,share_name = share_name).copy_files(data_folder_path, local_folder_path,timeout=timeout)
+        local_data_dir = local_folder_path     # path to a folder with images.
+        # Downloading masks from NAS
+        if not (path_to_masks_dir is None):
+            local_folder_path_masks = pathlib.Path().absolute().joinpath( path_to_masks_dir.stem  )
+            zip_file_path = local_folder_path_masks.joinpath( path_to_masks_dir.stem +'.zip')
+            print(zip_file_path)
+            NASConnection(path_to_config_file,share_name = share_name).download_file(path_to_masks_dir, local_folder_path_masks,timeout=timeout)
+            # Unzip downloaded images and update mask directory
+            file_to_unzip = zipfile.ZipFile(str(zip_file_path)) # opens zip
+            # Iterates for each file in zip file
+            for file_in_zip in file_to_unzip.namelist():
+                # Extracts data to specific folder
+                file_to_unzip.extract(file_in_zip,local_folder_path_masks)
+            # Closes the zip file
+            file_to_unzip.close()
+            # removes the original zip file
+            os.remove(zip_file_path)
+            masks_dir = local_folder_path_masks
+        else:
+            masks_dir = None
+        return local_data_dir, masks_dir
 
 
 def dist_plots(df, plot_title,destination_folder ):
