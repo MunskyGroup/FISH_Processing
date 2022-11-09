@@ -779,14 +779,12 @@ class CellSegmentation():
                         reordered_mask = mask_new
                     return reordered_mask  
                 
-                
                 # Cytosol masks
                 masks_cyto = remove_lonely_masks(masks_cyto, masks_nuclei)
                 masks_cyto = reorder_masks(masks_cyto)
                 # Masks nucleus
                 masks_nuclei = remove_lonely_masks(masks_nuclei, masks_cyto,is_nuc='nuc')
                 masks_nuclei = reorder_masks(masks_nuclei)
-                
                 
                 # Iterate for each cyto mask
                 def matching_masks(masks_cyto, masks_nuclei):
@@ -811,7 +809,6 @@ class CellSegmentation():
                         masks_cyto = np.zeros_like(masks_cyto)
                         reordered_mask_nuclei = np.zeros_like(masks_nuclei)
                     return masks_cyto, reordered_mask_nuclei
-                
                                 
                 # Matching nuclei and cytosol
                 masks_cyto, masks_nuclei = matching_masks(masks_cyto, masks_nuclei)                
