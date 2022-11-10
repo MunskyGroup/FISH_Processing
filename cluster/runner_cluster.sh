@@ -70,7 +70,7 @@ save_all_images=0 # If true, it shows a all planes for the FISH plot detection.
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 threshold_for_spot_detection='None'
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_A549_NFKBIA_test[*]}; do
+for folder in ${list_A549_NFKBIA[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait

@@ -661,12 +661,12 @@ class CellSegmentation():
         self.use_brute_force = use_brute_force
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         self.number_z_slices = image.shape[0]
-        if number_gpus ==0:
-            self.NUMBER_OPTIMIZATION_VALUES= 0
-            self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
-        else:
-            self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,15))
-            self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+        #if number_gpus ==0:
+        #    self.NUMBER_OPTIMIZATION_VALUES= 0
+        #    self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+        #else:
+        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,15))
+        self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
@@ -1917,7 +1917,8 @@ class PipelineFISH():
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     list_selected_z_slices : list or None
     '''
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,200]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
+
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,105]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
         
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         
@@ -1968,10 +1969,8 @@ class PipelineFISH():
         else:
             self.save_masks_as_file = False
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
-        if number_gpus ==0:
-            self.optimization_segmentation_method = None
-        else:
-            self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+
+        self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         
         if np.min(self.list_z_slices_per_image) < 5:
             self.optimization_segmentation_method = 'center_slice'

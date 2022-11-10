@@ -27,6 +27,10 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 # 'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_woSTM' \
 
+list_A549_NFKBIA_test=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20220930/A549_NFKBIA_180minDEX' \
+)
+
 
 
 
@@ -142,13 +146,13 @@ list_cox_il=(\
 ////
 
 path_to_config_file="$HOME/Desktop/config.yml"
-NUMBER_OF_CORES=4
+NUMBER_OF_CORES=1
 diameter_nucleus=80      # approximate nucleus size in pixels
 diameter_cytosol=200     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-nucleus_channel='[0,0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='[2,0]'           # Channel to pass to python for cytosol segmentation
+nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
+cyto_channel='[2]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1
@@ -170,9 +174,8 @@ threshold_for_spot_detection='None'
 # / with
 # / slash
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_A549_NFKBIA[*]}; do
+for folder in ${list_A549_NFKBIA_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     #nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
      nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait
 done

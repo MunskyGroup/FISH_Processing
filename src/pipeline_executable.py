@@ -65,7 +65,7 @@ if path_to_masks_dir in ('None', 'none',['None'],['none'],[None]):
   path_to_masks_dir = None
 else:
   path_to_masks_dir = pathlib.Path(path_to_masks_dir )
-optimization_segmentation_method= pathlib.Path(sys.argv[14])
+optimization_segmentation_method= sys.argv[14]
 # Additional parameters
 if optimization_segmentation_method in ('None', 'none',['None'],['none'],[None]):
   optimization_segmentation_method = None
@@ -74,7 +74,8 @@ if sys.argv[16] in ('None', 'none',['None'],['none'],[None]):
   threshold_for_spot_detection = None
 else:
   threshold_for_spot_detection = int(sys.argv[16])
-
+  
+  
 NUMBER_OF_CORES=int(sys.argv[17])
 
 # Defining directories
