@@ -1930,7 +1930,6 @@ class PipelineFISH():
         # Trimming the z-slices in each image based on 
         list_images_trimmed = []
         if not (list_selected_z_slices is None):
-            
             number_images = len(list_images)
             for i in range (number_images):
                 if len(list_selected_z_slices) > list_images[i].shape[0]:

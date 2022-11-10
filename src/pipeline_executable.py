@@ -48,9 +48,7 @@ if channels_with_nucleus in ('None', 'none',['None'],['none'],[None]):
 if not isinstance(channels_with_cytosol, list) and not (channels_with_cytosol is None):
   channels_with_cytosol = [channels_with_cytosol]            # list or int indicating the channels where the cytosol is detectable
 if not isinstance(channels_with_nucleus, list) and not (channels_with_nucleus is None):
-  channels_with_nucleus = [channels_with_nucleus]            # list or int indicating the channels where the cytosol is detectable
-
-
+  channels_with_nucleus = [channels_with_nucleus]            # list or int indicating the channels where the nucleus is detectable
 
 # FISH Channels
 channels_with_FISH =json.loads(sys.argv[9])
