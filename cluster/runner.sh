@@ -25,10 +25,32 @@ export CUDA_VISIBLE_DEVICES=0,1
 #'Test/test_dir' \
 #) 
 
+# 'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_woSTM' \
+
+
+
+
+list_A549_NFKBIA=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_woSTM' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_10minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_20minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_30minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_40minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_50minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_60minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_75minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_90minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_120minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_150minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220930/A549_NFKBIA_180minDEX' \
+)
+
+
 list_test_b=(\
 'smFISH_images/Eric_smFISH_images/20211109/MS2_Cy3_TPL_0min' \
 #'smFISH_images/Linda_smFISH_images/Confocal/20220114/GAPDH-Cy3_NFKBIA-Cy5_woDex' \
 )
+
 
 
 list_Dex_R1=(\
@@ -99,14 +121,7 @@ list_cox_dex=(\
 ////
 
 
-diameter_nucleus=170               # approximate nucleus size in pixels
-diameter_cytosol=200               # approximate cytosol size in pixels
-psf_z=350                          # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=120                         # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
-nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='[0,2]'           # Channel to pass to python for cytosol segmentation
-FISH_channel='[1]'           # Channel to pass to python for spot detection
-threshold_for_spot_detection='None'
+
 
 << ////
 list_cox_il=(\
@@ -127,13 +142,22 @@ list_cox_il=(\
 ////
 
 path_to_config_file="$HOME/Desktop/config.yml"
-send_data_to_NAS=0       # If data sent back to NAS use 1.
-download_data_from_NAS=1 # If data is downloaded from NAS use 1
+NUMBER_OF_CORES=4
+diameter_nucleus=80      # approximate nucleus size in pixels
+diameter_cytosol=200     # approximate cytosol size in pixels
+psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+nucleus_channel='[0,0]'        # Channel to pass to python for nucleus segmentation
+cyto_channel='[2,0]'           # Channel to pass to python for cytosol segmentation
+FISH_channel='[1]'           # Channel to pass to python for spot detection
+send_data_to_NAS=1       # If data sent back to NAS use 1.
+download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 threshold_for_spot_detection='None'
+
 
 #########for loop
 # over different parameters above
@@ -145,17 +169,12 @@ threshold_for_spot_detection='None'
 # \\ backslash
 # / with
 # / slash
-maximum_parallel_iterations=3
 # ########### PYTHON PROGRAM #############################
-COUNTER=0
-for folder in ${list_test_b[*]}; do
+for folder in ${list_A549_NFKBIA[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
-     COUNTER=$((COUNTER+1))
-     val1=$(($COUNTER%maximum_parallel_iterations)) 
-     if [ $val1 -eq '0' ];then
+     #nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection >> "$output_names" &
+     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait
-     fi
 done
 
 #for folder in ${list_DUSP1_DEX[*]}; do

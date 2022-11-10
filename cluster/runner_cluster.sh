@@ -29,18 +29,34 @@ list_linda2=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220914/A549_NFKBIA_woSTM' \
 ) 
 
+
+list_A549_NFKBIA=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_woSTM' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_10minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_20minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_30minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_40minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_50minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_60minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_75minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_90minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_120minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220928/A549_NFKBIA_150minDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20220930/A549_NFKBIA_180minDEX' \
+)
+
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
 # Read them in the python file using: sys.argv. This return a list of strings. 
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 NUMBER_OF_CORES=4
 
-diameter_nucleus=90      # approximate nucleus size in pixels
-diameter_cytosol=200     # approximate cytosol size in pixels
+diameter_nucleus=85      # approximate nucleus size in pixels
+diameter_cytosol=190     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel='[0,0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='[2,0]'           # Channel to pass to python for cytosol segmentation
+cyto_channel='[2]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
 path_to_config_file="$HOME/FISH_Processing/config.yml"
 send_data_to_NAS=1       # If data sent back to NAS use 1.
@@ -51,7 +67,7 @@ save_all_images=0 # If true, it shows a all planes for the FISH plot detection.
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 threshold_for_spot_detection='None'
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_linda2[*]}; do
+for folder in ${list_A549_NFKBIA[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait

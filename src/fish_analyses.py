@@ -2002,9 +2002,10 @@ class PipelineFISH():
             masks_folder_name = str('masks_'+ self.name_for_files)
             if not os.path.exists(masks_folder_name):
                 os.makedirs(masks_folder_name)
-        filtered_folder_name = str('filtered_images_'+ self.name_for_files)
-        if not os.path.exists(filtered_folder_name):
-            os.makedirs(filtered_folder_name)           
+        if self.save_filtered_images == True:
+            filtered_folder_name = str('filtered_images_'+ self.name_for_files)
+            if not os.path.exists(filtered_folder_name):
+                os.makedirs(filtered_folder_name)           
         # Running the pipeline.
         counter=0
         for i in range (0, self.number_images ):
