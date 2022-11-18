@@ -57,7 +57,7 @@ NUMBER_OF_CORES=4
 diameter_nucleus=90      # approximate nucleus size in pixels
 diameter_cytosol=200     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+psf_yx=120               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel='[0,0]'        # Channel to pass to python for nucleus segmentation
 cyto_channel='[2,0]'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1]'           # Channel to pass to python for spot detection
@@ -68,7 +68,7 @@ path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
-threshold_for_spot_detection='None'
+threshold_for_spot_detection=500 #'None'
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_A549_NFKBIA[*]}; do
      output_names=""output__"${folder////__}"".txt"

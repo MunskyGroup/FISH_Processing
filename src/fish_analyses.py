@@ -1899,10 +1899,14 @@ class PipelineFISH():
     
     parameter: bool, optional
         parameter description. The default is True. 
-    list_voxels : List of lists or None
-        list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
-    list_psfs : List of lists or None
-        list with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+    voxel_size_z : int, optional
+        Microscope conversion px to nanometers in the z axis. The default is 500.
+    voxel_size_yx : int, optional
+        Microscope conversion px to nanometers in the xy axis.   The default is 160.
+    psf_z : int, optional
+        Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.  The default is 350.
+    psf_yx: int, optional
+        Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.  The default is 160.
     list_masks : List of Numpy or None.
         list of Numpy arrays where each array has values from 0 to n where n is the number of masks in  the image.
     save_all_images : Bool, optional.
@@ -1918,7 +1922,7 @@ class PipelineFISH():
     list_selected_z_slices : list or None
     '''
 
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True,list_voxels=[[500,105]], list_psfs=[[300,100]],file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
         
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         
@@ -1946,6 +1950,9 @@ class PipelineFISH():
         self.channels_with_FISH = channels_with_FISH
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
+        
+        
+        # 
         if type(list_voxels[0]) != list:
             self.list_voxels = [list_voxels]
         else:
@@ -1954,6 +1961,9 @@ class PipelineFISH():
             self.list_psfs = [list_psfs]
         else:
             self.list_psfs = list_psfs
+        
+        
+        
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
         self.CLUSTER_RADIUS = 500
@@ -2187,7 +2197,10 @@ class Utilities():
             #image = RemoveExtrema(image,min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
         image_new= np.zeros_like(image)
         for i in range(0, image.shape[2]):  # iterate for each channel
-            image_new[:,:,i]= (image[:,:,i]/ image[:,:,i].max()) *255
+            temp = image[:,:,i].copy()
+            image_new[:,:,i]= ( (temp-np.min(temp))/(np.max(temp)-np.min(temp)) ) * 255
+            
+            #image_new[:,:,i]= (image[:,:,i]/ image[:,:,i].max()) *255
             image_new = np.uint8(image_new)
         # padding with zeros the channel dimension.
         while image_new.shape[2]<3:

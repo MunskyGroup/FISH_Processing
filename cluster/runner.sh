@@ -27,12 +27,52 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 # 'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_woSTM' \
 
+list_Huys_paper_test=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20211014/MS2-CY5-0minTPL' \
+)
+
+list_Huys_paper=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20211014/MS2-CY5-0minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211014/MS2-CY5-3minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211015/MS2-CY5-6minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211015/MS2-CY5-9minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211015/MS2-CY5-12minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211019/MS2-CY5-15minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211019/MS2-CY5-18minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211019/MS2-CY5-21minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211021/MS2-CY5-24minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211021/MS2-CY5-27minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211021/MS2-CY5-30minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20211021/MS2-CY5-60minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20210921/MS2-Cy5-120minTPL' \
+'smFISH_images/Linda_smFISH_images/Confocal/20210921/MS2-Cy5-240minTPL' \
+)
+
 list_A549_NFKBIA_test=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220930/A549_NFKBIA_180minDEX' \
 )
 
+list_A549_NFKB_AB_488_IKBA_short=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20221101/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_60min_DEX_60min_C2' \
+)
 
+list_A549_NFKB_AB_488_COX2=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20221102/A549_NFKB_AB_488_COX2-Cy5_IL-1B_60min_DEX_60min_B4' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221102/A549_NFKB_AB_488_COX2-Cy5_IL-1B_60min_DEX_120min_C4' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221102/A549_NFKB_AB_488_COX2-Cy5_IL-1B_60min_woDEX_A4' \
+)
 
+list_A549_NFKB_AB_488_IKBA=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20221027/A549_NFKB_AB_488_IKBA-Cy5_woSTM' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221027/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_60min_woDEX' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221031/A549_NFKB_AB_488_IKBA-Cy5_DEX_60min_woIL-1B_A2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221031/A549_NFKB_AB_488_IKBA-Cy5_DEX_120min_woIL-1B_A3' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221031/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_20min_DEX_60min_B2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221031/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_20min_woDEX_B1' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221101/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_20min_DEX_120min_B3' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221101/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_60min_DEX_60min_C2' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221101/A549_NFKB_AB_488_IKBA-Cy5_IL-1B_60min_DEX_120min_C3' \
+)
 
 list_A549_NFKBIA=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220927/A549_NFKBIA_woSTM' \
@@ -147,20 +187,20 @@ list_cox_il=(\
 
 path_to_config_file="$HOME/Desktop/config.yml"
 NUMBER_OF_CORES=1
-diameter_nucleus=80      # approximate nucleus size in pixels
+diameter_nucleus=90      # approximate nucleus size in pixels
 diameter_cytosol=200     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='[2]'           # Channel to pass to python for cytosol segmentation
-FISH_channel='[1]'           # Channel to pass to python for spot detection
+cyto_channel='None'           # Channel to pass to python for cytosol segmentation
+FISH_channel='[1,2]'           # Channel to pass to python for spot detection
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
-threshold_for_spot_detection='None'
+threshold_for_spot_detection=500 #'None'
 
 
 #########for loop
@@ -174,7 +214,7 @@ threshold_for_spot_detection='None'
 # / with
 # / slash
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_A549_NFKBIA_test[*]}; do
+for folder in ${list_Huys_paper_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
      nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
      wait
