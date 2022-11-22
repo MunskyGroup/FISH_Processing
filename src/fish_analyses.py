@@ -462,8 +462,8 @@ class RemoveExtrema():
             if not np.max(normalized_image_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
                 max_val = np.percentile(normalized_image_temp, self.max_percentile)
                 min_val = np.percentile(normalized_image_temp, self.min_percentile)
-                normalized_image_temp [normalized_image_temp > max_val] = max_val
                 normalized_image_temp [normalized_image_temp < min_val] = min_val
+                normalized_image_temp [normalized_image_temp > max_val] = max_val
                 normalized_image_temp [normalized_image_temp < 0] = 0
         # Normalization for image with format [Y, X, C].
         if len(self.image.shape) == 3:
@@ -474,8 +474,8 @@ class RemoveExtrema():
                     if not np.max(normalized_image_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
                         max_val = np.percentile(normalized_image_temp, self.max_percentile)
                         min_val = np.percentile(normalized_image_temp, self.min_percentile)
-                        normalized_image_temp [normalized_image_temp > max_val] = max_val
                         normalized_image_temp [normalized_image_temp < min_val] =  min_val
+                        normalized_image_temp [normalized_image_temp > max_val] = max_val
                         normalized_image_temp [normalized_image_temp < 0] = 0
         # Normalization for image with format [Z, Y, X, C].
         if len(self.image.shape) == 4:
@@ -487,8 +487,8 @@ class RemoveExtrema():
                         if not np.max(normalized_image_temp) == 0: # this section detect that the channel is not empty to perform the normalization.
                             max_val = np.percentile(normalized_image_temp, self.max_percentile)
                             min_val = np.percentile(normalized_image_temp, self.min_percentile)
-                            normalized_image_temp [normalized_image_temp > max_val] = max_val
                             normalized_image_temp [normalized_image_temp < min_val] = min_val
+                            normalized_image_temp [normalized_image_temp > max_val] = max_val
                             normalized_image_temp [normalized_image_temp < 0] = 0
         return np.array(normalized_image, 'uint16')
 
@@ -1095,6 +1095,7 @@ class BigFISH():
             Coordinates of the detected spots. One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
         '''
         rna=self.image[:,:,:,self.FISH_channel]
+        
         # Calculating Sigma with  the parameters for the PSF.
         spot_radius_px = detection.get_object_radius_pixel(
                         voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
@@ -1110,6 +1111,7 @@ class BigFISH():
                 rna_filtered = stack.remove_background_gaussian(rna, sigma)
         else:
             rna_filtered = stack.remove_background_gaussian(rna, sigma)
+            
         # Automatic threshold detection.
         mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection        
         if not (self.threshold_for_spot_detection is None):
@@ -1951,18 +1953,14 @@ class PipelineFISH():
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
         
-        
-        # 
-        if type(list_voxels[0]) != list:
-            self.list_voxels = [list_voxels]
-        else:
-            self.list_voxels = list_voxels
-        if type(list_psfs[0]) != list:
-            self.list_psfs = [list_psfs]
-        else:
-            self.list_psfs = list_psfs
-        
-        
+        # Lists for voxels and psfs
+        list_voxels = []
+        list_psfs = []
+        for i in range (len(channels_with_FISH)):
+            list_voxels.append([voxel_size_z,voxel_size_yx])
+            list_psfs.append([psf_z, psf_yx])
+        self.list_voxels = list_voxels
+        self.list_psfs = list_psfs
         
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
@@ -2267,13 +2265,16 @@ class Utilities():
             # Size of each cell
             cell_size = [dataframe.loc[   (dataframe['cell_id']==i) ].cell_area_px.values[0] for i in range(0, number_cells)]
             cell_size = np.asarray(cell_size)
+            # Size of the nucleus of each cell
+            nuc_size = [dataframe.loc[   (dataframe['cell_id']==i) ].nuc_area_px.values[0] for i in range(0, number_cells)]
+            nuc_size = np.asarray(nuc_size)
             # removing values less than zeros
             number_of_spots_per_cell.clip(0)
             number_of_spots_per_cell_cytosol.clip(0)
             number_of_spots_per_cell_nucleus.clip(0)
             number_of_TS_per_cell.clip(0)
             ts_size.clip(0)
-            return number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size,cell_size, number_cells
+            return number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size,cell_size, number_cells,nuc_size
         
         '''
         This method is intended to extract 
@@ -2285,12 +2286,14 @@ class Utilities():
         list_number_cells =[]
         list_transcription_sites =[]
         list_cell_size=[]
+        list_nuc_size =[]
+        list_dataframes =[]
         for i in range (0, len (list_local_folders)):
             dataframe_dir = current_dir.joinpath('analyses',list_local_folders[i])    # loading files from "analyses" folder
             dataframe_file = glob.glob( str(dataframe_dir.joinpath('dataframe_*')) )[0]
             dataframe = pd.read_csv(dataframe_file)
             # Extracting values from dataframe
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells = dataframe_extract_data(dataframe,minimal_TS_size=minimal_TS_size)
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size = dataframe_extract_data(dataframe,minimal_TS_size=minimal_TS_size)
             # Appending each condition to a list
             list_spots_total.append(number_of_spots_per_cell)  # This list includes spots and TS in the nucleus
             list_spots_nuc.append(number_of_spots_per_cell_nucleus)   #
@@ -2298,9 +2301,11 @@ class Utilities():
             list_number_cells.append(number_cells)
             list_transcription_sites.append(number_of_TS_per_cell)
             list_cell_size.append(cell_size)
+            list_nuc_size.append(nuc_size)
+            list_dataframes.append(dataframe)
             # Deleting variables
-            del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells
-        return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size
+            del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size
+        return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size,list_dataframes,list_nuc_size
     
     
     def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False) :

@@ -28,18 +28,21 @@ data_folder_path = pathlib.Path(remote_folder)
 send_data_to_NAS = int(sys.argv[2])                     # Flag to send data back to NAS
 diameter_nucleus = int(sys.argv[3])                      # approximate nucleus size in pixels
 diameter_cytosol = int(sys.argv[4])  #250               # approximate cytosol size in pixels
-psf_z_1 = int(sys.argv[5])       #350                   # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx_1 = int(sys.argv[6])      #150                   # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+
+voxel_size_z  = int(sys.argv[5])                    # Microscope conversion px to nanometers in the z axis.
+voxel_size_yx  = int(sys.argv[6])                # Microscope conversion px to nanometers in the xy axis.
+psf_z = int(sys.argv[7])       #350                   # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
+psf_yx = int(sys.argv[8])      #150                   # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 # Segmentation Channels
-if sys.argv[7] in ('None', 'none',['None'],['none'],[None]):
+if sys.argv[9] in ('None', 'none',['None'],['none'],[None]):
   channels_with_nucleus = None
 else:
-  channels_with_nucleus= json.loads(sys.argv[7])                       # Channel to pass to python for nucleus segmentation
+  channels_with_nucleus= json.loads(sys.argv[9])                       # Channel to pass to python for nucleus segmentation
 
-if sys.argv[8] in ('None', 'none',['None'],['none'],[None]):
+if sys.argv[10] in ('None', 'none',['None'],['none'],[None]):
   channels_with_cytosol =None
 else:
-  channels_with_cytosol= json.loads(sys.argv[8])                        # Channel to pass to python for cytosol segmentation
+  channels_with_cytosol= json.loads(sys.argv[10])                        # Channel to pass to python for cytosol segmentation
 if channels_with_cytosol in ('None', 'none',['None'],['none'],[None]):
   channels_with_cytosol=None
 if channels_with_nucleus in ('None', 'none',['None'],['none'],[None]):
@@ -51,32 +54,33 @@ if not isinstance(channels_with_nucleus, list) and not (channels_with_nucleus is
   channels_with_nucleus = [channels_with_nucleus]            # list or int indicating the channels where the nucleus is detectable
 
 # FISH Channels
-channels_with_FISH =json.loads(sys.argv[9])
+channels_with_FISH =json.loads(sys.argv[11])
 if not isinstance(channels_with_FISH, list):
   channels_with_FISH = [channels_with_FISH]            # list or int indicating the channels where the cytosol is detectable
 # Output file name
-output_name = sys.argv[10]  
+output_name = sys.argv[12]  
 # Path to credentials
-path_to_config_file = pathlib.Path(sys.argv[11])
-download_data_from_NAS= int(sys.argv[12])
-path_to_masks_dir= sys.argv[13]
+path_to_config_file = pathlib.Path(sys.argv[13])
+download_data_from_NAS= int(sys.argv[14])
+path_to_masks_dir= sys.argv[15]
 # Path to directory with masks
 if path_to_masks_dir in ('None', 'none',['None'],['none'],[None]):
   path_to_masks_dir = None
 else:
   path_to_masks_dir = pathlib.Path(path_to_masks_dir )
-optimization_segmentation_method= sys.argv[14]
+optimization_segmentation_method= sys.argv[16]
 # Additional parameters
 if optimization_segmentation_method in ('None', 'none',['None'],['none'],[None]):
   optimization_segmentation_method = None
-save_all_images=int(sys.argv[15])
-if sys.argv[16] in ('None', 'none',['None'],['none'],[None]):
+save_all_images=int(sys.argv[17])
+if sys.argv[18] in ('None', 'none',['None'],['none'],[None]):
   threshold_for_spot_detection = None
 else:
-  threshold_for_spot_detection = int(sys.argv[16])
-  
-  
-NUMBER_OF_CORES=int(sys.argv[17])
+  threshold_for_spot_detection = int(sys.argv[18])  
+NUMBER_OF_CORES=int(sys.argv[19])
+
+save_filtered_images = int(sys.argv[20])
+
 
 # Defining directories
 current_dir = pathlib.Path().absolute()
@@ -90,9 +94,9 @@ share_name = 'share'
 
 # names for final folders
 if (threshold_for_spot_detection is None):
-  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts_auto'
+  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts_auto'
 else:
-  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z_1) +'__psfyx_' + str(psf_yx_1)+'__ts_'+str(threshold_for_spot_detection)
+  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts_'+str(threshold_for_spot_detection)
 name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
 def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
   # Downloading data from NAS
@@ -143,7 +147,16 @@ if is_needed_to_merge_images == True:
 voxel_size_z = 500                       # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx = 103                      # Microscope conversion px to nanometers in the xy axis.
 list_voxels = [ [voxel_size_z,voxel_size_yx  ]  ]
-list_psfs = [ [psf_z_1, psf_yx_1] ]
+list_psfs = [ [psf_z, psf_yx] ]
+
+
+# Lists for voxels and psfs
+list_voxels = []
+list_psfs = []
+for i in range (len(channels_with_FISH)):
+    list_voxels.append([voxel_size_z,voxel_size_yx])
+    list_psfs.append([psf_z, psf_yx])
+
 # Cluster Detection
 minimum_spots_cluster = 2                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
 show_plots=True                          # Flag to display plots
@@ -151,7 +164,7 @@ show_plots=True                          # Flag to display plots
 
 
 # Running the pipeline
-dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  list_voxels=list_voxels, list_psfs=list_psfs, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,NUMBER_OF_CORES=NUMBER_OF_CORES).run()
+dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx ,psf_z=psf_z,psf_yx=psf_yx, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,NUMBER_OF_CORES=NUMBER_OF_CORES,save_filtered_images=save_filtered_images).run()
 
 
 
@@ -218,6 +231,12 @@ pathlib.Path().absolute().joinpath('dataframe_' + data_folder_path.name +'.csv')
 pathlib.Path().absolute().joinpath('pdf_report_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder),'pdf_report_'+ data_folder_path.name +'.pdf'))
 # copy output file
 #shutil.copyfile(pathlib.Path().absolute().joinpath(output_name),    pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder), output_name) )
+
+
+if save_filtered_images == True:
+  filtered_folder_name = 'filtered_images_' + data_folder_path.name 
+  pathlib.Path().absolute().joinpath(filtered_folder_name).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ name_final_folder    ),filtered_folder_name))
+
 
 # Writing analyses data to NAS
 analysis_folder_name = 'analysis_'+ name_final_folder

@@ -20,9 +20,12 @@ Figure_Distributions_*
 out.txt
 output.txt
 analyses/
+analyses_*
 output__*
 slurm-*
 out-*
 masks_*
 tests/
 results/
+test*/
+filtered_images_*/

@@ -191,6 +191,8 @@ diameter_nucleus=90      # approximate nucleus size in pixels
 diameter_cytosol=200     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+voxel_size_z=500    #300                      # Microscope conversion px to nanometers in the z axis.
+voxel_size_yx=160 #103   #103                 # Microscope conversion px to nanometers in the xy axis.
 nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
 cyto_channel='None'           # Channel to pass to python for cytosol segmentation
 FISH_channel='[1,2]'           # Channel to pass to python for spot detection
@@ -201,6 +203,7 @@ optimization_segmentation_method='z_slice_segmentation' # optimization_segmentat
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 threshold_for_spot_detection=500 #'None'
+save_filtered_images=1
 
 
 #########for loop
@@ -216,7 +219,7 @@ threshold_for_spot_detection=500 #'None'
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_Huys_paper_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES >> "$output_names" &
+     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
      wait
 done
 
