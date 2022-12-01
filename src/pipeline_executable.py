@@ -143,13 +143,6 @@ if is_needed_to_merge_images == True:
   local_data_dir_un_merged =local_data_dir
   local_data_dir = local_data_dir.joinpath('merged')
 
-# Parameters for FISH detection
-voxel_size_z = 500                       # Microscope conversion px to nanometers in the z axis.
-voxel_size_yx = 103                      # Microscope conversion px to nanometers in the xy axis.
-list_voxels = [ [voxel_size_z,voxel_size_yx  ]  ]
-list_psfs = [ [psf_z, psf_yx] ]
-
-
 # Lists for voxels and psfs
 list_voxels = []
 list_psfs = []
@@ -161,12 +154,8 @@ for i in range (len(channels_with_FISH)):
 minimum_spots_cluster = 2                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
 show_plots=True                          # Flag to display plots
 
-
-
 # Running the pipeline
 dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx ,psf_z=psf_z,psf_yx=psf_yx, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,NUMBER_OF_CORES=NUMBER_OF_CORES,save_filtered_images=save_filtered_images).run()
-
-
 
 def extracting_data_from_df (df,spot_type_selected=0):
     number_cells = df['cell_id'].nunique()
