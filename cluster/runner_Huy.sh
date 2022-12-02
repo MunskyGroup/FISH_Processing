@@ -80,7 +80,7 @@ path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
-threshold_for_spot_detection='None'
+threshold_for_spot_detection='[300,400]'
 save_filtered_images=0 # To save filtered images
 
 # ########### PYTHON PROGRAM #############################
