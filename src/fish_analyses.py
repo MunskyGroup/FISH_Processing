@@ -522,8 +522,8 @@ class Cellpose():
         self.num_iterations = num_iterations
         #self.minimum_probability = -4
         #self.maximum_probability = 4
-        self.minimum_probability = 0.1
-        self.maximum_probability = 0.9
+        self.minimum_probability = 0.2
+        self.maximum_probability = 0.6
         self.channels = channels
         self.diameter = diameter
         self.model_type = model_type # options are 'cyto' or 'nuclei'
@@ -551,9 +551,9 @@ class Cellpose():
         #sys.stdout = open(os.devnull, "w")
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         if number_gpus ==0:
-            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = True) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.Cellpose(gpu = 0, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
         else:
-            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = True) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -827,6 +827,16 @@ class CellSegmentation():
                     masks_complete_cells = masks_nuclei
                     masks_cytosol_no_nuclei = None
             return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
+        
+        # TESTING IF A MASK PATH WAS PASSED TO THE CODE
+        
+        
+        
+        
+        
+        
+        
+        
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
@@ -954,10 +964,17 @@ class CellSegmentation():
         else:
             # no optimization is applied if a 2D image is passed
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_normalized)
+        
+        
+        
+        
         # This functions makes zeros the border of the mask, it is used only for plotting.
         def remove_border(img,px_to_remove = 1):
             img[0:px_to_remove, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
             return img
+        
+        
+        
         # Plotting
         if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
             n_channels = np.min([3, image_normalized.shape[2]])
@@ -1027,6 +1044,9 @@ class CellSegmentation():
                 else:
                     plt.close()
             print('No paired masks were detected for this image')
+        
+        
+        
         
         return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei 
 
@@ -1831,6 +1851,9 @@ class ReportPDF():
         # list_files_names = [ f[4:-4] for f in pre_list_files_names]
         # Main loop that reads each image and makes the pdf
         for i,temp_file_name in enumerate(list_files_names):
+            
+            
+            
             #print(i, temp_file_name)
             pdf.cell(w=0, h=10, txt='Original image: ' + temp_file_name,ln =2,align = 'L')
             # code that returns the path of the original image
@@ -1840,6 +1863,8 @@ class ReportPDF():
             for text_idx in range(0, 12):
                 pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
             pdf.cell(w=0, h=10, txt='Cell segmentation: ' + temp_file_name,ln =1,align = 'L')
+            
+            
             # code that returns the path of the segmented image
             if self.list_segmentation_succesful[i]==True:
                 temp_segmented_img_name = pathlib.Path().absolute().joinpath( self.directory, 'seg_' + temp_file_name +'.png' )
@@ -1847,6 +1872,9 @@ class ReportPDF():
             else:
                 pdf.cell(w=0, h=20, txt='Segmentation was not possible for image: ' + temp_file_name,ln =1,align = 'L')
                 pdf.add_page()
+            
+            
+            
             # Code that plots the detected spots.
             if (self.save_all_images==True) and (self.list_segmentation_succesful[i]==True):
                 for id_channel, channel in enumerate(self.channels_with_FISH):
@@ -2040,6 +2068,14 @@ class PipelineFISH():
             print('CELL SEGMENTATION')
             if (self.masks_dir is None):
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks() 
+            
+            
+            
+            
+            
+            
+            
+            
             # test if segmentation was succcesful
                 if (self.channels_with_cytosol  is None):
                     detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
@@ -2053,6 +2089,8 @@ class PipelineFISH():
                     segmentation_succesful = False                
             else:
                 segmentation_succesful = True
+                
+                
                 # Paths to masks
                 if not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
                     mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
@@ -2063,28 +2101,134 @@ class PipelineFISH():
                 if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
                     mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                     masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
+                
+                # test all masks exist, if not create the variable and set as None.
+                if not 'masks_nuclei' in locals():
+                    masks_nuclei=None
+                if not 'masks_complete_cells' in locals():
+                    masks_complete_cells=None
+                if not 'masks_cytosol_no_nuclei' in locals():
+                    masks_cytosol_no_nuclei=None
+                
+                
+                
                 # Plotting masks
-                if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
-                    _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
-                    axes[0].imshow(masks_complete_cells)
-                    axes[0].set(title = 'Cytosol mask')
-                    axes[1].imshow(masks_nuclei)
-                    axes[1].set(title = 'Nuclei mask')
-                    axes[2].imshow(masks_cytosol_no_nuclei)
-                    axes[2].set(title = 'Cytosol only')
-                if not (self.channels_with_cytosol is None) and (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
-                    _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
-                    axes[0].imshow(masks_complete_cells)
-                    axes[0].set(title = 'Cytosol mask')
-                if (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
-                    _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
-                    axes[0].imshow(masks_nuclei)
-                    axes[0].set(title = 'Nuclei mask')
-                plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
-                if self.show_plots == True:
-                    plt.show()
+                # if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
+                #     _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
+                #     axes[0].imshow(masks_complete_cells)
+                #     axes[0].set(title = 'Cytosol mask')
+                #     axes[1].imshow(masks_nuclei)
+                #     axes[1].set(title = 'Nuclei mask')
+                #     axes[2].imshow(masks_cytosol_no_nuclei)
+                #     axes[2].set(title = 'Cytosol only')
+                # if not (self.channels_with_cytosol is None) and (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
+                #     _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
+                #     axes.imshow(masks_complete_cells)
+                #     axes.set(title = 'Cytosol mask')
+                # if (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
+                #     _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
+                #     axes.imshow(masks_nuclei)
+                #     axes.set(title = 'Nuclei mask')
+                # plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
+                # if self.show_plots == True:
+                #     plt.show()
+                # else:
+                #     plt.close()
+                
+                # This functions makes zeros the border of the mask, it is used only for plotting.
+                def remove_border(img,px_to_remove = 1):
+                    img[0:px_to_remove, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
+                    return img
+        
+        
+                image = self.list_images[i]
+                if len(image.shape) > 3:  # [ZYXC]
+                    if image.shape[0] ==1:
+                        image_normalized = image[0,:,:,:]
+                    else:
+                        image_normalized = np.max(image[:,:,:,:],axis=0)    # taking the mean value
                 else:
-                    plt.close()
+                    image_normalized = image # [YXC] 
+                
+                
+                # Plotting
+                if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+                    n_channels = np.min([3, image_normalized.shape[2]])
+                    _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
+                    im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
+                    masks_plot_cyto= masks_complete_cells 
+                    masks_plot_nuc = masks_nuclei              
+                    axes[0].imshow(im)
+                    axes[0].set(title = 'All channels')
+                    axes[1].imshow(masks_plot_cyto)
+                    axes[1].set(title = 'Cytosol mask')
+                    axes[2].imshow(masks_plot_nuc)
+                    axes[2].set(title = 'Nuclei mask')
+                    axes[3].imshow(im)
+                    n_masks =np.max(masks_complete_cells)                 
+                    for i in range(1, n_masks+1 ):
+                        # Removing the borders just for plotting
+                        tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
+                        tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
+                        # Remove border for plotting
+                        temp_nucleus_mask= remove_border(tested_mask_nuc)
+                        temp_complete_mask = remove_border(tested_mask_cyto)
+                        temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
+                        temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
+                        contours_connected_n = np.vstack((temp_contour_n))
+                        contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
+                        contours_connected_c = np.vstack((temp_contour_c))
+                        contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
+                        axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                        axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                        axes[3].set(title = 'Paired masks')
+                    #if not(self.image_name is None):
+                    plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
+                    if self.show_plots == 1:
+                        plt.show()
+                    else:
+                        plt.close()
+                else:
+                    if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
+                        masks_plot_cyto= masks_complete_cells 
+                        n_channels = np.min([3, image_normalized.shape[2]])
+                        _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
+                        im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
+                        axes[0].imshow(im)
+                        axes[0].set(title = 'All channels')
+                        axes[1].imshow(masks_plot_cyto)
+                        axes[1].set(title = 'Cytosol mask')
+                        if not(self.image_name is None):
+                            plt.savefig(self.image_name,bbox_inches='tight')
+                        if self.show_plots == 1:
+                            plt.show()
+                        else:
+                            plt.close()
+                    if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+                        masks_plot_nuc = masks_nuclei    
+                        n_channels = np.min([3, image_normalized.shape[2]])
+                        _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
+                        im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
+                        axes[0].imshow(im)
+                        axes[0].set(title = 'All channels')
+                        axes[1].imshow(masks_plot_nuc)
+                        axes[1].set(title = 'Nuclei mask')
+                        #if not(self.image_name is None):
+                        plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
+                        if self.show_plots == 1:
+                            plt.show()
+                        else:
+                            plt.close()
+                    
+                
+                
+                
+                
+                
+                
+                
+                
+                
             # saving masks
             if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
                 if not (self.channels_with_nucleus is None):
