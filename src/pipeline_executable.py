@@ -73,14 +73,27 @@ optimization_segmentation_method= sys.argv[16]
 if optimization_segmentation_method in ('None', 'none',['None'],['none'],[None]):
   optimization_segmentation_method = None
 save_all_images=int(sys.argv[17])
+
+# converting the threshold_for_spot_detection to a list to iterate for each FISH channel
+list_threshold_for_spot_detection =[]
 if sys.argv[18] in ('None', 'none',['None'],['none'],[None]):
   threshold_for_spot_detection = None
 else:
-  threshold_for_spot_detection = int(sys.argv[18])  
+  threshold_for_spot_detection = json.loads(sys.argv[18])  
+  
+if not isinstance(threshold_for_spot_detection, list):
+  for i in range (len(channels_with_FISH)):
+    list_threshold_for_spot_detection.append(threshold_for_spot_detection)
+else:
+  list_threshold_for_spot_detection = threshold_for_spot_detection
+  
+# Lists for thresholds
+if (isinstance(list_threshold_for_spot_detection, list)) and (len(list_threshold_for_spot_detection) < len(channels_with_FISH)):
+  for i in range (len(channels_with_FISH)):
+    list_threshold_for_spot_detection.append(list_threshold_for_spot_detection[0])
+
 NUMBER_OF_CORES=int(sys.argv[19])
-
 save_filtered_images = int(sys.argv[20])
-
 
 # Defining directories
 current_dir = pathlib.Path().absolute()
@@ -93,10 +106,14 @@ fa.Banner().print_banner()
 share_name = 'share'
 
 # names for final folders
-if (threshold_for_spot_detection is None):
+if (list_threshold_for_spot_detection[0] is None):
   name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts_auto'
 else:
-  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts_'+str(threshold_for_spot_detection)
+  name_final_folder = data_folder_path.name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts'
+  for i in range (len(channels_with_FISH)):
+    name_final_folder+='_'+ str(list_threshold_for_spot_detection[i])
+  # add more fields for spot detection
+
 name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
 def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
   # Downloading data from NAS
@@ -155,7 +172,7 @@ minimum_spots_cluster = 2                # The number of spots in a neighborhood
 show_plots=True                          # Flag to display plots
 
 # Running the pipeline
-dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx ,psf_z=psf_z,psf_yx=psf_yx, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=threshold_for_spot_detection,NUMBER_OF_CORES=NUMBER_OF_CORES,save_filtered_images=save_filtered_images).run()
+dataframe_FISH,_,_,_ = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, diameter_cytosol, minimum_spots_cluster, masks_dir=masks_dir,  voxel_size_z=voxel_size_z, voxel_size_yx=voxel_size_yx ,psf_z=psf_z,psf_yx=psf_yx, show_plots=show_plots, file_name_str =data_folder_path.name, optimization_segmentation_method = optimization_segmentation_method,save_all_images=save_all_images,threshold_for_spot_detection=list_threshold_for_spot_detection,NUMBER_OF_CORES=NUMBER_OF_CORES,save_filtered_images=save_filtered_images).run()
 
 def extracting_data_from_df (df,spot_type_selected=0):
     number_cells = df['cell_id'].nunique()
@@ -174,7 +191,6 @@ def extracting_data_from_df (df,spot_type_selected=0):
     return number_of_spots_per_cell,number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus,number_of_TS_per_cell,ts_size,cell_size 
   
 number_of_spots_per_cell,number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus,number_of_TS_per_cell,ts_size,cell_size = extracting_data_from_df (df=dataframe_FISH,spot_type_selected=0)
-
 
 # Plotting intensity distributions
 plt.style.use('ggplot')  # ggplot  #default

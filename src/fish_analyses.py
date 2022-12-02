@@ -1582,6 +1582,9 @@ class SpotDetection():
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        
+        if not isinstance(threshold_for_spot_detection, list):
+            threshold_for_spot_detection=[threshold_for_spot_detection]
         self.threshold_for_spot_detection=threshold_for_spot_detection
         
     def get_dataframe(self):
@@ -1595,7 +1598,7 @@ class SpotDetection():
             voxel_size_yx = self.list_voxels[i][1]
             psf_z = self.list_psfs[i][0] 
             psf_yx = self.list_psfs[i][1]
-            [spotDetectionCSV, clusterDetectionCSV], image_filtered = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plots=self.show_plots,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).detect()
+            [spotDetectionCSV, clusterDetectionCSV], image_filtered = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plots=self.show_plots,image_name=self.image_name,save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection[i]).detect()
             dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i).get_dataframe()
             # reset counter for image and cell number
             reset_cell_counter = True
@@ -1630,7 +1633,7 @@ class Metadata():
     file_name_str : str
         Name used for the metadata file. The final name has the format metadata_<<file_name_str>>.txt
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True,list_counter_cell_id=[]):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True,list_counter_cell_id=[],threshold_for_spot_detection=[]):
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -1644,6 +1647,7 @@ class Metadata():
         self.list_psfs = list_psfs
         self.file_name_str=file_name_str
         self.minimum_spots_cluster = minimum_spots_cluster
+        self.threshold_for_spot_detection=threshold_for_spot_detection
         if  (not str(data_dir.name)[0:5] ==  'temp_') and (self.file_name_str is None):
             self.filename = 'metadata_'+ str(data_dir.name).replace(" ", "")  +'.txt'
         elif not(self.file_name_str is None):
@@ -1688,6 +1692,12 @@ class Metadata():
                     fd.write('\n        voxel_size_yx: ' + str(self.list_voxels[k][1]) )
                     fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
                     fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
+                    used_threshold = self.threshold_for_spot_detection[k]
+                    if not(used_threshold is None):
+                        fd.write('\n        threshold_spot_detection: ' + str(self.threshold_for_spot_detection[k]) )
+                    else:
+                        fd.write('\n        threshold_spot_detection: ' + 'automatic value using BIG-FISH' )
+                    self.threshold_for_spot_detection
                 fd.write('\n    minimum_spots_cluster: ' + str(self.minimum_spots_cluster) )
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign) ) 
@@ -1860,11 +1870,11 @@ class ReportPDF():
                         counter=counter+1
                     pdf.add_page()
                     try:
-                        if (self.threshold_for_spot_detection is None):
+                        if (self.threshold_for_spot_detection[id_channel] is None):
                             temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
                             pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
                         else:
-                            pdf.cell(w=0, h=10, txt='Used intensity threshold = '+str(self.threshold_for_spot_detection) ,ln =2,align = 'L')
+                            pdf.cell(w=0, h=10, txt='Used intensity threshold = '+str(self.threshold_for_spot_detection[id_channel]) ,ln =2,align = 'L')
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
@@ -1880,11 +1890,11 @@ class ReportPDF():
                         pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
                     # Plotting the elbow plot
                     try:
-                        if (self.threshold_for_spot_detection is None):
+                        if (self.threshold_for_spot_detection[id_channel] is None):
                             temp_elbow_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '__elbow_'+ '_ch_'+str(channel)+'.png' )
                             pdf.image(str(temp_elbow_name), x=0, y=HEIGHT//2, w=WIDTH-140)
                         else:
-                            pdf.cell(w=0, h=10, txt='Used intensity threshold = '+str(self.threshold_for_spot_detection) ,ln =2,align = 'L')
+                            pdf.cell(w=0, h=10, txt='Used intensity threshold = '+str(self.threshold_for_spot_detection[id_channel]) ,ln =2,align = 'L')
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()                
@@ -1917,7 +1927,7 @@ class PipelineFISH():
         If true, it shows a spots on the plane below and above the selected plane. The default is False.
     use_log_filter_for_spot_detection : bool, optional
         Uses Big_FISH log_filter. The default is True.
-    threshold_for_spot_detection: scalar or None.
+    threshold_for_spot_detection: scalar, list, or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calulated automatically.
     use_brute_force : bool, optional
         Flag to perform cell segmentation using all possible combination of parameters. The default is False.
@@ -2102,7 +2112,6 @@ class PipelineFISH():
                         filtered_image_path = pathlib.Path().absolute().joinpath( filtered_folder_name, 'filter_Ch_' + str(self.channels_with_FISH[j]) +'_'+ temp_file_name +'.tif' )
                         tifffile.imwrite(filtered_image_path, list_fish_images[j])
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images
-                
             # appending cell segmentation flag
             list_segmentation_succesful.append(segmentation_succesful)
         # Creating the dataframe       
@@ -2111,7 +2120,7 @@ class PipelineFISH():
         elif np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')
         # Creating the metadata
-        Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files,list_segmentation_succesful=list_segmentation_succesful,list_counter_cell_id=list_counter_cell_id).write_metadata()
+        Metadata(self.data_dir, self.channels_with_cytosol, self.channels_with_nucleus, self.channels_with_FISH,self.diameter_nucleus, self.diameter_cytosol, self.minimum_spots_cluster,list_voxels=self.list_voxels, list_psfs=self.list_psfs,file_name_str=self.name_for_files,list_segmentation_succesful=list_segmentation_succesful,list_counter_cell_id=list_counter_cell_id,threshold_for_spot_detection=self.threshold_for_spot_detection).write_metadata()
         # Creating a PDF report
         filenames_for_pdf_report = [ f[:-4] for f in self.list_files_names]
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name), filenames_for_pdf_report=filenames_for_pdf_report, channels_with_FISH=self.channels_with_FISH, save_all_images=self.save_all_images, list_z_slices_per_image=self.list_z_slices_per_image,threshold_for_spot_detection=self.threshold_for_spot_detection,list_segmentation_succesful=list_segmentation_succesful ).create_report()

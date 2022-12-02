@@ -16,9 +16,10 @@ export CUDA_VISIBLE_DEVICES=0,1
 # Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
 # Make sure to convert str to the desired data types.
 
+
 #####################  Huys pape data 100X  ############################
 << ////
-list_Huy1=(\
+list_Huy=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20211014/MS2-CY5-0minTPL' \
 'smFISH_images/Linda_smFISH_images/Confocal/20211014/MS2-CY5-3minTPL' \
 'smFISH_images/Linda_smFISH_images/Confocal/20211015/MS2-CY5-6minTPL' \
@@ -62,10 +63,6 @@ list_Huy=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_5hTPL_5uM' \
 )
 
-list_test=(\
-'Test/MS2-CY5_Cyto543_560_5hTPL_5uM' \
-)
-
 path_to_config_file="$HOME/Desktop/config.yml"
 NUMBER_OF_CORES=1
 diameter_nucleus=80     # approximate nucleus size in pixels
@@ -83,11 +80,11 @@ path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
-threshold_for_spot_detection=600 #'None'
+threshold_for_spot_detection='None'
 save_filtered_images=0 # To save filtered images
 
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_test[*]}; do
+for folder in ${list_Huy[*]}; do
      output_names=""output__"${folder////__}"".txt"
      nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
      wait
