@@ -2149,7 +2149,7 @@ class PipelineFISH():
                         image_normalized = np.max(image[:,:,:,:],axis=0)    # taking the mean value
                 else:
                     image_normalized = image # [YXC] 
-                
+            
                 
                 # Plotting
                 if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
