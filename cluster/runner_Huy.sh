@@ -49,7 +49,24 @@ download_data_from_NAS=1                   # If data downloaded from NAS use 1
 #path_to_masks_dir='None'                   #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0                          # If true, it shows a all planes for the FISH plot detection. 
-threshold_for_spot_detection='[550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+
+#threshold_for_spot_detection='[400,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[400,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+
+#threshold_for_spot_detection='[450,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[450,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[450,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+
+#threshold_for_spot_detection='[500,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[500,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[500,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+
+#threshold_for_spot_detection='[550,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[550,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+threshold_for_spot_detection='[550,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+
+
 save_filtered_images=1                     # To save filtered images
 
 # ########### PYTHON PROGRAM #############################
