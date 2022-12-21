@@ -657,14 +657,9 @@ class CellSegmentation():
         self.show_plots = show_plots
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
-        #self.NUMBER_OF_CORES = 4 # number of cores for parallel computing.
         self.use_brute_force = use_brute_force
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
         self.number_z_slices = image.shape[0]
-        #if number_gpus ==0:
-        #    self.NUMBER_OPTIMIZATION_VALUES= 0
-        #    self.optimization_segmentation_method = None # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
-        #else:
         self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,15))
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
@@ -750,7 +745,6 @@ class CellSegmentation():
                             for ind_1 in range(1,n_mask_1+1):
                                 tested_mask_1 = np.where(masks_1 == ind_1, 1, 0)
                                 array_paired[ind_1-1] = is_nucleus_in_cytosol(tested_mask_1, tested_mask_0)
-                                #remove_lonely_masks(masks_nuclei, masks_cyto,is_nuc='nuc')
                                 if (is_nuc =='nuc') and (np.count_nonzero(tested_mask_0) > np.count_nonzero(tested_mask_1) ):
                                     # condition that rejects images with nucleus bigger than the cytosol
                                     array_paired[ind_1-1] = 0
@@ -830,14 +824,6 @@ class CellSegmentation():
             return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
         
         # TESTING IF A MASK PATH WAS PASSED TO THE CODE
-        
-        
-        
-        
-        
-        
-        
-        
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Intensity Based Optimization to find the maximum number of index_paired_masks. 
@@ -893,7 +879,6 @@ class CellSegmentation():
                 test_image_optimization = np.max(self.image[:,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization) 
         
-        
         elif (self.optimization_segmentation_method == 'z_slice_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
             num_slices_range = 3  # range to consider above and below a selected z-slice
@@ -932,7 +917,6 @@ class CellSegmentation():
             else:
                 test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)        
-        
                 
         elif (self.optimization_segmentation_method == 'center_slice') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
@@ -966,86 +950,14 @@ class CellSegmentation():
             # no optimization is applied if a 2D image is passed
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_normalized)
         
-        
-        
-        
-        # This functions makes zeros the border of the mask, it is used only for plotting.
-        def remove_border(img,px_to_remove = 1):
-            img[0:px_to_remove, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
-            return img
-        
-        
-        
-        # Plotting
-        if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-            n_channels = np.min([3, image_normalized.shape[2]])
-            _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-            im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
-            masks_plot_cyto= masks_complete_cells 
-            masks_plot_nuc = masks_nuclei              
-            axes[0].imshow(im)
-            axes[0].set(title = 'All channels')
-            axes[1].imshow(masks_plot_cyto)
-            axes[1].set(title = 'Cytosol mask')
-            axes[2].imshow(masks_plot_nuc)
-            axes[2].set(title = 'Nuclei mask')
-            axes[3].imshow(im)
-            n_masks =np.max(masks_complete_cells)                 
-            for i in range(1, n_masks+1 ):
-                tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
-                tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
-                # Remove border for plotting
-                temp_nucleus_mask= remove_border(tested_mask_nuc)
-                temp_complete_mask = remove_border(tested_mask_cyto)
-                temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
-                temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
-                contours_connected_n = np.vstack((temp_contour_n))
-                contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
-                contours_connected_c = np.vstack((temp_contour_c))
-                contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
-                axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
-                axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
-                axes[3].set(title = 'Paired masks')
-            if not(self.image_name is None):
-                plt.savefig(self.image_name,bbox_inches='tight')
-            if self.show_plots == 1:
-                plt.show()
-            else:
-                plt.close()
-        else:
-            if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
-                masks_plot_cyto= masks_complete_cells 
-                n_channels = np.min([3, image_normalized.shape[2]])
-                _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
-                axes[0].imshow(im)
-                axes[0].set(title = 'All channels')
-                axes[1].imshow(masks_plot_cyto)
-                axes[1].set(title = 'Cytosol mask')
-                if not(self.image_name is None):
-                    plt.savefig(self.image_name,bbox_inches='tight')
-                if self.show_plots == 1:
-                    plt.show()
-                else:
-                    plt.close()
-            if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-                masks_plot_nuc = masks_nuclei    
-                n_channels = np.min([3, image_normalized.shape[2]])
-                _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
-                axes[0].imshow(im)
-                axes[0].set(title = 'All channels')
-                axes[1].imshow(masks_plot_nuc)
-                axes[1].set(title = 'Nuclei mask')
-                if not(self.image_name is None):
-                    plt.savefig(self.image_name,bbox_inches='tight')
-                if self.show_plots == 1:
-                    plt.show()
-                else:
-                    plt.close()
-            print('No paired masks were detected for this image')
-        
-                
+        Utilities.plotting_masks_and_original_image(image = image_normalized, 
+                                                    masks_complete_cells = masks_complete_cells, 
+                                                    masks_nuclei = masks_nuclei, 
+                                                    channels_with_cytosol = self.channels_with_cytosol, 
+                                                    channels_with_nucleus = self.channels_with_nucleus,
+                                                    image_name = self.image_name,
+                                                    show_plots = self.show_plots)
+            
         return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei 
 
 
@@ -1113,7 +1025,6 @@ class BigFISH():
             Coordinates of the detected spots. One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
         '''
         rna=self.image[:,:,:,self.FISH_channel]
-        
         # Calculating Sigma with  the parameters for the PSF.
         spot_radius_px = detection.get_object_radius_pixel(
                         voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
@@ -1158,7 +1069,6 @@ class BigFISH():
         spotDetectionCSV = spots_post_clustering
         clusterDetectionCSV = clusters
         ## PLOTTING
-        #if self.show_plots == True:
         try:
             if not(self.image_name is None):
                 path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
@@ -1263,7 +1173,6 @@ class DataProcessing():
         self.channels_with_nucleus=channels_with_nucleus
         self.number_color_channels=number_color_channels
         self.image = image
-        
         if isinstance(masks_complete_cells, list) or (masks_complete_cells is None):
             self.masks_complete_cells=masks_complete_cells
         else:
@@ -1302,7 +1211,6 @@ class DataProcessing():
             # spotDetectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus
-            
             
             if not (self.channels_with_nucleus is None):
                 try:
@@ -1389,7 +1297,6 @@ class DataProcessing():
                     array_spots_nuc[:,13] = 0                   # cluster_size
                     array_spots_nuc[:,14] =  spot_type          # spot_type
                     array_spots_nuc[:,15] =  is_cell_in_border  # is_cell_fragmented
-                
             
             if not (self.channels_with_cytosol is None) :
                 if detected_cyto == True:
@@ -1415,7 +1322,6 @@ class DataProcessing():
                 array_complete = np.zeros( ( 1,number_columns)  )
             # Saves a dataframe with zeros when no spots are detected on the cell.
             if array_complete.shape[0] ==1:
-                #array_complete = np.zeros( ( 1,number_columns)  )
                 # if NO spots are detected populate  with -1
                 array_complete[:,2] = -1     # spot_id
                 array_complete[:,8:16] = -1
@@ -1432,17 +1338,12 @@ class DataProcessing():
             array_complete[:,7] = cell_area      #'cell_area_px'
             
             number_constant_columns = 16
-            
-            
-            
             # Populating array to add the average intensity in the cell
             for c in range (self.number_color_channels):
                 if not (self.channels_with_nucleus is None):
                     array_complete[:,number_constant_columns+c] = nuc_int[c] 
                 if not (self.channels_with_cytosol is None) :
                     array_complete[:,number_constant_columns+self.number_color_channels+c] = cyto_int[c]      
-            
-            
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nucleus_y':int, 'nucleus_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
             df = df.astype(new_dtypes)
@@ -1451,10 +1352,6 @@ class DataProcessing():
             n_masks = len(self.masks_nuclei)
         else:
             n_masks = len(self.masks_complete_cells)  
-        
-        
-        
-        
         
         # Initializing Dataframe
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
@@ -1510,10 +1407,6 @@ class DataProcessing():
             else:
                 cell_area = 0
                 cyto_int = None
-                
-                
-            #print('nuc_int',nuc_int)
-            #print('cyto_int',cyto_int)
             
             # case where no nucleus is passed and only cytosol
             if (self.channels_with_nucleus in  (None, [None])) and not (self.channels_with_cytosol in (None, [None])):
@@ -1552,13 +1445,6 @@ class DataProcessing():
                 print('cluster')
                 print(self.clusterDetectionCSV)
                 raise
-            #     print(selected_mask_nuc.max())
-            #     print(slected_masks_cytosol_no_nuclei.max())
-            #     print(new_dataframe)
-            #     print('spots')
-            #     print(self.spotDetectionCSV)
-            #     print('cluster')
-            #     print(self.clusterDetectionCSV)
             counter_total_cells +=1
         return new_dataframe
 
@@ -1621,13 +1507,10 @@ class SpotDetection():
         self.number_color_channels = image.shape[-1]
         self.channels_with_cytosol=channels_with_cytosol
         self.channels_with_nucleus=channels_with_nucleus
-        
         if not (masks_complete_cells is None):
             self.list_masks_complete_cells = Utilities.separate_masks(masks_complete_cells)
         elif (masks_complete_cells is None) and not(masks_nuclei is None):
-            self.list_masks_complete_cells = Utilities.separate_masks(masks_nuclei)
-
-            
+            self.list_masks_complete_cells = Utilities.separate_masks(masks_nuclei)            
         if not (masks_nuclei is None):    
             self.list_masks_nuclei = Utilities.separate_masks(masks_nuclei)
         else:
@@ -1637,8 +1520,6 @@ class SpotDetection():
             self.list_masks_cytosol_no_nuclei = Utilities.separate_masks(masks_cytosol_no_nuclei)
         else:
             self.list_masks_cytosol_no_nuclei = None
-            
-            
         self.FISH_channels = FISH_channels
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
@@ -1912,8 +1793,6 @@ class ReportPDF():
         # Main loop that reads each image and makes the pdf
         for i,temp_file_name in enumerate(list_files_names):
             
-            
-            
             #print(i, temp_file_name)
             pdf.cell(w=0, h=10, txt='Original image: ' + temp_file_name,ln =2,align = 'L')
             # code that returns the path of the original image
@@ -1924,7 +1803,6 @@ class ReportPDF():
                 pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
             pdf.cell(w=0, h=10, txt='Cell segmentation: ' + temp_file_name,ln =1,align = 'L')
             
-            
             # code that returns the path of the segmented image
             if self.list_segmentation_succesful[i]==True:
                 temp_segmented_img_name = pathlib.Path().absolute().joinpath( self.directory, 'seg_' + temp_file_name +'.png' )
@@ -1932,8 +1810,6 @@ class ReportPDF():
             else:
                 pdf.cell(w=0, h=20, txt='Segmentation was not possible for image: ' + temp_file_name,ln =1,align = 'L')
                 pdf.add_page()
-            
-            
             
             # Code that plots the detected spots.
             if (self.save_all_images==True) and (self.list_segmentation_succesful[i]==True):
@@ -2059,7 +1935,6 @@ class PipelineFISH():
             list_psfs.append([psf_z, psf_yx])
         self.list_voxels = list_voxels
         self.list_psfs = list_psfs
-        
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
         self.CLUSTER_RADIUS = 500
@@ -2075,16 +1950,12 @@ class PipelineFISH():
         else:
             self.save_masks_as_file = False
         number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
-
         self.optimization_segmentation_method = optimization_segmentation_method # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
-        
         if np.min(self.list_z_slices_per_image) < 5:
             self.optimization_segmentation_method = 'center_slice'
-        
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
-        #if not (threshold_for_spot_detection is None):
         self.threshold_for_spot_detection=threshold_for_spot_detection
         self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
@@ -2129,13 +2000,6 @@ class PipelineFISH():
             if (self.masks_dir is None):
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks() 
             
-            
-            
-            
-            
-            
-            
-            
             # test if segmentation was succcesful
                 if (self.channels_with_cytosol  is None):
                     detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
@@ -2149,8 +2013,6 @@ class PipelineFISH():
                     segmentation_succesful = False                
             else:
                 segmentation_succesful = True
-                
-                
                 # Paths to masks
                 if not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
                     mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
@@ -2170,116 +2032,14 @@ class PipelineFISH():
                 if not 'masks_cytosol_no_nuclei' in locals():
                     masks_cytosol_no_nuclei=None
                 
-                
-                
-                # Plotting masks
-                # if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
-                #     _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (15, 10))
-                #     axes[0].imshow(masks_complete_cells)
-                #     axes[0].set(title = 'Cytosol mask')
-                #     axes[1].imshow(masks_nuclei)
-                #     axes[1].set(title = 'Nuclei mask')
-                #     axes[2].imshow(masks_cytosol_no_nuclei)
-                #     axes[2].set(title = 'Cytosol only')
-                # if not (self.channels_with_cytosol is None) and (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
-                #     _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
-                #     axes.imshow(masks_complete_cells)
-                #     axes.set(title = 'Cytosol mask')
-                # if (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) and (segmentation_succesful==True) :
-                #     _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 10))
-                #     axes.imshow(masks_nuclei)
-                #     axes.set(title = 'Nuclei mask')
-                # plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
-                # if self.show_plots == True:
-                #     plt.show()
-                # else:
-                #     plt.close()
-                
-                # This functions makes zeros the border of the mask, it is used only for plotting.
-                def remove_border(img,px_to_remove = 1):
-                    img[0:px_to_remove, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
-                    return img
-        
-        
-                image = self.list_images[i]
-                if len(image.shape) > 3:  # [ZYXC]
-                    if image.shape[0] ==1:
-                        image_normalized = image[0,:,:,:]
-                    else:
-                        image_normalized = np.max(image[:,:,:,:],axis=0)    # taking the mean value
-                else:
-                    image_normalized = image # [YXC] 
-            
-                
-                # Plotting
-                if np.max(masks_complete_cells) != 0 and not(self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-                    n_channels = np.min([3, image_normalized.shape[2]])
-                    _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
-                    im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
-                    masks_plot_cyto= masks_complete_cells 
-                    masks_plot_nuc = masks_nuclei              
-                    axes[0].imshow(im)
-                    axes[0].set(title = 'All channels')
-                    axes[1].imshow(masks_plot_cyto)
-                    axes[1].set(title = 'Cytosol mask')
-                    axes[2].imshow(masks_plot_nuc)
-                    axes[2].set(title = 'Nuclei mask')
-                    axes[3].imshow(im)
-                    n_masks =np.max(masks_complete_cells)                 
-                    for i in range(1, n_masks+1 ):
-                        # Removing the borders just for plotting
-                        tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
-                        tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
-                        # Remove border for plotting
-                        temp_nucleus_mask= remove_border(tested_mask_nuc)
-                        temp_complete_mask = remove_border(tested_mask_cyto)
-                        temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
-                        temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
-                        contours_connected_n = np.vstack((temp_contour_n))
-                        contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
-                        contours_connected_c = np.vstack((temp_contour_c))
-                        contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
-                        axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
-                        axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
-                        axes[3].set(title = 'Paired masks')
-                    #if not(self.image_name is None):
-                    plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
-                    if self.show_plots == 1:
-                        plt.show()
-                    else:
-                        plt.close()
-                else:
-                    if not(self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
-                        masks_plot_cyto= masks_complete_cells 
-                        n_channels = np.min([3, image_normalized.shape[2]])
-                        _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                        im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
-                        axes[0].imshow(im)
-                        axes[0].set(title = 'All channels')
-                        axes[1].imshow(masks_plot_cyto)
-                        axes[1].set(title = 'Cytosol mask')
-                        if not(self.image_name is None):
-                            plt.savefig(self.image_name,bbox_inches='tight')
-                        if self.show_plots == 1:
-                            plt.show()
-                        else:
-                            plt.close()
-                    if (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
-                        masks_plot_nuc = masks_nuclei    
-                        n_channels = np.min([3, image_normalized.shape[2]])
-                        _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
-                        im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
-                        axes[0].imshow(im)
-                        axes[0].set(title = 'All channels')
-                        axes[1].imshow(masks_plot_nuc)
-                        axes[1].set(title = 'Nuclei mask')
-                        #if not(self.image_name is None):
-                        plt.savefig(temp_segmentation_img_name,bbox_inches='tight')
-                        if self.show_plots == 1:
-                            plt.show()
-                        else:
-                            plt.close()
-                                    
+                # this section plots the original image and the segmentation results.
+                Utilities.plotting_masks_and_original_image(image= self.list_images[i], 
+                                                            masks_complete_cells=masks_complete_cells, 
+                                                            masks_nuclei=masks_nuclei, 
+                                                            channels_with_cytosol=self.channels_with_cytosol, 
+                                                            channels_with_nucleus = self.channels_with_nucleus,
+                                                            image_name=temp_segmentation_img_name,
+                                                            show_plots=self.show_plots)
                 
             # saving masks
             if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
@@ -2321,7 +2081,6 @@ class PipelineFISH():
         filenames_for_pdf_report = [ f[:-4] for f in self.list_files_names]
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name), filenames_for_pdf_report=filenames_for_pdf_report, channels_with_FISH=self.channels_with_FISH, save_all_images=self.save_all_images, list_z_slices_per_image=self.list_z_slices_per_image,threshold_for_spot_detection=self.threshold_for_spot_detection,list_segmentation_succesful=list_segmentation_succesful ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei
-
 
 
 class Utilities():
@@ -2565,15 +2324,85 @@ class Utilities():
         else:
             masks_dir = None
         return local_data_dir, masks_dir
+    
+    
+    def plotting_masks_and_original_image(image, masks_complete_cells, masks_nuclei, channels_with_cytosol, channels_with_nucleus,image_name,show_plots):
+    # This functions makes zeros the border of the mask, it is used only for plotting.
+        def remove_border(img,px_to_remove = 1):
+            img[0:px_to_remove, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
+            return img
+        # This section converst the image into a 2d maximum projection.
+        if len(image.shape) > 3:  # [ZYXC]
+            if image.shape[0] ==1:
+                image_normalized = image[0,:,:,:]
+            else:
+                image_normalized = np.max(image[:,:,:,:],axis=0)    # taking the mean value
+        else:
+            image_normalized = image # [YXC] 
+        
+        # Plotting
+        if np.max(masks_complete_cells) != 0 and not(channels_with_cytosol is None) and not(channels_with_nucleus is None):
+            n_channels = np.min([3, image_normalized.shape[2]])
+            _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
+            im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
+            masks_plot_cyto= masks_complete_cells 
+            masks_plot_nuc = masks_nuclei              
+            axes[0].imshow(im)
+            axes[0].set(title = 'All channels')
+            axes[1].imshow(masks_plot_cyto)
+            axes[1].set(title = 'Cytosol mask')
+            axes[2].imshow(masks_plot_nuc)
+            axes[2].set(title = 'Nuclei mask')
+            axes[3].imshow(im)
+            n_masks =np.max(masks_complete_cells)                 
+            for i in range(1, n_masks+1 ):
+                # Removing the borders just for plotting
+                tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
+                tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
+                # Remove border for plotting
+                temp_nucleus_mask= remove_border(tested_mask_nuc)
+                temp_complete_mask = remove_border(tested_mask_cyto)
+                temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
+                temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
+                contours_connected_n = np.vstack((temp_contour_n))
+                contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
+                contours_connected_c = np.vstack((temp_contour_c))
+                contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
+                axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
+                axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                axes[3].set(title = 'Paired masks')
+        else:
+            if not(channels_with_cytosol is None) and (channels_with_nucleus is None):
+                masks_plot_cyto= masks_complete_cells 
+                n_channels = np.min([3, image_normalized.shape[2]])
+                _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
+                im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
+                axes[0].imshow(im)
+                axes[0].set(title = 'All channels')
+                axes[1].imshow(masks_plot_cyto)
+                axes[1].set(title = 'Cytosol mask')
+            if (channels_with_cytosol is None) and not(channels_with_nucleus is None):
+                masks_plot_nuc = masks_nuclei    
+                n_channels = np.min([3, image_normalized.shape[2]])
+                _, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (20, 10))
+                im = Utilities.convert_to_int8(image_normalized[ :, :, 0:n_channels],rescale=True,min_percentile=1, max_percentile=95)
+                axes[0].imshow(im)
+                axes[0].set(title = 'All channels')
+                axes[1].imshow(masks_plot_nuc)
+                axes[1].set(title = 'Nuclei mask')
+        if not(image_name is None):
+            plt.savefig(image_name,bbox_inches='tight')
+        if show_plots == 1:
+            plt.show()
+        else:
+            plt.close()
 
 
 def dist_plots(df, plot_title,destination_folder ):
-    
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
-        
     max_x_val = df.max().max()
-    
+
     # Histograms
     plt.figure(figsize=(10,5))
     sns.set(font_scale = 1)
