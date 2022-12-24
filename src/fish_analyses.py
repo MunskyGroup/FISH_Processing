@@ -1610,7 +1610,7 @@ class SpotDetection():
 
 
 
-
+""" 
 
 class Intensity():
     '''
@@ -1922,7 +1922,7 @@ class Intensity():
             #dataframe_particles = dataframe_particles.astype({"red_int_mean": int, "green_int_mean": int, "blue_int_mean": int, "x": int, "y": int}) 
         return dataframe_particles, array_intensities_mean, time_vector, mean_intensities, std_intensities, mean_intensities_normalized, std_intensities_normalized
 
-
+ """
 
 
 
