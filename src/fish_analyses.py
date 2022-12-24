@@ -1339,6 +1339,11 @@ class DataProcessing():
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+c] = nuc_int[c] 
                 if not (self.channels_with_cytosol is None) :
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels+c] = cyto_int[c]      
+            
+            # adding the columns wth the intensity in for each channel.
+            
+            
+            
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nuc_loc_y':int, 'nuc_loc_x':int,'cyto_loc_y':int, 'cyto_loc_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
             df = df.astype(new_dtypes)
@@ -1396,10 +1401,7 @@ class DataProcessing():
             else:
                 cyto_int = None
                 cell_area, cyto_centroid_y, cyto_centroid_x  = 0,0,0
-    
-            
-            
-            
+                
             # case where nucleus and cyto are passed 
             if not (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
                 slected_masks_cytosol_no_nuclei = self.masks_cytosol_no_nuclei[id_cell]
@@ -1420,6 +1422,16 @@ class DataProcessing():
                 cyto_area = 0 
                 selected_masks_complete_cells = None
                 
+            # This section calculates the 
+            #self.number_color_channels
+            
+            # spotDetectionCSV      nrna x  [Z,Y,X,idx_foci]
+            # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
+            
+            # iterate for each spot and get the inetstity for all channels.
+            # iterate for each cluster and get intensity for all channels.
+            
+            
             # determining if the cell is in the border of the image. If true the cell is in the border.
             is_cell_in_border =  np.any( np.concatenate( ( tested_mask[:,0],tested_mask[:,-1],tested_mask[0,:],tested_mask[-1,:] ) ) )  
             
@@ -1582,7 +1594,358 @@ class SpotDetection():
             reset_cell_counter = True
             list_fish_images.append(image_filtered)
         return dataframe_FISH, list_fish_images
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class Intensity():
+    '''
+    This class is intended to calculate the intensity in the detected spots.
+
+    Parameters
+
+    video : NumPy array
+        Array of images with dimensions [T, Y, X, C].
+    particle_size : int, optional
+        Average particle size. The default is 5.
+    trackpy_dataframe : pandas data frame or None (if not given).
+        Pandas data frame from trackpy with fields [x, y, mass, size, ecc, signal, raw_mass, ep, frame, particle]. The default is None
+    spot_positions_movement : NumPy array  or None (if not given).
+        Array of images with dimensions [T, S, y_x_positions].  The default is None
+    dataframe_format : str, optional
+        Format for the dataframe the options are : 'short' , and 'long'. The default is 'short'.
+        "long" format generates this dataframe: [image_number, cell_number, particle, frame, red_int_mean, green_int_mean, blue_int_mean, red_int_std, green_int_std, blue_int_std, x, y, SNR_red,SNR_green,SNR_blue].
+        "short" format generates this dataframe: [image_number, cell_number, particle, frame, red_int_mean, green_int_mean, blue_int_mean, x, y].
+    method : str, optional
+        Method to calculate intensity the options are : 'total_intensity' , 'disk_donut' and 'gaussian_fit'. The default is 'disk_donut'.
+    step_size : float, optional
+        Frame rate in seconds. The default is 1 frame per second.
+    show_plot : bool, optional
+        Allows the user to show a plot for the optimization process. The default is True.
+    '''
+    def __init__(self, video:np.ndarray, particle_size:int = 5, trackpy_dataframe: Union[object , None ] = None, spot_positions_movement: Union[np.ndarray, None] = None,dataframe_format:str = 'short',   method:str = 'disk_donut', step_size:float = 1, show_plot:bool = True):
+        if particle_size < 3:
+            particle_size = 3 # minimal size allowed for detection
+        if (particle_size % 2) == 0:
+            particle_size = particle_size + 1
+            print('particle_size must be an odd number, this was automatically changed to: ', particle_size)
+        self.video = video
+        self.trackpy_dataframe = trackpy_dataframe
+        self.disk_size = int(np.round(particle_size/2)) # size of the half of the crop
+        self.crop_size = int(np.round(particle_size/2))*2
+        self.spots_range_to_replace = np.linspace(-(particle_size - 1) / 2, (particle_size - 1) / 2, particle_size,dtype=int)
+        PIXELS_AROUND_SPOT = 6 # THIS HAS TO BE AN EVEN NUMBER
+        self.crop_range_to_replace = np.linspace(-(particle_size+PIXELS_AROUND_SPOT - 1) / 2, (particle_size+PIXELS_AROUND_SPOT - 1) / 2, particle_size+PIXELS_AROUND_SPOT,dtype=int)
+        self.show_plot = show_plot
+        self.dataframe_format = dataframe_format # options are : 'short' and 'long'
+        self.method = method # options are : 'total_intensity' , 'disk_donut' and 'gaussian_fit'
+        self.particle_size = particle_size
+        self.spot_positions_movement = spot_positions_movement
+        # the number of spots is determined by the dataframe or numpy array passed by the user
+        if not ( trackpy_dataframe is None):
+            self.n_particles = self.trackpy_dataframe['particle'].nunique()
+        if not ( spot_positions_movement is None):
+            self.n_particles = spot_positions_movement.shape[1]
+        if (trackpy_dataframe is None) and (spot_positions_movement is None):
+            print ('Error a trackpy_dataframe or spot_positions_movement should be given')
+            raise
+        self.step_size = step_size
+        #If the video is longer than 1000 frames  avoid using parallel computing. Necessary to avoid issues with the memory.
+        if video.shape[0] < 1000:
+            self.NUMBER_OF_CORES = multiprocessing.cpu_count()
+        else:
+            self.NUMBER_OF_CORES =1
     
+    def calculate_intensity(self):
+        '''
+        This method calculates the spot intensity.
+
+        Returns
+
+        dataframe_particles : pandas dataframe
+            Dataframe with fields [image_number, cell_number, particle, frame, red_int_mean, green_int_mean, blue_int_mean, red_int_std, green_int_std, blue_int_std, x, y, SNR_red,SNR_green,SNR_blue].
+        array_intensities_mean : Numpy array
+            Array with dimensions [S, T, C].
+        time_vector : Numpy array
+            1D array.
+        mean_intensities: Numpy array
+            Array with dimensions [S, T, C].
+        std_intensities : Numpy array
+            Array with dimensions [S, T, C].
+        mean_intensities_normalized : Numpy array
+            Array with dimensions [S, T, C].
+        std_intensities_normalized : Numpy array
+            Array with dimensions [S, T, C].
+        '''
+        time_points, number_channels  = self.video.shape[0], self.video.shape[3]
+        array_intensities_mean = np.zeros((self.n_particles, time_points, number_channels))
+        array_intensities_std = np.zeros((self.n_particles, time_points, number_channels))
+        array_intensities_snr = np.zeros((self.n_particles, time_points, number_channels))
+        array_intensities_background_mean = np.zeros((self.n_particles, time_points, number_channels))
+        array_intensities_background_std = np.zeros((self.n_particles, time_points, number_channels))
+        def gaussian_fit(test_im):
+            size_spot = test_im.shape[0]
+            image_flat = test_im.ravel()
+            def gaussian_function(size_spot, offset, sigma):
+                ax = np.linspace(-(size_spot - 1) / 2., (size_spot - 1) / 2., size_spot)
+                xx, yy = np.meshgrid(ax, ax)
+                kernel =  offset *(np.exp(-0.5 * (np.square(xx) + np.square(yy)) / np.square(sigma)))
+                return kernel.ravel()
+            p0 = (np.min(image_flat) , np.std(image_flat) ) # int(size_spot/2))
+            optimized_parameters, _ = curve_fit(gaussian_function, size_spot, image_flat, p0 = p0)
+            spot_intensity_gaussian = optimized_parameters[0] # Amplitude
+            spot_intensity_gaussian_std = optimized_parameters[1]
+            return spot_intensity_gaussian, spot_intensity_gaussian_std
+        
+        def return_crop(image:np.ndarray, x:int, y:int,spot_range):
+            crop_image = image[y+spot_range[0]:y+(spot_range[-1]+1), x+spot_range[0]:x+(spot_range[-1]+1)].copy()
+            return crop_image
+        
+        def return_donut(image, spot_size):
+            tem_img = image.copy().astype('float')
+            center_coordinates = int(tem_img.shape[0]/2)
+            range_to_replace = np.linspace(-(spot_size - 1) / 2, (spot_size - 1) / 2, spot_size,dtype=int)
+            min_index = center_coordinates+range_to_replace[0]
+            max_index = (center_coordinates +range_to_replace[-1])+1
+            tem_img[min_index: max_index , min_index: max_index] *= np.nan
+            removed_center_flat = tem_img.copy().flatten()
+            donut_values = removed_center_flat[~np.isnan(removed_center_flat)]
+            # if donut_values.shape[0] == 169:
+            #     print(donut_values)
+            #     print(image)
+            #     print('r',min_index,max_index )
+            return donut_values.astype('uint16')
+        
+        def signal_to_noise_ratio(values_disk,values_donut):
+            mean_intensity_disk = np.mean(values_disk.flatten().astype('float'))            
+            mean_intensity_donut = np.mean(values_donut.flatten().astype('float')) # mean calculation ignoring zeros
+            std_intensity_donut = np.std(values_donut.flatten().astype('float')) # mean calculation ignoring zeros
+            #print('s',values_disk.shape,values_donut.shape)
+            if std_intensity_donut >0:
+                SNR = (mean_intensity_disk-mean_intensity_donut) / std_intensity_donut
+            else:
+                SNR = 0
+            mean_background_int = mean_intensity_donut
+            std_background_int = std_intensity_donut
+            return SNR, mean_background_int,std_background_int
+        
+        def disk_donut(values_disk, values_donut):
+            mean_intensity_disk = np.mean(values_disk.flatten().astype('float'))
+            spot_intensity_disk_donut_std = np.std(values_disk.flatten().astype('float'))
+            mean_intensity_donut = np.mean(values_donut.flatten().astype('float')) # mean calculation ignoring zeros
+            spot_intensity_disk_donut = mean_intensity_disk - mean_intensity_donut
+            #spot_intensity_disk_donut[np.isnan(spot_intensity_disk_donut)] = 0 # replacing nans with zero
+            return spot_intensity_disk_donut, spot_intensity_disk_donut_std
+        
+        # Section that marks particles if a numpy array with spot positions is passed.
+        def intensity_from_position_movement(particle_index , frames_part ,time_points, number_channels ):
+            intensities_mean = np.zeros((time_points, number_channels))
+            intensities_std = np.zeros((time_points, number_channels))
+            intensities_snr = np.zeros((time_points, number_channels))
+            intensities_background_mean = np.zeros((time_points, number_channels))
+            intensities_background_std = np.zeros((time_points, number_channels))
+            for j in range(0, frames_part):
+                for i in range(0, number_channels):
+                    x_pos = int(np.round(self.spot_positions_movement[j,particle_index, 1]))
+                    y_pos = int(np.round(self.spot_positions_movement[j,particle_index, 0]))
+                    crop_with_disk_and_donut = return_crop(self.video[j, :, :, i], x_pos, y_pos,spot_range=self.crop_range_to_replace) # 
+                    values_disk = return_crop(self.video[j, :, :, i], x_pos, y_pos, spot_range=self.spots_range_to_replace) 
+                    values_donut = return_donut( crop_with_disk_and_donut,spot_size=self.particle_size )
+                    intensities_snr[j, i]  , intensities_background_mean [j, i], intensities_background_std [j, i] = signal_to_noise_ratio(values_disk,values_donut) # SNR
+                    if self.method == 'disk_donut':
+                        intensities_mean[j, i], intensities_std[j, i] = disk_donut(values_disk,values_donut )
+                    elif self.method == 'total_intensity':
+                        intensities_mean[j, i] = np.max((0, np.mean(values_disk)))# mean intensity in the crop
+                        intensities_std[ j, i] = np.max((0, np.std(values_disk)))# std intensity in the crop
+                    elif self.method == 'gaussian_fit':
+                        intensities_mean[j, i], intensities_std[j, i] = gaussian_fit(values_disk)# disk_donut(crop_image, self.disk_size
+            return intensities_mean, intensities_std, intensities_snr, intensities_background_mean, intensities_background_std
+        def intensity_from_dataframe(particle_index ,time_points, number_channels ):
+            frames_part = self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[particle_index]].frame.values
+            intensities_mean = np.zeros((time_points, number_channels))
+            intensities_std = np.zeros((time_points, number_channels))
+            intensities_snr = np.zeros((time_points, number_channels))
+            intensities_background_mean = np.zeros((time_points, number_channels))
+            intensities_background_std = np.zeros((time_points, number_channels))
+            for j in range(0, len(frames_part)):
+                for i in range(0, number_channels):
+                    current_frame = frames_part[j]
+                    try:
+                        x_pos = int(np.round(self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[particle_index]].x.values[j]))
+                        y_pos = int(np.round(self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[particle_index]].y.values[j]))
+                    except:
+                        x_pos = int(np.round(self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[particle_index]].x.values[frames_part[0]]))
+                        y_pos = int(np.round(self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[particle_index]].y.values[frames_part[0]]))
+                    crop_with_disk_and_donut = return_crop(self.video[j, :, :, i], x_pos, y_pos,spot_range=self.crop_range_to_replace) # 
+                    values_disk = return_crop(self.video[j, :, :, i], x_pos, y_pos, spot_range=self.spots_range_to_replace) 
+                    values_donut = return_donut( crop_with_disk_and_donut ,spot_size=self.particle_size)
+                    intensities_snr[current_frame, i] , intensities_background_mean [current_frame, i], intensities_background_std [current_frame, i] = signal_to_noise_ratio(values_disk,values_donut) # SNR
+                    if self.method == 'disk_donut':
+                        intensities_mean[current_frame, i], intensities_std[current_frame, i] = disk_donut(values_disk, values_donut )
+                    elif self.method == 'total_intensity':
+                        intensities_mean[ current_frame, i] = np.max((0, np.mean(values_disk))) # mean intensity in image
+                        intensities_std[ current_frame, i] = np.max((0, np.std(values_disk))) # std intensity in image
+                    elif self.method == 'gaussian_fit':
+                        intensities_mean[current_frame, i], intensities_std[ current_frame, i] = gaussian_fit(values_disk)# disk_donut(crop_image, disk_size)
+            intensities_mean[np.isnan(intensities_mean)] = 0 # replacing nans with zeros
+            intensities_std[np.isnan(intensities_std)] = 0 # replacing nans with zeros
+            return intensities_mean, intensities_std, intensities_snr , intensities_background_mean, intensities_background_std
+        if not ( self.spot_positions_movement is None):
+            frames_part = self.spot_positions_movement.shape[0]
+            list_intensities_mean_std_snr = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(intensity_from_position_movement)(i,frames_part, time_points, number_channels  ) for i in range(0,  self.n_particles))
+            array_intensities_mean = np.asarray([list_intensities_mean_std_snr[i][0]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_std = np.asarray([list_intensities_mean_std_snr[i][1]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_snr = np.asarray([list_intensities_mean_std_snr[i][2]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_background_mean = np.asarray([list_intensities_mean_std_snr[i][3]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_background_std = np.asarray([list_intensities_mean_std_snr[i][4]  for i in range(0,len(list_intensities_mean_std_snr))]   )        
+        if not ( self.trackpy_dataframe is None):
+            list_intensities_mean_std_snr = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(intensity_from_dataframe)(i, time_points, number_channels  ) for i in range(0,  self.n_particles))
+            array_intensities_mean = np.asarray([list_intensities_mean_std_snr[i][0]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_std = np.asarray([list_intensities_mean_std_snr[i][1]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_snr = np.asarray([list_intensities_mean_std_snr[i][2]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_background_mean = np.asarray([list_intensities_mean_std_snr[i][3]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+            array_intensities_background_std = np.asarray([list_intensities_mean_std_snr[i][4]  for i in range(0,len(list_intensities_mean_std_snr))]   )
+        # Calculate mean intensities.
+        mean_intensities = np.nanmean(array_intensities_mean, axis = 0, dtype = np.float32)
+        std_intensities = np.nanstd(array_intensities_mean, axis = 0, dtype = np.float32)
+        # Calculate mean intensities normalized
+        array_mean_intensities_normalized = np.zeros_like(array_intensities_mean)*nan
+        for k in range (0, self.n_particles):
+                for i in range(0, number_channels):
+                    if np.nanmax( array_intensities_mean[k, :, i]) > 0:
+                        array_mean_intensities_normalized[k, :, i] = array_intensities_mean[k, :, i]/ np.nanmax( array_intensities_mean[k, :, i])
+        mean_intensities_normalized = np.nanmean(array_mean_intensities_normalized, axis = 0, dtype = np.float32)
+        mean_intensities_normalized = np.nan_to_num(mean_intensities_normalized)
+        std_intensities_normalized = np.nanstd(array_mean_intensities_normalized, axis = 0, dtype = np.float32)
+        std_intensities_normalized = np.nan_to_num(std_intensities_normalized)
+        time_vector = np.arange(0, time_points, 1)*self.step_size
+
+        # Initialize a dataframe
+        init_dataFrame = {'image_number': [], 
+            'cell_number': [], 
+            'particle': [], 
+            'frame': [], 
+            'red_int_mean': [], 
+            'green_int_mean': [], 
+            'blue_int_mean': [], 
+            'red_int_std': [], 
+            'green_int_std': [], 
+            'blue_int_std': [], 
+            'x': [], 
+            'y': [],
+            'SNR_red':[],
+            'SNR_green':[],
+            'SNR_blue':[],
+            'background_int_mean_red':[],
+            'background_int_mean_green':[],
+            'background_int_mean_blue':[],
+            'background_int_std_red':[],
+            'background_int_std_green':[],
+            'background_int_std_blue':[] }
+        dataframe_particles = pd.DataFrame(init_dataFrame)
+        # Iterate for each spot and save time courses in the data frame
+        counter = 0
+        for id in range (0, self.n_particles):
+            # Loop that populates the dataframes
+            if not ( self.trackpy_dataframe is None):
+                temporal_frames_vector = np.around(self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[id]].frame.values)  # time_(sec)
+                temporal_x_position_vector = self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[id]].x.values
+                temporal_y_position_vector = self.trackpy_dataframe.loc[self.trackpy_dataframe['particle'] == self.trackpy_dataframe['particle'].unique()[id]].y.values
+            else:
+                counter_time_vector = np.arange(0, time_points, 1)
+                temporal_frames_vector = counter_time_vector
+                temporal_x_position_vector = self.spot_positions_movement[:, id, 1]
+                temporal_y_position_vector = self.spot_positions_movement[:, id, 0]
+            temporal_red_vector =  array_intensities_mean[id, temporal_frames_vector, 0]  # red
+            temporal_green_vector = array_intensities_mean[id, temporal_frames_vector, 1]  # green
+            temporal_blue_vector =  array_intensities_mean[id, temporal_frames_vector, 2]  # blue
+            temporal_red_vector_std =  array_intensities_std[id, temporal_frames_vector, 0]  # red
+            temporal_green_vector_std =  array_intensities_std[id, temporal_frames_vector, 1]  # green
+            temporal_blue_vector_std =  array_intensities_std[id, temporal_frames_vector, 2]  # blue
+            temporal_spot_number_vector = [counter] * len(temporal_frames_vector)
+            temporal_image_number_vector = [0] * len(temporal_frames_vector)
+            temporal_cell_number_vector = [0] * len(temporal_frames_vector)
+            temporal_SNR_red =  array_intensities_snr[id, temporal_frames_vector, 0] # red
+            temporal_SNR_green =  array_intensities_snr[id, temporal_frames_vector, 1]  # green
+            temporal_SNR_blue =  array_intensities_snr[id, temporal_frames_vector, 2]  # blue
+            temporal_background_int_mean_red  = array_intensities_background_mean [id, temporal_frames_vector, 0]  # red
+            temporal_background_int_mean_green = array_intensities_background_mean [id, temporal_frames_vector, 1]  # green
+            temporal_background_int_mean_blue=  array_intensities_background_mean [id, temporal_frames_vector, 2]  # blue
+            temporal_background_int_std_red  = array_intensities_background_std[id, temporal_frames_vector, 0]  # red
+            temporal_background_int_std_green = array_intensities_background_std[id, temporal_frames_vector, 1]  # green
+            temporal_background_int_std_blue = array_intensities_background_std[id, temporal_frames_vector, 2]  # blue
+            # Section that append the information for each spots
+            temp_data_frame = {'image_number': temporal_image_number_vector, 
+                'cell_number': temporal_cell_number_vector, 
+                'particle': temporal_spot_number_vector, 
+                'frame': temporal_frames_vector*self.step_size, 
+                'red_int_mean': np.round( temporal_red_vector ,2), 
+                'green_int_mean': np.round( temporal_green_vector ,2), 
+                'blue_int_mean': np.round( temporal_blue_vector ,2), 
+                'red_int_std': np.round( temporal_red_vector_std ,2), 
+                'green_int_std': np.round( temporal_green_vector_std ,2), 
+                'blue_int_std': np.round( temporal_blue_vector_std, 2), 
+                'x': temporal_x_position_vector, 
+                'y': temporal_y_position_vector,
+                'SNR_red' : np.round( temporal_SNR_red ,2),
+                'SNR_green': np.round( temporal_SNR_green ,2),
+                'SNR_blue': np.round( temporal_SNR_blue ,2),
+                'background_int_mean_red': np.round( temporal_background_int_mean_red ,2),
+                'background_int_mean_green': np.round( temporal_background_int_mean_green ,2),
+                'background_int_mean_blue': np.round( temporal_background_int_mean_blue ,2),
+                'background_int_std_red': np.round( temporal_background_int_std_red ,2),
+                'background_int_std_green': np.round( temporal_background_int_std_green ,2),
+                'background_int_std_blue': np.round( temporal_background_int_std_blue ,2) }
+            counter += 1
+            temp_DataFrame = pd.DataFrame(temp_data_frame)
+            dataframe_particles = dataframe_particles.append(temp_DataFrame, ignore_index = True)
+            dataframe_particles = dataframe_particles.astype({"image_number": int, "cell_number": int, "particle": int, "frame": int, "x": int, "y": int}) # specify data type as integer for some columns
+        def reduce_dataframe(df):
+            # This function is intended to reduce the columns that are not used in the ML process.
+            return df.drop(['red_int_std', 'green_int_std','blue_int_std','SNR_red', 'SNR_green', 'SNR_blue','background_int_mean_red','background_int_mean_green','background_int_mean_blue','background_int_std_red','background_int_std_green','background_int_std_blue'], axis = 1)
+        if self.dataframe_format == 'short':
+            dataframe_particles = reduce_dataframe(dataframe_particles)
+            #dataframe_particles = dataframe_particles.astype({"red_int_mean": int, "green_int_mean": int, "blue_int_mean": int, "x": int, "y": int}) 
+        return dataframe_particles, array_intensities_mean, time_vector, mean_intensities, std_intensities, mean_intensities_normalized, std_intensities_normalized
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
 class Metadata():
     '''
@@ -1674,7 +2037,11 @@ class Metadata():
                     fd.write('\n        voxel_size_yx: ' + str(self.list_voxels[k][1]) )
                     fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
                     fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
-                    used_threshold = self.threshold_for_spot_detection[k]
+                    
+                    if not(self.threshold_for_spot_detection is None):
+                        used_threshold = self.threshold_for_spot_detection[k]
+                    else:
+                        used_threshold = None
                     if not(used_threshold is None):
                         fd.write('\n        threshold_spot_detection: ' + str(self.threshold_for_spot_detection[k]) )
                     else:
