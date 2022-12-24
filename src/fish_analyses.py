@@ -2038,15 +2038,11 @@ class Metadata():
                     fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
                     fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
                     
-                    if not(self.threshold_for_spot_detection is None):
-                        used_threshold = self.threshold_for_spot_detection[k]
-                    else:
-                        used_threshold = None
-                    if not(used_threshold is None):
+                    if not(self.threshold_for_spot_detection in (None, [None]) ):
                         fd.write('\n        threshold_spot_detection: ' + str(self.threshold_for_spot_detection[k]) )
                     else:
                         fd.write('\n        threshold_spot_detection: ' + 'automatic value using BIG-FISH' )
-                    self.threshold_for_spot_detection
+                    #self.threshold_for_spot_detection
                 fd.write('\n    minimum_spots_cluster: ' + str(self.minimum_spots_cluster) )
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign) ) 
@@ -2265,7 +2261,7 @@ class PipelineFISH():
     list_selected_z_slices : list or None
     '''
 
-    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
+    def __init__(self,data_dir, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False):
         list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir).read()
         if len(list_images[0].shape) < 4:
             list_images_extended = [ np.expand_dims(img,axis=0) for img in list_images ] 
@@ -2317,6 +2313,9 @@ class PipelineFISH():
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        #self.threshold_for_spot_detection=threshold_for_spot_detection
+        if not isinstance(threshold_for_spot_detection, list):
+            threshold_for_spot_detection=[threshold_for_spot_detection]
         self.threshold_for_spot_detection=threshold_for_spot_detection
         self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
