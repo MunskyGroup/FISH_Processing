@@ -35,7 +35,7 @@ mask_list=(\
 
 ####################  CODE PARAMETERS ############################
 NUMBER_OF_CORES=1
-diameter_nucleus=70                        # Approximate nucleus size in pixels
+diameter_nucleus=71                        # Approximate nucleus size in pixels
 diameter_cytosol=0                         # Approximate cytosol size in pixels
 psf_z=350                                  # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers
 psf_yx=160                                 # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers
@@ -52,7 +52,7 @@ save_all_images=0                          # If true, it shows a all planes for 
 
 #threshold_for_spot_detection='[400,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
-#threshold_for_spot_detection='[400,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+threshold_for_spot_detection='[400,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
 #threshold_for_spot_detection='[450,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[450,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
@@ -64,7 +64,7 @@ save_all_images=0                          # If true, it shows a all planes for 
 
 #threshold_for_spot_detection='[550,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[550,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
-threshold_for_spot_detection='[550,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[550,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
 
 save_filtered_images=1                     # To save filtered images
