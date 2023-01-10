@@ -1432,6 +1432,8 @@ class DataProcessing():
                 array_complete = np.vstack((array_ts, array_spots_nuc, array_spots_cytosol_only))
             elif (detected_ts == True) and (detected_nuc == True) and (detected_cyto == False):
                 array_complete = np.vstack((array_ts, array_spots_nuc))
+            elif (detected_ts == False) and (detected_nuc == True) and (detected_cyto == False):
+                array_complete =  array_spots_nuc
             elif(detected_ts == False) and (detected_nuc == True) and (detected_cyto == True):
                 array_complete = np.vstack(( array_spots_nuc, array_spots_cytosol_only))
             elif(detected_ts == True) and (detected_nuc == False) and (detected_cyto == True):
@@ -1480,11 +1482,16 @@ class DataProcessing():
                 intensity_spots_nuc = Intensity(original_image=self.image, spot_size=self.yx_spot_size_in_px, array_spot_location_z_y_x=spots_nuc[:,0:3],  method = 'disk_donut').calculate_intensity()[0]
             if num_cyto >0 :
                 intensity_spots_cyto = Intensity(original_image=self.image, spot_size=self.yx_spot_size_in_px, array_spot_location_z_y_x=spots_cytosol_only[:,0:3],  method = 'disk_donut').calculate_intensity()[0]
+            
             # Cancatenating the final array
             if (detected_ts == True) and (detected_nuc == True) and (detected_cyto == True):
                 array_spot_int = np.vstack((intensity_ts, intensity_spots_nuc, intensity_spots_cyto))
+                
             elif (detected_ts == True) and (detected_nuc == True) and (detected_cyto == False):
-                array_spot_int = np.vstack((intensity_ts, array_spots_nuc))
+                                
+                array_spot_int = np.vstack((intensity_ts, intensity_spots_nuc))
+            elif (detected_ts == False) and (detected_nuc == True) and (detected_cyto == False):
+                array_spot_int = intensity_spots_nuc
             elif(detected_ts == False) and (detected_nuc == True) and (detected_cyto == True):
                 array_spot_int = np.vstack(( intensity_spots_nuc, intensity_spots_cyto))
             elif(detected_ts == True) and (detected_nuc == False) and (detected_cyto == True):
@@ -1492,21 +1499,12 @@ class DataProcessing():
             elif(detected_ts == False) and (detected_nuc == False) and (detected_cyto == True):
                 array_spot_int = intensity_spots_cyto
             else:
-                array_spot_int = np.zeros( ( 1,number_columns)  )
+                array_spot_int = np.zeros( ( 1,self.number_color_channels )  )
             # Populating the columns wth the spots intensity for each channel.
-            
-            
-            
-            number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+2*self.number_color_channels            
-            
-            
-            print(self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME)
-            print(self.number_color_channels)
-            print(array_spot_int.shape)
-            print(number_columns_after_adding_intensity_in_cell)
-            raise
-            
+                        
+            number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+2*self.number_color_channels                        
             array_complete[:, number_columns_after_adding_intensity_in_cell: number_columns_after_adding_intensity_in_cell+self.number_color_channels] = array_spot_int
+            
             # Creating the dataframe  
             df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nuc_loc_y':int, 'nuc_loc_x':int,'cyto_loc_y':int, 'cyto_loc_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
