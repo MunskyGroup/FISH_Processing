@@ -1,6 +1,6 @@
 # FISH processing repository
 
-Authors: Luis U. Aguilera, Joshua Cook, Brian Munsky
+Authors: Luis U. Aguilera, Linda Forero-Quintero, Joshua Cook, Brian Munsky
 
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1CQx4e5MQ0ZsZSQgqtLzVVh53dAg4uaQj?usp=sharing)
