@@ -2459,7 +2459,7 @@ class Utilities():
             return number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size,cell_size, number_cells,nuc_size
         
         '''
-        This method is intended to extract 
+        This method is intended to extract data from the dataframe
         '''
         # Extracting data from dataframe and converting it into lists for each directory.
         list_spots_total=[]
@@ -2475,7 +2475,7 @@ class Utilities():
             dataframe_file = glob.glob( str(dataframe_dir.joinpath('dataframe_*')) )[0]
             dataframe = pd.read_csv(dataframe_file)
             # Extracting values from dataframe
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size = dataframe_extract_data(dataframe,minimal_TS_size=minimal_TS_size)
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size = dataframe_extract_data(dataframe,minimal_TS_size=minimal_TS_size)
             # Appending each condition to a list
             list_spots_total.append(number_of_spots_per_cell)  # This list includes spots and TS in the nucleus
             list_spots_nuc.append(number_of_spots_per_cell_nucleus)   #
@@ -2488,6 +2488,21 @@ class Utilities():
             # Deleting variables
             del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size
         return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size,list_dataframes,list_nuc_size
+    
+    
+    def function_get_df_columns_as_array(df, colum_to_extract, extraction_type='all_values'):
+        '''This method is intended to extract a column from a dataframe and convert its values to an array format.
+            The argument <<<extraction_type>>> accepts two possible values. 
+                values_per_cell: this returns an unique value that represents a cell parameter and is intended to be used with the following columns 
+                        'nuc_int_ch", cyto_int_ch', 'nuc_loc_y', 'nuc_loc_x', 'cyto_loc_y', 'cyto_loc_x', 'nuc_area_px', 'cyto_area_px', 'cell_area_px'
+                all_values: this returns all fields in the dataframe for the specified column.  
+        '''
+        number_cells = df['cell_id'].nunique()
+        if extraction_type == 'values_per_cell':
+            return np.asarray( [       df.loc[(df['cell_id']==i)][colum_to_extract].values[0]            for i in range(0, number_cells)] )
+        elif extraction_type == 'all_values' :
+            return np.asarray( [       df.loc[(df['cell_id']==i)][colum_to_extract].values          for i in range(0, number_cells)] )  
+    
     
     
     def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False) :

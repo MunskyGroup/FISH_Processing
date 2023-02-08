@@ -89,6 +89,11 @@ list_A549_NFKBIA=(\
 'smFISH_images/Linda_smFISH_images/Confocal/20220930/A549_NFKBIA_180minDEX' \
 )
 
+list_dirs=(\
+'smFISH_images/Linda_smFISH_images/Confocal/20221102/A549_NFKB_AB_488_COX2-Cy5_IL-1B_60min_woDEX_A4' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221102/A549_NFKB_AB_488_COX2-Cy5_IL-1B_60min_DEX_60min_B4' \
+'smFISH_images/Linda_smFISH_images/Confocal/20221102/A549_NFKB_AB_488_COX2-Cy5_IL-1B_60min_DEX_120min_C4' \
+)
 
 list_test_b=(\
 'smFISH_images/Eric_smFISH_images/20211109/MS2_Cy3_TPL_0min' \
@@ -187,22 +192,22 @@ list_cox_il=(\
 
 path_to_config_file="$HOME/Desktop/config.yml"
 NUMBER_OF_CORES=1
-diameter_nucleus=90      # approximate nucleus size in pixels
-diameter_cytosol=200     # approximate cytosol size in pixels
+diameter_nucleus=91      # approximate nucleus size in pixels
+diameter_cytosol=201     # approximate cytosol size in pixels
 psf_z=350                # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=160               # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500    #300                      # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx=160 #103   #103                 # Microscope conversion px to nanometers in the xy axis.
 nucleus_channel='[0]'        # Channel to pass to python for nucleus segmentation
-cyto_channel='None'           # Channel to pass to python for cytosol segmentation
-FISH_channel='[1,2]'           # Channel to pass to python for spot detection
+cyto_channel='[1,2]'           # Channel to pass to python for cytosol segmentation
+FISH_channel='[3]'           # Channel to pass to python for spot detection
 send_data_to_NAS=1       # If data sent back to NAS use 1.
 download_data_from_NAS=1
 path_to_masks_dir='None' #'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0 # If true, it shows a all planes for the FISH plot detection. 
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
-threshold_for_spot_detection=500 #'None'
+threshold_for_spot_detection=1500 #'None'
 save_filtered_images=1
 
 
@@ -217,7 +222,7 @@ save_filtered_images=1
 # / with
 # / slash
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_Huys_paper_test[*]}; do
+for folder in ${list_dirs[*]}; do
      output_names=""output__"${folder////__}"".txt"
      nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
      wait
