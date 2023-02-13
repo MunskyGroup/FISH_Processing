@@ -48,6 +48,8 @@ send_data_to_NAS=1                         # If data sent back to NAS use 1
 download_data_from_NAS=1                   # If data downloaded from NAS use 1
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0                          # If true, it shows a all planes for the FISH plot detection. 
+save_filtered_images=0                     # To save filtered images
+
 
 #threshold_for_spot_detection='[400,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
@@ -67,7 +69,6 @@ save_all_images=0                          # If true, it shows a all planes for 
 
 list_ts=('[400,450]' '[400,500]' '[400,550]' '[450,400]' '[450,500]' '[450,550]' '[500,400]' '[500,450]' '[500,550]' '[550,400]' '[550,450]' '[550,500]')
 
-save_filtered_images=0                     # To save filtered images
 
 
 for threshold_for_spot_detection in ${list_ts[*]}; do #echo "$threshold_for_spot_detection"; done
