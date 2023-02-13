@@ -60,14 +60,14 @@ save_filtered_images=0                     # To save filtered images
 list_ts=('[400,450]' '[400,500]' '[400,550]' '[450,400]' '[450,500]' '[450,550]' '[500,400]' '[500,450]' '[500,550]' '[550,400]' '[550,450]' '[550,500]')
 
 for threshold_for_spot_detection in ${list_ts[*]}; do
-counter=0
-for folder in ${list_Huy[*]}; do
-     output_names=""output__"${folder////__}"".txt"
-     path_to_masks_dir="${mask_list[counter]}"
-     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images "$threshold_for_spot_detection" $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
-     ((counter++))
-     wait
-done
+     counter=0
+     for folder in ${list_Huy[*]}; do
+          output_names=""output__"${folder////__}"".txt"
+          path_to_masks_dir="${mask_list[counter]}"
+          ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images "$threshold_for_spot_detection" $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
+          ((counter++))
+          wait
+     done
 done
 
 
