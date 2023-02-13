@@ -2426,9 +2426,9 @@ class Utilities():
             list_local_folders.append(temp_folder_name)
         return list_local_folders
     
-    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir, minimal_TS_size=2):
+    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir,spot_type_selected=0, minimal_TS_size=2):
         
-        def dataframe_extract_data(dataframe,spot_type_selected = 0,minimal_TS_size=2):
+        def dataframe_extract_data(dataframe,spot_type_selected,minimal_TS_size=2):
             ''' This function is intended to read a dataframe and returns 
                 number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size
             '''
@@ -2475,7 +2475,7 @@ class Utilities():
             dataframe_file = glob.glob( str(dataframe_dir.joinpath('dataframe_*')) )[0]
             dataframe = pd.read_csv(dataframe_file)
             # Extracting values from dataframe
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size = dataframe_extract_data(dataframe,minimal_TS_size=minimal_TS_size)
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size = dataframe_extract_data(dataframe,spot_type_selected,minimal_TS_size=minimal_TS_size)
             # Appending each condition to a list
             list_spots_total.append(number_of_spots_per_cell)  # This list includes spots and TS in the nucleus
             list_spots_nuc.append(number_of_spots_per_cell_nucleus)   #
