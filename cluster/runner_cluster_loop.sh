@@ -68,6 +68,7 @@ for threshold_for_spot_detection in ${list_ts[*]}; do
           ((counter++))
           wait
      done
+     wait
 done
 
 
