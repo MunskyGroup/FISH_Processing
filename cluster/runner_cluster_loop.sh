@@ -73,7 +73,7 @@ done
 
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown
+# run as: sbatch runner_cluster_loop.sh /dev/null 2>&1 & disown
 
 exit 0
 
