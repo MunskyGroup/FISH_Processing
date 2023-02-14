@@ -49,8 +49,8 @@ download_data_from_NAS=1                   # If data downloaded from NAS use 1
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0                          # If true, it shows a all planes for the FISH plot detection. 
 
-threshold_for_spot_detection='[400,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
-#threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[400,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[400,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
 #threshold_for_spot_detection='[450,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.

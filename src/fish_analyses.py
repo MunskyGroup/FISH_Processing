@@ -446,16 +446,8 @@ class Intensity():
         else:
             raise ValueError("please use integer values for the spot_size or a numpy array with integer values ")
         
-        #self.spots_range_to_replace = np.linspace(-(spot_size - 1) / 2, (spot_size - 1) / 2, spot_size,dtype=int)
-        #self.crop_range_to_replace = np.linspace(-(spot_size+PIXELS_AROUND_SPOT - 1) / 2, (spot_size+PIXELS_AROUND_SPOT - 1) / 2, spot_size+PIXELS_AROUND_SPOT,dtype=int)
-            
-            
-            
-            
-
     
     def calculate_intensity(self):
-
         def return_crop(image:np.ndarray, x:int, y:int,spot_range):
             crop_image = image[y+spot_range[0]:y+(spot_range[-1]+1), x+spot_range[0]:x+(spot_range[-1]+1)].copy()
             return crop_image
@@ -503,7 +495,6 @@ class Intensity():
             mean_intensity_donut = np.mean(values_donut.flatten().astype('float')) # mean calculation ignoring zeros
             spot_intensity_disk_donut = mean_intensity_disk - mean_intensity_donut
             return spot_intensity_disk_donut, spot_intensity_disk_donut_std
-
         
         # Pre-allocating memory
         intensities_snr = np.zeros((self.number_spots, self.number_channels ))
@@ -511,9 +502,8 @@ class Intensity():
         intensities_background_std = np.zeros((self.number_spots, self.number_channels ))
         intensities_mean = np.zeros((self.number_spots, self.number_channels ))
         intensities_std = np.zeros((self.number_spots, self.number_channels ))
-
+        
         for sp in range(self.number_spots):
-
             for i in range(0, self.number_channels):
                 x_pos = self.array_spot_location_z_y_x[sp,2]
                 y_pos = self.array_spot_location_z_y_x[sp,1]
@@ -526,8 +516,6 @@ class Intensity():
                 crop_with_disk_and_donut = return_crop(self.original_image[z_pos, :, :, i], x_pos, y_pos, spot_range=crop_range_to_replace) # 
                 values_disk = return_crop(self.original_image[z_pos, :, :, i], x_pos, y_pos, spot_range=spots_range_to_replace) 
                 values_donut = return_donut( crop_with_disk_and_donut,spot_size=individual_spot_size)
-
-                
                 intensities_snr[sp,i], intensities_background_mean[sp,i], intensities_background_std[sp,i]  = signal_to_noise_ratio(values_disk,values_donut) # SNR
                 
                 if self.method == 'disk_donut':
@@ -537,7 +525,6 @@ class Intensity():
                     intensities_std[sp,i] = np.max((0, np.std(values_disk)))# std intensity in the crop
                 elif self.method == 'gaussian_fit':
                     intensities_mean[sp,i], intensities_std[sp,i] = gaussian_fit(values_disk)# disk_donut(crop_image, self.disk_size
-
         return intensities_mean, intensities_std, intensities_snr, intensities_background_mean, intensities_background_std
 
 
@@ -1486,9 +1473,7 @@ class DataProcessing():
             # Cancatenating the final array
             if (detected_ts == True) and (detected_nuc == True) and (detected_cyto == True):
                 array_spot_int = np.vstack((intensity_ts, intensity_spots_nuc, intensity_spots_cyto))
-                
             elif (detected_ts == True) and (detected_nuc == True) and (detected_cyto == False):
-                                
                 array_spot_int = np.vstack((intensity_ts, intensity_spots_nuc))
             elif (detected_ts == False) and (detected_nuc == True) and (detected_cyto == False):
                 array_spot_int = intensity_spots_nuc
@@ -1500,8 +1485,8 @@ class DataProcessing():
                 array_spot_int = intensity_spots_cyto
             else:
                 array_spot_int = np.zeros( ( 1,self.number_color_channels )  )
+            
             # Populating the columns wth the spots intensity for each channel.
-                        
             number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+2*self.number_color_channels                        
             array_complete[:, number_columns_after_adding_intensity_in_cell: number_columns_after_adding_intensity_in_cell+self.number_color_channels] = array_spot_int
             
@@ -1533,18 +1518,16 @@ class DataProcessing():
                 list_columns_intensity_cyto.append( 'cyto_int_ch_' + str(c) )
                 list_intensity_spots.append( 'spot_int_ch_' + str(c) )
                 #list_intensity_clusters.append( 'cluster_int_ch_' + str(c) )
-                
             # creating the main dataframe with column names
             new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_intensity_spots+list_intensity_clusters )
             counter_total_cells = 0
-
         # loop for each cell in image
         for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
             # calculating nuclear area and center of mass
             if not (self.channels_with_nucleus in  (None, [None])):
                 nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
                 selected_mask_nuc = self.masks_nuclei[id_cell]
-                tested_mask =  self.masks_nuclei[id_cell]
+                tested_mask_for_border =  self.masks_nuclei[id_cell]
                 nuc_int = np.zeros( (self.number_color_channels ))
                 for k in range(self.number_color_channels ):
                     temp_img = np.max (self.image[:,:,:,k ],axis=0)
@@ -1555,11 +1538,10 @@ class DataProcessing():
                 nuc_area, nuc_centroid_y, nuc_centroid_x = 0,0,0
                 selected_mask_nuc = None
                 nuc_int = None
-            
             # calculating cytosol area and center of mass
             if not (self.channels_with_cytosol in (None, [None])):
                 cell_area, cyto_centroid_y, cyto_centroid_x  = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=True)
-                tested_mask =  self.masks_complete_cells[id_cell]
+                tested_mask_for_border =  self.masks_complete_cells[id_cell]
                 cyto_int = np.zeros( (self.number_color_channels ))
                 for k in range(self.number_color_channels ):
                     temp_img = np.max (self.image[:,:,:,k ],axis=0)
@@ -1569,7 +1551,6 @@ class DataProcessing():
             else:
                 cyto_int = None
                 cell_area, cyto_centroid_y, cyto_centroid_x  = 0,0,0
-                
             # case where nucleus and cyto are passed 
             if not (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
                 slected_masks_cytosol_no_nuclei = self.masks_cytosol_no_nuclei[id_cell]
@@ -1590,7 +1571,7 @@ class DataProcessing():
                 cyto_area = 0 
                 selected_masks_complete_cells = None
             # determining if the cell is in the border of the image. If true the cell is in the border.
-            is_cell_in_border =  np.any( np.concatenate( ( tested_mask[:,0],tested_mask[:,-1],tested_mask[0,:],tested_mask[-1,:] ) ) )  
+            is_cell_in_border =  np.any( np.concatenate( ( tested_mask_for_border[:,0],tested_mask_for_border[:,-1],tested_mask_for_border[0,:],tested_mask_for_border[-1,:] ) ) )  
             # Data extraction
             try:
                 if self.spotDetectionCSV.shape[0] >1:
