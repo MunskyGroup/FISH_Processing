@@ -67,7 +67,9 @@ save_filtered_images=0                     # To save filtered images
 #threshold_for_spot_detection='[550,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[550,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
-list_ts=('[400,550]' '[450,400]' '[450,450]' '[450,500]' '[450,550]' '[500,400]' '[500,450]')
+#list_ts=('[400,550]' '[450,400]' '[450,450]' '[450,500]' '[450,550]' '[500,400]' '[500,450]')
+
+list_ts=('[450,300]' '[450,350]' '[550,300]' '[550,350]' '[500,350]')
 
 
 for threshold_for_spot_detection in ${list_ts[*]}; do #echo "$threshold_for_spot_detection"; done
