@@ -110,7 +110,7 @@ show_plots=True
 ######################################
 ######################################
 # Download data from NAS
-local_data_dir, masks_dir, _, _ = fa.Utilities.read_images_from_folder( path_to_config_file, data_folder_path, 
+local_data_dir, masks_dir, _, _, _ = fa.Utilities.read_images_from_folder( path_to_config_file, data_folder_path, 
                                                                         path_to_masks_dir,  download_data_from_NAS)
 # Running the pipeline
 dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH,diameter_nucleus, 

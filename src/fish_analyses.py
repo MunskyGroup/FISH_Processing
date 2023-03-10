@@ -29,10 +29,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re  
 from skimage.io import imread
+from skimage.morphology import erosion
 from scipy import ndimage
 from scipy.optimize import curve_fit
 import itertools
-
 import glob
 import tifffile
 import sys
@@ -48,6 +48,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 from skimage.measure import find_contours
 from skimage.io import imread
+from scipy import signal
 from scipy import ndimage
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
@@ -341,8 +342,6 @@ class ReadImages():
         number_files = len(path_files_complete)
         list_images_complete = [imread(str(f)) for f in path_files_complete]
         
-        
-        
         # This section reads the images to process in the repository.  If the user defines "number_of_images_to_process" as an integer N the code will process a subset N of these images. 
         if (self.number_of_images_to_process is None) or (self.number_of_images_to_process>number_files):
             list_images =list_images_complete
@@ -507,10 +506,12 @@ class Intensity():
             return SNR, mean_background_int,std_background_int
         
         def disk_donut(values_disk, values_donut):
-            mean_intensity_disk = np.mean(values_disk.flatten().astype('float'))
+            #mean_intensity_disk = np.mean(values_disk.flatten().astype('float'))
+            sum_intensity_disk = np.sum(values_disk.flatten().astype('float'))
             spot_intensity_disk_donut_std = np.std(values_disk.flatten().astype('float'))
             mean_intensity_donut = np.mean(values_donut.flatten().astype('float')) # mean calculation ignoring zeros
-            spot_intensity_disk_donut = mean_intensity_disk - mean_intensity_donut
+            #spot_intensity_disk_donut = mean_intensity_disk - mean_intensity_donut
+            spot_intensity_disk_donut = sum_intensity_disk - mean_intensity_donut
             return spot_intensity_disk_donut, spot_intensity_disk_donut_std
         
         # Pre-allocating memory
@@ -656,7 +657,10 @@ class Cellpose():
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
         self.use_brute_force = use_brute_force
-        self.MINIMUM_CELL_AREA = 4000
+        self.MINIMUM_CELL_AREA = 3000
+        self.BATCH_SIZE = 80
+        self.use_omni_pose = True
+        
     def calculate_masks(self):
         '''
         This method performs the process of image masking using **Cellpose**.
@@ -671,11 +675,12 @@ class Cellpose():
         torch.cuda.empty_cache() 
         #old_stdout = sys.stdout
         #sys.stdout = open(os.devnull, "w")
-        model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = False) # model_type = 'cyto' or model_type = 'nuclei'
+        
+        model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = self.use_omni_pose) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
-                masks= model.eval(self.image, normalize = True, flow_threshold = optimization_parameter, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+                masks= model.eval(self.image, batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
             except:
                 masks = 0
             n_masks = np.max(masks)
@@ -691,14 +696,14 @@ class Cellpose():
                 return np.sum(masks)
         def cellpose_max_cells(optimization_parameter):
             try:
-                masks = model.eval(self.image, normalize = True, flow_threshold = optimization_parameter, diameter =self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+                masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter, diameter =self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
             except:
                 masks =0
             return np.max(masks)
         
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
-                masks = model.eval(self.image, normalize = True, flow_threshold = optimization_parameter,diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+                masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter,diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
             except:
                 masks = 0
             n_masks = np.max(masks)
@@ -726,7 +731,7 @@ class Cellpose():
             evaluated_metric_for_masks = np.array(list_metrics_masks)
         if not (self.selection_method is None) and (np.max(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
-            selected_masks = model.eval(self.image, normalize = True, flow_threshold = selected_conditions , diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+            selected_masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = selected_conditions , diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
         else:
             if len(self.image.shape) >= 3:
                 selected_masks = np.zeros_like(self.image[:,:,0])
@@ -735,7 +740,7 @@ class Cellpose():
             #print('No cells detected on the image')
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
-            selected_masks= model.eval(self.image, normalize = True, flow_threshold = self.default_flow_threshold, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+            selected_masks= model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = self.default_flow_threshold, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
         return selected_masks
     
     
@@ -777,7 +782,7 @@ class CellSegmentation():
         self.image_name = image_name
         self.use_brute_force = use_brute_force
         self.number_z_slices = image.shape[0]
-        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,15))
+        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,10))
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
@@ -859,10 +864,10 @@ class CellSegmentation():
                     n_mask_1 = np.max(masks_1)
                     if (n_mask_0>0) and (n_mask_1>0):
                         for ind_0 in range(1,n_mask_0+1):
-                            tested_mask_0 = np.where(masks_0 == ind_0, 1, 0)
+                            tested_mask_0 = erosion(np.where(masks_0 == ind_0, 1, 0))
                             array_paired= np.zeros(n_mask_1)
                             for ind_1 in range(1,n_mask_1+1):
-                                tested_mask_1 = np.where(masks_1 == ind_1, 1, 0)
+                                tested_mask_1 = erosion(np.where(masks_1 == ind_1, 1, 0))
                                 array_paired[ind_1-1] = is_nucleus_in_cytosol(tested_mask_1, tested_mask_0)
                                 if (is_nuc =='nuc') and (np.count_nonzero(tested_mask_0) > np.count_nonzero(tested_mask_1) ):
                                     # condition that rejects images with nucleus bigger than the cytosol
@@ -2681,16 +2686,16 @@ class Utilities():
         # Detecting if images need to be merged
         is_needed_to_merge_images = MergeChannels(local_data_dir, substring_to_detect_in_file_name = substring_to_detect_in_file_name, save_figure =1).checking_images()
         if is_needed_to_merge_images == True:
-            _, list_images, number_images, _ = MergeChannels(local_data_dir, substring_to_detect_in_file_name = substring_to_detect_in_file_name, save_figure =1).merge()
+            list_file_names, list_images, number_images, _ = MergeChannels(local_data_dir, substring_to_detect_in_file_name = substring_to_detect_in_file_name, save_figure =1).merge()
             local_data_dir = local_data_dir.joinpath('merged')
         else:
-            list_images, _, _, number_images = ReadImages(directory= local_data_dir).read()
+            list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()  # list_images, path_files, list_files_names, number_files
         # Printing image properties
         number_color_channels = list_images[0].shape[-1] 
         print('Image shape: ', list_images[0].shape , '\n')
         print('Number of images: ',number_images , '\n')
         print('Local directory with images: ', local_data_dir, '\n')
-        return local_data_dir, masks_dir, number_images, number_color_channels
+        return local_data_dir, masks_dir, number_images, number_color_channels, list_file_names
         
     def save_output_to_folder (output_identification_string, data_folder_path,
                                 file_plots_distributions = None, 
@@ -2815,9 +2820,10 @@ class Plots():
     
     def plotting_masks_and_original_image(image, masks_complete_cells, masks_nuclei, channels_with_cytosol, channels_with_nucleus,image_name,show_plots,df_labels=None):
     # This functions makes zeros the border of the mask, it is used only for plotting.
-        def remove_border(img,px_to_remove = 1):
+        NUM_POINTS_MASK_EDGE_LINE = 50
+        def erode_mask(img,px_to_remove = 1):
             img[0:px_to_remove, :] = 0;img[:, 0:px_to_remove] = 0;img[img.shape[0]-px_to_remove:img.shape[0]-1, :] = 0; img[:, img.shape[1]-px_to_remove: img.shape[1]-1 ] = 0#This line of code ensures that the corners are zeros.
-            return img
+            return erosion(img) # performin erosion of the mask to remove not connected pixeles.
         # This section converst the image into a 2d maximum projection.
         if len(image.shape) > 3:  # [ZYXC]
             if image.shape[0] ==1:
@@ -2846,14 +2852,18 @@ class Plots():
                 tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
                 tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
                 # Remove border for plotting
-                temp_nucleus_mask= remove_border(tested_mask_nuc)
-                temp_complete_mask = remove_border(tested_mask_cyto)
-                temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
-                temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
+                temp_nucleus_mask= erode_mask(tested_mask_nuc)
+                temp_complete_mask = erode_mask(tested_mask_cyto)
+                temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high',positive_orientation='high')
+                temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high',positive_orientation='high')
                 contours_connected_n = np.vstack((temp_contour_n))
                 contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
+                if contour_n.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
+                    contour_n = signal.resample(contour_n, num = NUM_POINTS_MASK_EDGE_LINE)
                 contours_connected_c = np.vstack((temp_contour_c))
                 contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
+                if contour_c.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
+                    contour_c = signal.resample(contour_c, num = NUM_POINTS_MASK_EDGE_LINE)
                 axes[3].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
                 axes[3].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                 axes[3].set(title = 'Paired masks')
@@ -2879,10 +2889,12 @@ class Plots():
                     # Removing the borders just for plotting
                     tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
                     # Remove border for plotting
-                    temp_complete_mask = remove_border(tested_mask_cyto)
-                    temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high')
+                    temp_complete_mask = erode_mask(tested_mask_cyto)
+                    temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high',positive_orientation='high')
                     contours_connected_c = np.vstack((temp_contour_c))
                     contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
+                    if contour_c.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
+                        contour_c = signal.resample(contour_c, num = NUM_POINTS_MASK_EDGE_LINE)
                     axes[2].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     axes[2].set(title = 'Original + Masks')
                 if not (df_labels is None):
@@ -2905,10 +2917,12 @@ class Plots():
                     # Removing the borders just for plotting
                     tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
                     # Remove border for plotting
-                    temp_nucleus_mask= remove_border(tested_mask_nuc)
-                    temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high')
+                    temp_nucleus_mask= erode_mask(tested_mask_nuc)
+                    temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high',positive_orientation='high')
                     contours_connected_n = np.vstack((temp_contour_n))
                     contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
+                    if contour_n.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
+                        contour_n = signal.resample(contour_n, num = NUM_POINTS_MASK_EDGE_LINE)
                     axes[2].fill(contour_n[:, 1], contour_n[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask nucleus
                     axes[2].set(title = 'Original + Masks')
                 if not (df_labels is None):
@@ -3115,7 +3129,7 @@ class Plots():
         number_subplots = int(np.any(number_of_spots_per_cell)) + int(np.any(number_of_spots_per_cell_cytosol)) + int(np.any(number_of_spots_per_cell_nucleus)) + int(np.any(ts_size)) + int(np.any(number_of_TS_per_cell))
         file_name = 'spot_distributions_'+title_string+'.pdf'
         #Plotting
-        fig_size = (20, 5)
+        fig_size = (25, 5)
         f = plt.figure(figsize=fig_size)
         #ylab='Probability'
         ylab='Frequency Count' 
@@ -3142,7 +3156,7 @@ class Plots():
             subplot_counter+=1
             f.add_subplot(1,number_subplots,subplot_counter)  
             plot_probability_distribution(number_of_TS_per_cell ,  numBins=20, title='Number TS per cell', xlab='[TS (>= '+str(minimum_spots_cluster)+' rna)]', ylab=ylab, fig=f, color=selected_color)
-        plt.savefig(file_name, transparent=False,dpi=1200, format='pdf' )
+        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf' )
         plt.show()
         return file_name
 
@@ -3366,7 +3380,7 @@ class Plots():
             if match:
                 number_color_channels += 1
         # Plotting
-        _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (20, 4))
+        _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 4))
         max_percentile =99
         min_percentile = 1
         title_plot  = 'spot_intensities'
@@ -3389,6 +3403,6 @@ class Plots():
             #ax[i].set_title(title_plot)
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
-        plt.savefig(file_name, transparent=False,dpi=1200, format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
