@@ -3380,7 +3380,7 @@ class Plots():
             if match:
                 number_color_channels += 1
         # Plotting
-        _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 4))
+        _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 5))
         max_percentile =99
         min_percentile = 1
         title_plot  = 'spot_intensities'
