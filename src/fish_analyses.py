@@ -3149,7 +3149,7 @@ class Plots():
             return (f)
         # Section that generates each subplot
         number_subplots = int(np.any(number_of_spots_per_cell)) + int(np.any(number_of_spots_per_cell_cytosol)) + int(np.any(number_of_spots_per_cell_nucleus)) + int(np.any(ts_size)) + int(np.any(number_of_TS_per_cell))
-        file_name = 'spot_distributions_'+title_string+'_sp_'+str(spot_type)+'.pdf'
+        file_name = 'spot_distributions_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
         #Plotting
         fig_size = (25, 5)
         f = plt.figure(figsize=fig_size)
@@ -3238,7 +3238,7 @@ class Plots():
             nuc_exists = False
         # Plot title
         title_plot='cell'
-        file_name = 'scatter_cell_size_vs_spots_'+title_string+'_sp_'+str(spot_type)+'.pdf'
+        file_name = 'scatter_cell_size_vs_spots_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
         # Complete cell
         if (cyto_exists == True) and (nuc_exists == True):
             x = cell_size
@@ -3313,7 +3313,7 @@ class Plots():
         else:
             number_rows = 1
         # Creating plot
-        file_name  = 'ch_int_vs_spots_'+title_string+'_sp_'+str(spot_type)+'.pdf'
+        file_name  = 'ch_int_vs_spots_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
         counter = 0
         _, axes = plt.subplots(nrows = number_rows, ncols = number_color_channels, figsize = (15, 10))
         for j in range(number_rows):
@@ -3406,7 +3406,7 @@ class Plots():
         max_percentile =99
         min_percentile = 1
         title_plot  = 'spot_intensities'
-        file_name = title_plot +'_'+title_string+'_sp_'+str(spot_type)+'.pdf'
+        file_name = title_plot +'_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
         colors = ['r','g','b','m']
         for i in range (0,number_color_channels ):
             column_name = 'spot_int_ch_'+str(i)
@@ -3422,7 +3422,7 @@ class Plots():
                 spot_intensity = spot_intensity [spot_intensity > min_val]
                 spot_intensity = spot_intensity [spot_intensity < max_val]
             ax[i].hist(x=spot_intensity, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
-            #ax[i].set_title(title_plot)
+            #ax[i].set_title('spot_type')
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
         plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
