@@ -13,7 +13,7 @@ export CUDA_VISIBLE_DEVICES=0,1
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
 # Read them in the python file using: sys.argv. This return a list of strings. 
-# Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
+# Where sys.argv[0] is the name  of the <<python_file.py>>, and  the rest are in positional order 
 # Make sure to convert str to the desired data types.
 
 # Declare a string array

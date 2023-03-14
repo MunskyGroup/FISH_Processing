@@ -505,13 +505,13 @@ class Intensity():
             std_background_int = std_intensity_donut
             return SNR, mean_background_int,std_background_int
         
-        def disk_donut(values_disk, values_donut):
-            #mean_intensity_disk = np.mean(values_disk.flatten().astype('float'))
-            sum_intensity_disk = np.sum(values_disk.flatten().astype('float'))
+        def disk_donut(values_disk, values_donut,spot_size):
+            mean_intensity_disk = np.mean(values_disk.flatten().astype('float'))
+            #sum_intensity_disk = np.sum(values_disk.flatten().astype('float'))
             spot_intensity_disk_donut_std = np.std(values_disk.flatten().astype('float'))
             mean_intensity_donut = np.mean(values_donut.flatten().astype('float')) # mean calculation ignoring zeros
-            #spot_intensity_disk_donut = mean_intensity_disk - mean_intensity_donut
-            spot_intensity_disk_donut = sum_intensity_disk - mean_intensity_donut
+            spot_intensity_disk_donut = (mean_intensity_disk*(spot_size**2)) - (mean_intensity_donut*(spot_size**2))
+            #spot_intensity_disk_donut = sum_intensity_disk - mean_intensity_donut
             return spot_intensity_disk_donut, spot_intensity_disk_donut_std
         
         # Pre-allocating memory
@@ -537,7 +537,7 @@ class Intensity():
                 intensities_snr[sp,i], intensities_background_mean[sp,i], intensities_background_std[sp,i]  = signal_to_noise_ratio(values_disk,values_donut) # SNR
                 
                 if self.method == 'disk_donut':
-                    intensities_mean[sp,i], intensities_std[sp,i] = disk_donut(values_disk,values_donut )
+                    intensities_mean[sp,i], intensities_std[sp,i] = disk_donut(values_disk,values_donut,spot_size=individual_spot_size )
                 elif self.method == 'total_intensity':
                     intensities_mean[sp,i] = np.max((0, np.mean(values_disk)))# mean intensity in the crop
                     intensities_std[sp,i] = np.max((0, np.std(values_disk)))# std intensity in the crop
@@ -1522,14 +1522,18 @@ class DataProcessing():
             n_masks = len(self.masks_nuclei)
         else:
             n_masks = len(self.masks_complete_cells)  
+            
+            
         # Initializing Dataframe
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
             new_dataframe = self.dataframe
             counter_total_cells = np.max( self.dataframe['cell_id'].values) +1
+        
         elif (not ( self.dataframe is None)) and (self.reset_cell_counter == True):    # IF dataframe exist and reset is passed
             new_dataframe = self.dataframe
             counter_total_cells = np.max( self.dataframe['cell_id'].values) - n_masks +1   # restarting the counter for the number of cells
-        else: # IF the dataframe does not exist.
+        
+        elif self.dataframe is None: # IF the dataframe does not exist.
             # Generate columns for the number of color channels
             list_columns_intensity_nuc = []
             list_columns_intensity_cyto = []
@@ -1542,7 +1546,15 @@ class DataProcessing():
                 #list_intensity_clusters.append( 'cluster_int_ch_' + str(c) )
             # creating the main dataframe with column names
             new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_intensity_spots+list_intensity_clusters )
+            #try:
+            #    print('cell counter', np.max( self.dataframe['cell_id'].values)  )
+            #    print(num_ts,num_nuc,num_cyto) 
+            #    raise
+            #except:
+            #    pass
             counter_total_cells = 0
+            
+            
         # loop for each cell in image
         for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
             # calculating nuclear area and center of mass
@@ -1595,41 +1607,43 @@ class DataProcessing():
             # determining if the cell is in the border of the image. If true the cell is in the border.
             is_cell_in_border =  np.any( np.concatenate( ( tested_mask_for_border[:,0],tested_mask_for_border[:,-1],tested_mask_for_border[0,:],tested_mask_for_border[-1,:] ) ) )  
             # Data extraction
-            try:
-                if self.spotDetectionCSV.shape[0] >1:
-                    new_dataframe = data_to_df( new_dataframe, 
-                                                self.spotDetectionCSV, 
-                                                self.clusterDetectionCSV, 
-                                                mask_nuc = selected_mask_nuc, 
-                                                mask_cytosol_only=slected_masks_cytosol_no_nuclei, 
-                                                masks_complete_cells = selected_masks_complete_cells,
-                                                nuc_area=nuc_area,
-                                                cyto_area=cyto_area, 
-                                                cell_area=cell_area, 
-                                                nuc_centroid_y = nuc_centroid_y, 
-                                                nuc_centroid_x = nuc_centroid_x,
-                                                cyto_centroid_y = cyto_centroid_y, 
-                                                cyto_centroid_x = cyto_centroid_x,
-                                                image_counter=self.image_counter,
-                                                is_cell_in_border = is_cell_in_border,
-                                                spot_type = self.spot_type ,
-                                                cell_counter =counter_total_cells,
-                                                nuc_int=nuc_int,
-                                                cyto_int=cyto_int)
-                else:
-                    print('cell_id', counter_total_cells)
-                    print('spots')
-                    print(self.spotDetectionCSV)
-                    print('cluster')
-                    print(self.clusterDetectionCSV)
-            except Exception as e: 
-                print(e)
-                print('cell_id', counter_total_cells)
-                print('spots')
-                print(self.spotDetectionCSV)
-                print('cluster')
-                print(self.clusterDetectionCSV)
-                raise
+            #try:
+            #if self.spotDetectionCSV.shape[0] >1:
+            new_dataframe = data_to_df( new_dataframe, 
+                                        self.spotDetectionCSV, 
+                                        self.clusterDetectionCSV, 
+                                        mask_nuc = selected_mask_nuc, 
+                                        mask_cytosol_only=slected_masks_cytosol_no_nuclei, 
+                                        masks_complete_cells = selected_masks_complete_cells,
+                                        nuc_area=nuc_area,
+                                        cyto_area=cyto_area, 
+                                        cell_area=cell_area, 
+                                        nuc_centroid_y = nuc_centroid_y, 
+                                        nuc_centroid_x = nuc_centroid_x,
+                                        cyto_centroid_y = cyto_centroid_y, 
+                                        cyto_centroid_x = cyto_centroid_x,
+                                        image_counter=self.image_counter,
+                                        is_cell_in_border = is_cell_in_border,
+                                        spot_type = self.spot_type ,
+                                        cell_counter =counter_total_cells,
+                                        nuc_int=nuc_int,
+                                        cyto_int=cyto_int)
+            #else:
+            #    print('cell_id', counter_total_cells)
+            #    print('spots')
+            #    print(self.spotDetectionCSV)
+            #    print('cluster')
+            #    print(self.clusterDetectionCSV)
+                
+                
+            # except Exception as e: 
+            #     print(e)
+            #     print('cell_id', counter_total_cells)
+            #     print('spots')
+            #     print(self.spotDetectionCSV)
+            #     print('cluster')
+            #     print(self.clusterDetectionCSV)
+            #     raise
             counter_total_cells +=1
         return new_dataframe
 
@@ -1754,6 +1768,7 @@ class SpotDetection():
             dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.image, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus,
                                             yx_spot_size_in_px, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i,number_color_channels=self.number_color_channels ).get_dataframe()
             # reset counter for image and cell number
+            #if i >0:
             reset_cell_counter = True
             list_fish_images.append(image_filtered)
         return dataframe_FISH, list_fish_images
@@ -2544,23 +2559,23 @@ class Utilities():
             list_local_folders.append(temp_folder_name)
         return list_local_folders
     
-    def dataframe_extract_data(dataframe,spot_type_selected, minimal_TS_size=2):
+    def dataframe_extract_data(dataframe,spot_type, minimum_spots_cluster=2):
         ''' This function is intended to read a dataframe and returns 
             number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size
         '''
         # Number of cells
         number_cells = dataframe['cell_id'].nunique()
         # Number of spots in cytosol
-        number_of_spots_per_cell_cytosol = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==i) & (dataframe['is_nuc']==False) & (dataframe['spot_type']==spot_type_selected)  & (dataframe['is_cell_fragmented']!=-1) ].spot_id) for i in range(0, number_cells)])
+        number_of_spots_per_cell_cytosol = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==i) & (dataframe['is_nuc']==False) & (dataframe['spot_type']==spot_type)  & (dataframe['is_cell_fragmented']!=-1) ].spot_id) for i in range(0, number_cells)])
         # Number of spots in nucleus.  Spots without TS.
-        number_of_spots_per_cell_nucleus = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==i) & (dataframe['is_nuc']==True) & (dataframe['spot_type']==spot_type_selected)  & (dataframe['is_cell_fragmented']!=-1)    ].spot_id) for i in range(0, number_cells)])
+        number_of_spots_per_cell_nucleus = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==i) & (dataframe['is_nuc']==True) & (dataframe['spot_type']==spot_type)  & (dataframe['is_cell_fragmented']!=-1)    ].spot_id) for i in range(0, number_cells)])
         # Number of spots
-        number_of_spots_per_cell = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==i)  & (dataframe['spot_type']==spot_type_selected) & (dataframe['is_cell_fragmented']!=-1)].spot_id) for i in range(0, number_cells)])
+        number_of_spots_per_cell = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==i)  & (dataframe['spot_type']==spot_type) & (dataframe['is_cell_fragmented']!=-1)].spot_id) for i in range(0, number_cells)])
         # Number of TS per cell.
-        number_of_TS_per_cell = [len( dataframe.loc[  (dataframe['cell_id']==i) &  (dataframe['is_cluster']==True) & (dataframe['is_nuc']==True) & (dataframe['spot_type']==spot_type_selected)  &   (dataframe['cluster_size']>=minimal_TS_size)  & (dataframe['is_cell_fragmented']!=-1)  ].spot_id) for i in range(0, number_cells)]
+        number_of_TS_per_cell = [len( dataframe.loc[  (dataframe['cell_id']==i) &  (dataframe['is_cluster']==True) & (dataframe['is_nuc']==True) & (dataframe['spot_type']==spot_type)  &   (dataframe['cluster_size']>=minimum_spots_cluster)  & (dataframe['is_cell_fragmented']!=-1)  ].spot_id) for i in range(0, number_cells)]
         number_of_TS_per_cell= np.asarray(number_of_TS_per_cell)
         # Number of RNA in a TS
-        ts_size =  dataframe.loc[ (dataframe['is_cluster']==True) & (dataframe['is_nuc']==True)  & (dataframe['spot_type']==spot_type_selected) &   (dataframe['cluster_size']>=minimal_TS_size)  & (dataframe['is_cell_fragmented']!=-1)   ].cluster_size.values
+        ts_size =  dataframe.loc[ (dataframe['is_cluster']==True) & (dataframe['is_nuc']==True)  & (dataframe['spot_type']==spot_type) &   (dataframe['cluster_size']>=minimum_spots_cluster)  & (dataframe['is_cell_fragmented']!=-1)   ].cluster_size.values
         # Size of each cell
         cell_size = [dataframe.loc[   (dataframe['cell_id']==i) ].cell_area_px.values[0] for i in range(0, number_cells)]
         cell_size = np.asarray(cell_size)
@@ -2578,7 +2593,7 @@ class Utilities():
         ts_size.clip(0)
         return number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size,cell_size, number_cells, nuc_size, cyto_size
     
-    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir,spot_type_selected=0, minimal_TS_size=2):
+    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir,spot_type=0, minimal_TS_size=2):
         '''
         This method is intended to extract data from the dataframe
         '''
@@ -2596,7 +2611,7 @@ class Utilities():
             dataframe_file = glob.glob( str(dataframe_dir.joinpath('dataframe_*')) )[0]
             dataframe = pd.read_csv(dataframe_file)
             # Extracting values from dataframe
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size = Utilities.dataframe_extract_data(dataframe,spot_type_selected,minimal_TS_size=minimal_TS_size)
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size = Utilities.dataframe_extract_data(dataframe,spot_type,minimal_TS_size=minimal_TS_size)
             # Appending each condition to a list
             list_spots_total.append(number_of_spots_per_cell)  # This list includes spots and TS in the nucleus
             list_spots_nuc.append(number_of_spots_per_cell_nucleus)   #
@@ -2675,7 +2690,7 @@ class Utilities():
             masks_dir = None
         return local_data_dir, masks_dir
     
-    def read_images_from_folder( path_to_config_file,data_folder_path, path_to_masks_dir,  download_data_from_NAS, substring_to_detect_in_file_name = '.*_C0.tif'):
+    def read_images_from_folder( path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS, substring_to_detect_in_file_name = '.*_C0.tif'):
         # Download data from NAS
         if download_data_from_NAS == True:
             share_name = 'share'
@@ -2686,8 +2701,9 @@ class Utilities():
         # Detecting if images need to be merged
         is_needed_to_merge_images = MergeChannels(local_data_dir, substring_to_detect_in_file_name = substring_to_detect_in_file_name, save_figure =1).checking_images()
         if is_needed_to_merge_images == True:
-            list_file_names, list_images, number_images, _ = MergeChannels(local_data_dir, substring_to_detect_in_file_name = substring_to_detect_in_file_name, save_figure =1).merge()
+            _, _, number_images, _ = MergeChannels(local_data_dir, substring_to_detect_in_file_name = substring_to_detect_in_file_name, save_figure =1).merge()
             local_data_dir = local_data_dir.joinpath('merged')
+            list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()
         else:
             list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()  # list_images, path_files, list_files_names, number_files
         # Printing image properties
@@ -2695,29 +2711,35 @@ class Utilities():
         print('Image shape: ', list_images[0].shape , '\n')
         print('Number of images: ',number_images , '\n')
         print('Local directory with images: ', local_data_dir, '\n')
-        return local_data_dir, masks_dir, number_images, number_color_channels, list_file_names
+        return local_data_dir, masks_dir, number_images, number_color_channels, list_files_names
         
     def save_output_to_folder (output_identification_string, data_folder_path,
                                 file_plots_distributions = None, 
                                 file_plots_cell_size_vs_num_spots = None,
                                 file_plots_cell_intensity_vs_num_spots = None,
-                                file_plots_bleedthru = None,
-                                file_plots_spot_intensity_distributions = None):
+                                file_plots_spot_intensity_distributions = None,
+                                file_plots_bleedthru = None):
         
         # create results folder
         #if not os.path.exists(str('analysis_'+ output_identification_string)):
         #    os.makedirs(str('analysis_'+ output_identification_string))    
         #  Moving figures to the final folder 
+        
         if not (file_plots_distributions is None):
-            pathlib.Path().absolute().joinpath(file_plots_distributions).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_distributions))
-        if not (file_plots_cell_size_vs_num_spots is None):
-            pathlib.Path().absolute().joinpath(file_plots_cell_size_vs_num_spots).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_cell_size_vs_num_spots))
-        if not (file_plots_cell_intensity_vs_num_spots is None):
-            pathlib.Path().absolute().joinpath(file_plots_cell_intensity_vs_num_spots).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_cell_intensity_vs_num_spots))
+            for i in range (len(file_plots_distributions)):
+                if not (file_plots_distributions is None):
+                    pathlib.Path().absolute().joinpath(file_plots_distributions[i]).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_distributions[i]))
+                if not (file_plots_cell_size_vs_num_spots is None):
+                    pathlib.Path().absolute().joinpath(file_plots_cell_size_vs_num_spots[i]).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_cell_size_vs_num_spots[i]))
+                if not (file_plots_cell_intensity_vs_num_spots is None):
+                    pathlib.Path().absolute().joinpath(file_plots_cell_intensity_vs_num_spots[i]).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_cell_intensity_vs_num_spots[i]))
+                if not (file_plots_spot_intensity_distributions is None):
+                    pathlib.Path().absolute().joinpath(file_plots_spot_intensity_distributions[i]).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_spot_intensity_distributions[i]))
+            
         if not (file_plots_bleedthru is None):
             pathlib.Path().absolute().joinpath(file_plots_bleedthru).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_bleedthru))
-        if not (file_plots_spot_intensity_distributions is None):
-            pathlib.Path().absolute().joinpath(file_plots_spot_intensity_distributions).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_spot_intensity_distributions))
+
+        
         #metadata_path
         pathlib.Path().absolute().joinpath('metadata_'+ data_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'metadata_'+ data_folder_path.name +'.txt'))
         #dataframe_path 
@@ -3107,7 +3129,7 @@ class Plots():
         return None
 
 
-    def plotting_results_as_distributions(number_of_spots_per_cell,number_of_spots_per_cell_cytosol,number_of_spots_per_cell_nucleus,ts_size,number_of_TS_per_cell,minimum_spots_cluster,numBins=20,output_identification_string=None):
+    def plotting_results_as_distributions(number_of_spots_per_cell,number_of_spots_per_cell_cytosol,number_of_spots_per_cell_nucleus,ts_size,number_of_TS_per_cell,minimum_spots_cluster,numBins=20,output_identification_string=None, spot_type=0):
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -3127,7 +3149,7 @@ class Plots():
             return (f)
         # Section that generates each subplot
         number_subplots = int(np.any(number_of_spots_per_cell)) + int(np.any(number_of_spots_per_cell_cytosol)) + int(np.any(number_of_spots_per_cell_nucleus)) + int(np.any(ts_size)) + int(np.any(number_of_TS_per_cell))
-        file_name = 'spot_distributions_'+title_string+'.pdf'
+        file_name = 'spot_distributions_'+title_string+'_sp_'+str(spot_type)+'.pdf'
         #Plotting
         fig_size = (25, 5)
         f = plt.figure(figsize=fig_size)
@@ -3193,7 +3215,7 @@ class Plots():
             pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         return b.fig, file_name
 
-    def plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=None):  
+    def plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=None,spot_type=0):  
         '''
         This function is intended to plot the spot count as a function of the cell size. 
         
@@ -3216,7 +3238,7 @@ class Plots():
             nuc_exists = False
         # Plot title
         title_plot='cell'
-        file_name = 'scatter_cell_size_vs_spots_'+title_string+'.pdf'
+        file_name = 'scatter_cell_size_vs_spots_'+title_string+'_sp_'+str(spot_type)+'.pdf'
         # Complete cell
         if (cyto_exists == True) and (nuc_exists == True):
             x = cell_size
@@ -3261,7 +3283,7 @@ class Plots():
         plt.show()
         return file_name
 
-    def plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus = None, number_of_spots_per_cell_cytosol = None,output_identification_string=None):  
+    def plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus = None, number_of_spots_per_cell_cytosol = None,output_identification_string=None,spot_type=0):  
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -3291,7 +3313,7 @@ class Plots():
         else:
             number_rows = 1
         # Creating plot
-        file_name  = 'ch_int_vs_spots_'+title_string+'.pdf'
+        file_name  = 'ch_int_vs_spots_'+title_string+'_sp_'+str(spot_type)+'.pdf'
         counter = 0
         _, axes = plt.subplots(nrows = number_rows, ncols = number_color_channels, figsize = (15, 10))
         for j in range(number_rows):
@@ -3363,7 +3385,7 @@ class Plots():
         plt.show()
         return file_name
 
-    def plot_spot_intensity_distributions(dataframe,output_identification_string=None,remove_outliers=True):
+    def plot_spot_intensity_distributions(dataframe,output_identification_string=None,remove_outliers=True, spot_type=0):
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -3384,11 +3406,11 @@ class Plots():
         max_percentile =99
         min_percentile = 1
         title_plot  = 'spot_intensities'
-        file_name = title_plot +'_'+title_string+'.pdf'
+        file_name = title_plot +'_'+title_string+'_sp_'+str(spot_type)+'.pdf'
         colors = ['r','g','b','m']
         for i in range (0,number_color_channels ):
             column_name = 'spot_int_ch_'+str(i)
-            df_spot_intensity = dataframe.loc[   (dataframe['is_cluster']==False) ]
+            df_spot_intensity = dataframe.loc[   (dataframe['is_cluster']==False) & (dataframe['spot_type']==spot_type)]
             spot_intensity = df_spot_intensity[column_name].values
             if remove_outliers ==True:
                 max_val = np.percentile(spot_intensity, max_percentile)

@@ -21,17 +21,27 @@ path_to_config_file="$HOME/Desktop/config.yml"
 path_to_executable="${PWD%/*}/src/pipeline_executable.py"   
 
 ####################      REPOSITORIES    ############################
+#list_Huy=(\
+#'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_woStim' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_18minTPL_5uM' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_5hTPL_5uM' \
+#)
+
+#mask_list=(\
+#'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_woStim/masks_MS2-CY5_Cyto543_560_woStim___nuc_70__cyto_0.zip' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_18minTPL_5uM/masks_MS2-CY5_Cyto543_560_18minTPL_5uM___nuc_70__cyto_0.zip' \
+#'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_5hTPL_5uM/masks_MS2-CY5_Cyto543_560_5hTPL_5uM___nuc_70__cyto_0.zip' \
+#)
+
+
 list_Huy=(\
-'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_woStim' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_18minTPL_5uM' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_5hTPL_5uM' \
 )
 
 mask_list=(\
-'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_woStim/masks_MS2-CY5_Cyto543_560_woStim___nuc_70__cyto_0.zip' \
-'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_18minTPL_5uM/masks_MS2-CY5_Cyto543_560_18minTPL_5uM___nuc_70__cyto_0.zip' \
 'smFISH_images/Linda_smFISH_images/Confocal/20220714/MS2-CY5_Cyto543_560_5hTPL_5uM/masks_MS2-CY5_Cyto543_560_5hTPL_5uM___nuc_70__cyto_0.zip' \
 )
+
 
 ####################  CODE PARAMETERS ############################
 NUMBER_OF_CORES=1
@@ -44,13 +54,13 @@ voxel_size_yx=160                          # Microscope conversion px to nanomet
 nucleus_channel='[0]'                      # Channel to pass to python for nucleus segmentation
 cyto_channel='None'                        # Channel to pass to python for cytosol segmentation
 FISH_channel='[1,3]'                       # Channel to pass to python for spot detection
-send_data_to_NAS=1                         # If data sent back to NAS use 1
+send_data_to_NAS=0                         # If data sent back to NAS use 1
 download_data_from_NAS=1                   # If data downloaded from NAS use 1
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 save_all_images=0                          # If true, it shows a all planes for the FISH plot detection. 
 
 #threshold_for_spot_detection='[400,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
-threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+#threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[400,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
 #threshold_for_spot_detection='[450,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
@@ -61,7 +71,7 @@ threshold_for_spot_detection='[400,500]'       # Threshold for spot detectin. Us
 #threshold_for_spot_detection='[500,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[500,550]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
-#threshold_for_spot_detection='[550,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
+threshold_for_spot_detection='[550,400]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[550,450]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 #threshold_for_spot_detection='[550,500]'       # Threshold for spot detectin. Use a scalar, list or None. List for multiple channels, None to use automated threshold.
 
