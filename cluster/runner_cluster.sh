@@ -1,32 +1,9 @@
 #!/bin/bash
+#SBATCH --gres=gpu:4
+#SBATCH --nodelist=gpu2    # gpu2 gpu3 gpu4
 #SBATCH --partition=all
 #SBATCH --ntasks=4
-#SBATCH --gres=gpu:4
 #SBATCH --job-name=test
-
-# Define an array of node names
-nodes=("gpu9" "gpu10" "gpu11" "gpu12" "gpu2" "gpu3" "gpu4")
-
-# Get the number of nodes in the array
-num_nodes=${#nodes[@]}
-
-# Loop through the nodes and select the first available node
-for node in "${nodes[@]}"; do
-     sinfo_output=$(sinfo -h -n $node)
-     if [[ $sinfo_output == *"idle"* ]]; then
-          node_name=$node
-          break
-     fi
-done
-
-# If no available select the fist one
-if [[ -z $node_name ]]; then
-     node_name="gpu9"
-fi
-
-#SBATCH --nodelist=$node_name
-
-
 
 # module purge
 module load gnu9/9.4.0 
@@ -95,7 +72,7 @@ exit 0
 # ls *.tif
 # rm -r temp_*
 # rm -r analysis_*
-# rm -r slurm* out* temp_* 
+# rm -r slurm* out* temp_* masks_* 
 
 # ########### SLURM COMMANDS #########################
 # scancel [jobid]
