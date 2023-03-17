@@ -127,43 +127,16 @@ dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_d
 ######################################
 ######################################
 
-if isinstance(channels_with_FISH, list):
-    number_fish_channels = (len(channels_with_FISH))
-else:
-    number_fish_channels = 1
-
-list_file_plots_spot_intensity_distributions =[]
-list_file_plots_distributions =[]
-list_file_plots_cell_size_vs_num_spots =[]
-list_file_plots_cell_intensity_vs_num_spots =[]
-# extracting data for each spot type
-for i in range (number_fish_channels):
-    number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = fa.Utilities.dataframe_extract_data(dataframe_FISH,spot_type=i,minimum_spots_cluster=minimum_spots_cluster)
-    file_plots_cell_intensity_vs_num_spots = fa.Plots.plot_cell_intensity_spots(dataframe_FISH, number_of_spots_per_cell_nucleus, number_of_spots_per_cell_cytosol,output_identification_string,spot_type=i)
-    file_plots_spot_intensity_distributions = fa.Plots.plot_spot_intensity_distributions(dataframe_FISH,output_identification_string,spot_type=i)
-    file_plots_distributions = fa.Plots.plotting_results_as_distributions(number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, ts_size, number_of_TS_per_cell, minimum_spots_cluster, output_identification_string=output_identification_string,spot_type=i)
-    file_plots_cell_size_vs_num_spots = fa.Plots.plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=output_identification_string,spot_type=i)
-    # Appending list of files
-    list_file_plots_spot_intensity_distributions.append(file_plots_spot_intensity_distributions)
-    list_file_plots_distributions.append(file_plots_distributions)
-    list_file_plots_cell_size_vs_num_spots.append(file_plots_cell_size_vs_num_spots)
-    list_file_plots_cell_intensity_vs_num_spots.append(file_plots_cell_intensity_vs_num_spots)
-    del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size
-
-file_plots_bleedthru = fa.Plots.plot_scatter_bleedthru(dataframe_FISH, channels_with_cytosol, channels_with_nucleus,output_identification_string)
+list_files_distributions = fa.Plots.plot_all_distributions (dataframe_FISH,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string )
+file_plots_bleed_thru = fa.Plots.plot_scatter_bleed_thru(dataframe_FISH, channels_with_cytosol, channels_with_nucleus,output_identification_string)
 
 ######################################
 ######################################
-
 # Saving data and plots, and sending data to NAS
-fa.Utilities.save_output_to_folder(output_identification_string, 
-                                   data_folder_path, 
-                                   file_plots_distributions=list_file_plots_distributions, 
-                                   file_plots_cell_size_vs_num_spots=list_file_plots_cell_size_vs_num_spots, 
-                                   file_plots_cell_intensity_vs_num_spots=list_file_plots_cell_intensity_vs_num_spots, 
-                                   file_plots_spot_intensity_distributions=list_file_plots_spot_intensity_distributions,
-                                   file_plots_bleedthru=file_plots_bleedthru)
+fa.Utilities.save_output_to_folder(output_identification_string, data_folder_path, list_files_distributions=list_files_distributions, file_plots_bleed_thru=file_plots_bleed_thru)
+# sending data to NAS
 analysis_folder_name, mask_dir_complete_name = fa.Utilities.sending_data_to_NAS(output_identification_string, data_folder_path, path_to_config_file, path_to_masks_dir, diameter_nucleus, diameter_cytosol, send_data_to_NAS, masks_dir)
+# Moving the complete analysis folder to final analyses folder 
 fa.Utilities.move_results_to_analyses_folder( output_identification_string, data_folder_path, mask_dir_complete_name, path_to_masks_dir, save_filtered_images, download_data_from_NAS )
 ######################################
 ######################################

@@ -2593,7 +2593,7 @@ class Utilities():
         ts_size.clip(0)
         return number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size,cell_size, number_cells, nuc_size, cyto_size
     
-    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir,spot_type=0, minimal_TS_size=2):
+    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir,spot_type=0, minimum_spots_cluster=2):
         '''
         This method is intended to extract data from the dataframe
         '''
@@ -2606,12 +2606,13 @@ class Utilities():
         list_cell_size=[]
         list_nuc_size =[]
         list_dataframes =[]
+        list_cyto_size =[]
         for i in range (0, len (list_local_folders)):
             dataframe_dir = current_dir.joinpath('analyses',list_local_folders[i])    # loading files from "analyses" folder
             dataframe_file = glob.glob( str(dataframe_dir.joinpath('dataframe_*')) )[0]
             dataframe = pd.read_csv(dataframe_file)
             # Extracting values from dataframe
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size = Utilities.dataframe_extract_data(dataframe,spot_type,minimal_TS_size=minimal_TS_size)
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities.dataframe_extract_data(dataframe,spot_type,minimum_spots_cluster=minimum_spots_cluster)            
             # Appending each condition to a list
             list_spots_total.append(number_of_spots_per_cell)  # This list includes spots and TS in the nucleus
             list_spots_nuc.append(number_of_spots_per_cell_nucleus)   #
@@ -2621,9 +2622,10 @@ class Utilities():
             list_cell_size.append(cell_size)
             list_nuc_size.append(nuc_size)
             list_dataframes.append(dataframe)
+            list_cyto_size.append(cyto_size)
             # Deleting variables
             del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size
-        return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size,list_dataframes,list_nuc_size
+        return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size,list_dataframes,list_nuc_size,list_cyto_size
     
     def function_get_df_columns_as_array(df, colum_to_extract, extraction_type='all_values'):
         '''This method is intended to extract a column from a dataframe and convert its values to an array format.
@@ -2714,18 +2716,15 @@ class Utilities():
         return local_data_dir, masks_dir, number_images, number_color_channels, list_files_names
         
     def save_output_to_folder (output_identification_string, data_folder_path,
-                                file_plots_distributions = None, 
-                                file_plots_cell_size_vs_num_spots = None,
-                                file_plots_cell_intensity_vs_num_spots = None,
-                                file_plots_spot_intensity_distributions = None,
-                                file_plots_bleedthru = None):
-        
-        # create results folder
-        #if not os.path.exists(str('analysis_'+ output_identification_string)):
-        #    os.makedirs(str('analysis_'+ output_identification_string))    
+                                list_files_distributions=None,
+                                file_plots_bleed_thru = None):
+
         #  Moving figures to the final folder 
-        
-        if not (file_plots_distributions is None):
+        if not (list_files_distributions is None) and (type(list_files_distributions) is list):
+            file_plots_distributions = list_files_distributions[0]
+            file_plots_cell_size_vs_num_spots = list_files_distributions[1]
+            file_plots_cell_intensity_vs_num_spots = list_files_distributions[2]
+            file_plots_spot_intensity_distributions = list_files_distributions[3]
             for i in range (len(file_plots_distributions)):
                 if not (file_plots_distributions is None):
                     pathlib.Path().absolute().joinpath(file_plots_distributions[i]).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_distributions[i]))
@@ -2736,8 +2735,8 @@ class Utilities():
                 if not (file_plots_spot_intensity_distributions is None):
                     pathlib.Path().absolute().joinpath(file_plots_spot_intensity_distributions[i]).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_spot_intensity_distributions[i]))
             
-        if not (file_plots_bleedthru is None):
-            pathlib.Path().absolute().joinpath(file_plots_bleedthru).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_bleedthru))
+        if not (file_plots_bleed_thru is None):
+            pathlib.Path().absolute().joinpath(file_plots_bleed_thru).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_bleed_thru))
 
         
         #metadata_path
@@ -2963,14 +2962,20 @@ class Plots():
 
 
     def dist_plots(df, plot_title,destination_folder ):
+        #color_palete = 'colorblind'
+        color_palete = 'CMRmap'
+        #color_palete = 'OrRd'
+        sns.set_style("white")
+        
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
         max_x_val = df.max().max()
+        
         # Histograms
         plt.figure(figsize=(10,5))
         sns.set(font_scale = 1)
-        sns.set_style("whitegrid")
-        p_dist =sns.histplot(data=df,palette="OrRd", element="step", fill=False) #binwidth=10
+        sns.set_style("white")
+        p_dist =sns.histplot(data=df,palette=color_palete, element="step", fill=False,bins=20,lw=5) #binwidth=10
         p_dist.set_xlabel("Spots")
         p_dist.set_ylabel("Histogram")
         p_dist.set_title(plot_title)
@@ -2983,12 +2988,14 @@ class Plots():
         # Violin plots
         plt.figure(figsize=(10,5))
         sns.set(font_scale = 1)
-        sns.set_style("whitegrid")
-        p_dist =sns.violinplot(data=df, scale="count",palette="OrRd",cut=0)
+        sns.set_style("white")
+        p_dist =sns.violinplot(data=df, scale="count",palette=color_palete,cut=0)
+        #p_dist =sns.stripplot(data=df,color='white',alpha = 0.1,size = 1)
         p_dist.set_xlabel("Spot count")
         p_dist.set_ylabel("Count")
         p_dist.set_title(plot_title)
         name_plot = 'Vio_'+plot_title+'.pdf'
+        plt.xticks(rotation=45, ha="right")
         plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
@@ -2996,8 +3003,8 @@ class Plots():
         # Distribution
         plt.figure(figsize=(10,5))
         sns.set(font_scale = 1)
-        sns.set_style("whitegrid")
-        p_dist =sns.kdeplot(data=df,palette="OrRd",cut=0)
+        sns.set_style("white")
+        p_dist =sns.kdeplot(data=df,palette=color_palete,cut=0,lw=5)
         p_dist.set_xlabel("Spots")
         p_dist.set_ylabel("Kernel Density Estimator (KDE)")
         p_dist.set_title(plot_title)
@@ -3010,8 +3017,8 @@ class Plots():
         # ECDF
         plt.figure(figsize=(10,5))
         sns.set(font_scale = 1)
-        sns.set_style("whitegrid")
-        p_dist =sns.ecdfplot(data=df,palette="OrRd")
+        sns.set_style("white")
+        p_dist =sns.ecdfplot(data=df,palette=color_palete,lw=5)
         p_dist.set_xlabel("Spots")
         p_dist.set_ylabel("Proportion")
         p_dist.set_title(plot_title)
@@ -3048,6 +3055,10 @@ class Plots():
 
 
     def plot_comparing_df(df_all,df_cyto,df_nuc,plot_title,destination_folder):
+        #color_palete = 'CMRmap'
+        color_palete = 'Dark2'
+        sns.set(font_scale = 1.5)
+        sns.set_style("white")
         # This code creates a single colum for all conditions and adds a 'location' column.
         df_all_melt = df_all.melt()
         df_all_melt['location'] = 'all' 
@@ -3060,7 +3071,8 @@ class Plots():
         # Plotting
         plt.figure(figsize=(12,7))
         sns.set(font_scale = 1.5)
-        b= sns.barplot(data=data_frames, x= 'variable',y='value', hue = 'location')
+        sns.set_style("white")
+        b= sns.barplot(data=data_frames, x= 'variable',y='value', hue = 'location',palette=color_palete)
         b.set_xlabel("time after treatment")
         b.set_ylabel("Spot Count")
         b.set_title(plot_title)
@@ -3072,15 +3084,19 @@ class Plots():
         return None
 
 
-    def plot_TS(df_original,plot_title,destination_folder,minimal_TS_size,remove_zeros=False):
+    def plot_TS(df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False):
+        color_palete = 'CMRmap'
+        #color_palete = 'Accent'
+        sns.set(font_scale = 1.5)
+        sns.set_style("white")
         df= df_original.copy()
         if remove_zeros == True:
             for col in df.columns:
                 df[col] = np.where(df[col]==0, np.nan, df[col])
         plt.figure(figsize=(12,7))
-        b= sns.stripplot(data=df, size=4, jitter=0.3, dodge=True)
+        b= sns.stripplot(data=df, size=4, jitter=0.3, dodge=True,palette=color_palete)
         b.set_xlabel('time after treatment')
-        b.set_ylabel('No. Cells with TS (Int. >= ' +str (minimal_TS_size) +' <RNAs>)' )
+        b.set_ylabel('No. Cells with TS (Int. >= ' +str (minimum_spots_cluster) +' <RNAs>)' )
         b.set_title(plot_title)
         plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
@@ -3091,8 +3107,11 @@ class Plots():
         return None
 
 
-    def plot_TS_bar_stacked(df_original,plot_title,destination_folder,minimal_TS_size,remove_zeros=False):
+    def plot_TS_bar_stacked(df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False):
         df= df_original.copy()
+        color_palete = 'OrRd'
+        sns.set(font_scale = 1.5)
+        sns.set_style("white")
         if remove_zeros == True:
             for col in df.columns:
                 df[col] = np.where(df[col]==0, np.nan, df[col])
@@ -3116,9 +3135,9 @@ class Plots():
                     table_data[indx,i] = df.loc[df[col] > max_ts_count, col].count()
         df_new = pd.DataFrame(table_data.T, columns = column_labels,index=list(df.columns))
         # Plotting
-        b= df_new.plot(kind='bar', stacked=True,figsize=(12,7))
+        b= df_new.plot(kind='bar', stacked=True,figsize=(12,7)) #, cmap=color_palete
         b.set_xlabel('time after treatment')
-        b.set_ylabel('No. Cells with TS (Int. >= ' +str (minimal_TS_size) +' <RNAs>)' )
+        b.set_ylabel('No. Cells with TS (Int. >= ' +str (minimum_spots_cluster) +' <RNAs>)' )
         b.set_title(plot_title)
         plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
@@ -3346,7 +3365,7 @@ class Plots():
         plt.show()
         return file_name
 
-    def plot_scatter_bleedthru (dataframe,channels_with_cytosol, channels_with_nucleus,output_identification_string=None):
+    def plot_scatter_bleed_thru (dataframe,channels_with_cytosol, channels_with_nucleus,output_identification_string=None):
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -3367,7 +3386,7 @@ class Plots():
         _, axes = plt.subplots(nrows = 1, ncols = len(combinations_channels), figsize = (20, 10))
         for i in range(len(combinations_channels)):
             title_plot=title_string
-            file_name  = 'bleedthru_'+title_string+'.pdf'
+            file_name  = 'bleed_thru_'+title_string+'.pdf'
             if not channels_with_cytosol in (None, 'None', 'none',['None'],['none'],[None]):
                 x = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
                 y = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
@@ -3428,3 +3447,30 @@ class Plots():
         plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
+    
+    def plot_all_distributions (dataframe,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string ):
+        if isinstance(channels_with_FISH, list):
+            number_fish_channels = (len(channels_with_FISH))
+        else:
+            number_fish_channels = 1
+        list_file_plots_spot_intensity_distributions =[]
+        list_file_plots_distributions =[]
+        list_file_plots_cell_size_vs_num_spots =[]
+        list_file_plots_cell_intensity_vs_num_spots =[]
+        # extracting data for each spot type
+        for i in range (number_fish_channels):
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities.dataframe_extract_data(dataframe,spot_type=i,minimum_spots_cluster=minimum_spots_cluster)
+            file_plots_cell_intensity_vs_num_spots = Plots.plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus, number_of_spots_per_cell_cytosol,output_identification_string,spot_type=i)
+            file_plots_spot_intensity_distributions = Plots.plot_spot_intensity_distributions(dataframe,output_identification_string,spot_type=i)
+            file_plots_distributions = Plots.plotting_results_as_distributions(number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, ts_size, number_of_TS_per_cell, minimum_spots_cluster, output_identification_string=output_identification_string,spot_type=i)
+            file_plots_cell_size_vs_num_spots = Plots.plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=output_identification_string,spot_type=i)
+            # Appending list of files
+            list_file_plots_spot_intensity_distributions.append(file_plots_spot_intensity_distributions)
+            list_file_plots_distributions.append(file_plots_distributions)
+            list_file_plots_cell_size_vs_num_spots.append(file_plots_cell_size_vs_num_spots)
+            list_file_plots_cell_intensity_vs_num_spots.append(file_plots_cell_intensity_vs_num_spots)
+            del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size
+        
+            list_files_distributions = [list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots]
+        return list_files_distributions #list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots
+    

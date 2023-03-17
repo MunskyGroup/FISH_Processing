@@ -40,9 +40,9 @@ psf_z=350                                  # Theoretical size of the PSF emitted
 psf_yx=160                                 # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers
 voxel_size_z=500                           # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx=160                          # Microscope conversion px to nanometers in the xy axis.
-nucleus_channel='[0]'                      # Channel to pass to python for nucleus segmentation
-cyto_channel='None'                        # Channel to pass to python for cytosol segmentation
-FISH_channel='[1,3]'                       # Channel to pass to python for spot detection
+channels_with_nucleus='[0]'                # Channel to pass to python for nucleus segmentation
+channels_with_cytosol='None'               # Channel to pass to python for cytosol segmentation
+channels_with_FISH='[1,3]'                 # Channel to pass to python for spot detection
 send_data_to_NAS=1                         # If data sent back to NAS use 1
 download_data_from_NAS=1                   # If data downloaded from NAS use 1
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
@@ -52,7 +52,7 @@ save_filtered_images=0                     # To save filtered images
 # ########### PYTHON PROGRAM #############################
 #for folder in ${list_A549_NFKBIA[*]}; do
 #     output_names=""output__"${folder////__}"".txt"
-#     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
+#     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
 #     wait
 #done
 
@@ -64,7 +64,7 @@ for threshold_for_spot_detection in ${list_ts[*]}; do
      for folder in ${list_Huy[*]}; do
           output_names=""output__"${folder////__}"".txt"
           path_to_masks_dir="${mask_list[counter]}"
-          ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$nucleus_channel" "$cyto_channel" "$FISH_channel" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images "$threshold_for_spot_detection" $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
+          ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images "$threshold_for_spot_detection" $NUMBER_OF_CORES $save_filtered_images >> "$output_names" &
           ((counter++))
           wait
      done
