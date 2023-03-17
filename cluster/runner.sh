@@ -21,7 +21,8 @@ path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 path_to_config_file="$HOME/Desktop/config.yml"
 
 # List or path to process
-list_test=('smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min')
+#list_test=('smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min')
+list_test=('smFISH_images/Eric_smFISH_images/20230306/DUSP1_0nM_Dex_0min_012623')
 
 # Software parameters
 NUMBER_OF_CORES=1
@@ -31,9 +32,12 @@ psf_z=350                            # Theoretical size of the PSF emitted by a 
 psf_yx=160                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx=160                    # Microscope conversion px to nanometers in the xy axis.
-channels_with_nucleus='[0]'          # Channel to pass to python for nucleus segmentation
-channels_with_cytosol='[2]'          # Channel to pass to python for cytosol segmentation
-channels_with_FISH='[1]'             # Channel to pass to python for spot detection
+#channels_with_nucleus='[0]'          # Channel to pass to python for nucleus segmentation
+#channels_with_cytosol='[2]'          # Channel to pass to python for cytosol segmentation
+#channels_with_FISH='[1]'             # Channel to pass to python for spot detection
+channels_with_nucleus='[2]'                  # Channel to pass to python for nucleus segmentation
+channels_with_cytosol='[1]'                 # Channel to pass to python for cytosol segmentation
+channels_with_FISH='[0]'                   # Channel to pass to python for spot detection
 send_data_to_NAS=0                   # If data sent back to NAS use 1.
 download_data_from_NAS=1             # Download data from NAS
 path_to_masks_dir='None'             # 'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'

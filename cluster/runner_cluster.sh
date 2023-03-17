@@ -2,7 +2,31 @@
 #SBATCH --partition=all
 #SBATCH --ntasks=4
 #SBATCH --gres=gpu:4
-#SBATCH --job-name=testing_2
+#SBATCH --job-name=test
+
+# Define an array of node names
+nodes=("gpu9" "gpu10" "gpu11" "gpu12" "gpu2" "gpu3" "gpu4")
+
+# Get the number of nodes in the array
+num_nodes=${#nodes[@]}
+
+# Loop through the nodes and select the first available node
+for node in "${nodes[@]}"; do
+     sinfo_output=$(sinfo -h -n $node)
+     if [[ $sinfo_output == *"idle"* ]]; then
+          node_name=$node
+          break
+     fi
+done
+
+# If no available select the fist one
+if [[ -z $node_name ]]; then
+     node_name="gpu9"
+fi
+
+#SBATCH --nodelist=$node_name
+
+
 
 # module purge
 module load gnu9/9.4.0 
