@@ -2627,6 +2627,26 @@ class Utilities():
             del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size
         return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size,list_dataframes,list_nuc_size,list_cyto_size
     
+    def extract_data_interpretation(list_dirs, path_to_config_file, current_dir, mandatory_substring, local_folder_path, list_labels, share_name='share',minimum_spots_cluster=2, connect_to_NAS=0, spot_type=0, remove_extreme_values=False):
+        if connect_to_NAS == True:
+            # Reading the data from NAS, unziping files, organizing data as single dataframe for comparison. 
+            list_local_files = Utilities.read_zipfiles_from_NAS(list_dirs,path_to_config_file,share_name, mandatory_substring, local_folder_path)
+            list_local_folders = Utilities.unzip_local_folders(list_local_files,local_folder_path)
+        else: 
+            list_local_folders = list_dirs # Use this line to process files from a local repository
+        # Extracting data from each repository
+        list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size = Utilities.extracting_data_for_each_df_in_directory(  list_local_folders=list_local_folders,current_dir=current_dir,spot_type=spot_type,minimum_spots_cluster=minimum_spots_cluster)
+        # Final dataframes for nuc, cyto and total spots
+        df_all = Utilities.convert_list_to_df (list_number_cells, list_spots_total, list_labels, remove_extreme_values= remove_extreme_values)
+        df_cyto = Utilities.convert_list_to_df (list_number_cells, list_spots_cytosol, list_labels, remove_extreme_values= remove_extreme_values)
+        df_nuc = Utilities.convert_list_to_df (list_number_cells, list_spots_nuc, list_labels, remove_extreme_values= remove_extreme_values)
+        df_transcription_sites = Utilities.convert_list_to_df (list_number_cells, list_transcription_sites, list_labels, remove_extreme_values= remove_extreme_values)
+        #print('number of cells in each dataset: ', list_number_cells)
+        return df_all, df_cyto, df_nuc, df_transcription_sites, list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size 
+
+    
+    
+    
     def function_get_df_columns_as_array(df, colum_to_extract, extraction_type='all_values'):
         '''This method is intended to extract a column from a dataframe and convert its values to an array format.
             The argument <<<extraction_type>>> accepts two possible values. 
@@ -2640,23 +2660,23 @@ class Utilities():
         elif extraction_type == 'all_values' :
             return np.asarray( [       df.loc[(df['cell_id']==i)][colum_to_extract].values          for i in range(0, number_cells)] )      
     
-    def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False) :
+    def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False,max_quantile=0.99) :
         # defining the dimensions for the array.
         max_number_cells = max(list_number_cells)
         number_conditions = len(list_number_cells)
         # creating an array with the same dimensions
-        spots_array = np.empty((max_number_cells,number_conditions))
+        spots_array = np.empty((max_number_cells, number_conditions))
         spots_array[:] = np.NaN
         # replace the elements in the array
-        for i in range(0,number_conditions ):
-            spots_array[0:list_number_cells[i],i] = list_spots[i] 
+        for i in range(0, number_conditions ):
+            spots_array[0:list_number_cells[i], i] = list_spots[i] 
         # creating a dataframe
-        df = pd.DataFrame(data=spots_array, columns=list_labels)
+        df = pd.DataFrame(data = spots_array, columns=list_labels)
         # Removing 1% extreme values.
         if remove_extreme_values == True:
             for col in df.columns:
-                max_data_value= df[col].quantile(0.99)
-                df[col] = np.where(df[col]>=max_data_value, np.nan, df[col])
+                max_data_value = df[col].quantile(max_quantile)
+                df[col] = np.where(df[col] >= max_data_value, np.nan, df[col])
         return df
 
     def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
@@ -2800,6 +2820,32 @@ class Utilities():
             # Delete temporal images downloaded from NAS
             shutil.rmtree('temp_'+data_folder_path.name)
         return None
+    
+    def export_data_to_CSV(list_spots_total, list_spots_nuc, list_spots_cytosol, destination_folder, plot_title_suffix=''):
+        # Exporting data to CSV. 
+        # ColumnA = time, 
+        # ColumnB= #RNA in nucleus, 
+        # ColumnC = #RNA in cytoplasm, 
+        # ColumnD = total RNA.
+        num_time_points = len(list_spots_total)
+        num_columns = 4 # time, RNA_nuc, RNA_cyto, total
+        array_data_spots =  np.empty(shape=(0, num_columns))
+        for i in range(0, num_time_points):
+            num_cells = len(list_spots_total[i])
+            temp_array_data_spots = np.zeros((num_cells,num_columns))
+            temp_array_data_spots[:,0] = i
+            temp_array_data_spots[:,1] = list_spots_nuc[i] # nuc
+            temp_array_data_spots[:,2] = list_spots_cytosol[i] # cyto
+            temp_array_data_spots[:,3] = list_spots_total[i] # all spots
+            array_data_spots = np.append(array_data_spots, temp_array_data_spots, axis=0)
+        array_data_spots.shape
+        # final data frame with format for the model
+        df_for_model = pd.DataFrame(data=array_data_spots, columns =['time_index', 'RNA_nuc','RNA_cyto','RNA_total'] )
+        new_dtypes = {'time_index':int, 'RNA_nuc':int, 'RNA_cyto':int,'RNA_total':int}
+        df_for_model = df_for_model.astype(new_dtypes)
+        # Save to csv
+        df_for_model.to_csv(pathlib.Path().absolute().joinpath(destination_folder,plot_title_suffix+'.csv'))
+        return df_for_model
 
 
 
@@ -2972,33 +3018,33 @@ class Plots():
         max_x_val = df.max().max()
         
         # Histograms
-        plt.figure(figsize=(10,5))
-        sns.set(font_scale = 1)
-        sns.set_style("white")
-        p_dist =sns.histplot(data=df,palette=color_palete, element="step", fill=False,bins=20,lw=5) #binwidth=10
-        p_dist.set_xlabel("Spots")
-        p_dist.set_ylabel("Histogram")
-        p_dist.set_title(plot_title)
-        p_dist.set(xlim=(0, max_x_val))
-        name_plot = 'Hist_'+plot_title+'.pdf'
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
-        plt.show()
-        pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
+        #plt.figure(figsize=(10,5))
+        #sns.set(font_scale = 1)
+        #sns.set_style("white")
+        #p_dist =sns.histplot(data=df,palette=color_palete, element="step", fill=False,bins=20,lw=5) #binwidth=10
+        #p_dist.set_xlabel("Spots")
+        #p_dist.set_ylabel("Histogram")
+        #p_dist.set_title(plot_title)
+        #p_dist.set(xlim=(0, max_x_val))
+        #name_plot = 'Hist_'+plot_title+'.pdf'
+        #plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        #plt.show()
+        #pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         
         # Violin plots
-        plt.figure(figsize=(10,5))
-        sns.set(font_scale = 1)
-        sns.set_style("white")
-        p_dist =sns.violinplot(data=df, scale="count",palette=color_palete,cut=0)
+        #plt.figure(figsize=(10,5))
+        #sns.set(font_scale = 1)
+        #sns.set_style("white")
+        #p_dist =sns.violinplot(data=df, scale="count",palette=color_palete,cut=0)
         #p_dist =sns.stripplot(data=df,color='white',alpha = 0.1,size = 1)
-        p_dist.set_xlabel("Spot count")
-        p_dist.set_ylabel("Count")
-        p_dist.set_title(plot_title)
-        name_plot = 'Vio_'+plot_title+'.pdf'
-        plt.xticks(rotation=45, ha="right")
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
-        plt.show()
-        pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
+        #p_dist.set_xlabel("Spot count")
+        #p_dist.set_ylabel("Count")
+        #p_dist.set_title(plot_title)
+        #name_plot = 'Vio_'+plot_title+'.pdf'
+        #plt.xticks(rotation=45, ha="right")
+        #plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        #plt.show()
+        #pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
         # Distribution
         plt.figure(figsize=(10,5))
@@ -3403,6 +3449,21 @@ class Plots():
         plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
+    
+    def plot_interpretation_distributions (df_all, df_cyto, df_nuc, destination_folder, plot_title_suffix=''):
+        if (df_cyto.dropna().any().any() == True) and (df_nuc.dropna().any().any() == True):  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
+            plot_title_complete = 'all_spots__'+plot_title_suffix
+            Plots.dist_plots(df_all, plot_title_complete, destination_folder)
+        
+        if df_cyto.dropna().any().any() == True:  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
+            # Plotting for all Cytosol only
+            plot_title_cyto = 'cyto__'+plot_title_suffix
+            Plots.dist_plots(df_cyto, plot_title_cyto, destination_folder)
+        
+        if df_nuc.dropna().any().any() == True:  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
+            # Plotting for all nucleus
+            plot_title_nuc = 'nuc__'+plot_title_suffix
+            Plots.dist_plots(df_nuc, plot_title_nuc, destination_folder)
 
     def plot_spot_intensity_distributions(dataframe,output_identification_string=None,remove_outliers=True, spot_type=0):
         # Creating a name for the plot
@@ -3470,7 +3531,62 @@ class Plots():
             list_file_plots_cell_size_vs_num_spots.append(file_plots_cell_size_vs_num_spots)
             list_file_plots_cell_intensity_vs_num_spots.append(file_plots_cell_intensity_vs_num_spots)
             del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size
-        
             list_files_distributions = [list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots]
         return list_files_distributions #list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots
     
+    def compare_intensities_spots_interpretation(merged_dataframe, list_dataframes, list_number_cells, list_labels,plot_title_suffix,destination_folder,remove_extreme_values= True,max_quantile=0.97,color_palete='CMRmap'):
+        file_name = 'comparing_ch_int_vs_spots_'+plot_title_suffix+'.pdf'
+        sns.set(font_scale = 1.5)
+        sns.set_style("white")
+        # Counting the number of color channels in the dataframe
+        pattern = r'^spot_int_ch_\d'
+        string_list = list_dataframes[0].columns
+        number_color_channels = 0
+        for string in string_list:
+            match = re.match(pattern, string)
+            if match:
+                number_color_channels += 1
+        number_color_channels
+        # Iterating for each color channel
+        y_value_label = 'Spot_Count'
+        list_file_names =[]
+        for i in range(number_color_channels):
+            x_value_label = 'Channel '+str(i) +' Intensity'
+            title_plot='temp__'+str(np.random.randint(1000, size=1)[0])+'_ch_'+str(i)+'_spots.png'
+            list_file_names.append(title_plot)
+            column_with_intensity = 'spot_int_ch_'+str(i)
+            list_cell_int = []
+            for j in range (len(list_dataframes)):
+                list_cell_int.append( Utilities.function_get_df_columns_as_array(df=list_dataframes[j], colum_to_extract=column_with_intensity, extraction_type='values_per_cell')  )
+            df_cell_int = Utilities.convert_list_to_df (list_number_cells, list_cell_int, list_labels, remove_extreme_values= remove_extreme_values,max_quantile=max_quantile)
+            # This code creates a single column for all conditions and adds a 'location' column.
+            df_all_melt = merged_dataframe.melt()
+            df_all_melt.rename(columns={'value' : y_value_label}, inplace=True)
+            df_int_melt = df_cell_int.melt()
+            df_int_melt.rename(columns={'value' : x_value_label}, inplace=True)
+            data_frames_list = [df_all_melt, df_int_melt[x_value_label]]
+            data_frames = pd.concat(data_frames_list, axis=1)
+            data_frames
+            # Plotting
+            plt.figure(figsize=(5,5))
+            sns.set(font_scale = 1.5)
+            b= sns.scatterplot( data = data_frames, x = x_value_label, y = y_value_label, hue = 'variable',  alpha = 0.9, palette = color_palete)
+            b.set_xlabel(x_value_label)
+            b.set_ylabel(y_value_label)
+            #b.set_title('Channel_intensity')
+            b.legend(fontsize=8)
+            plt.xticks(rotation=45, ha="right")
+            plt.savefig(title_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.close()
+            del b, data_frames, df_int_melt, df_all_melt, df_cell_int
+        # Saving a plot with all channels
+        _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (15, 7))
+        for i in range(number_color_channels):
+            axes[i].imshow(plt.imread(list_file_names[i]))
+            os.remove(list_file_names[i])
+            axes[i].grid(False)
+            axes[i].set_xticks([])
+            axes[i].set_yticks([])
+        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.show()
+        pathlib.Path().absolute().joinpath(file_name).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
