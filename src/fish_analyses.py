@@ -3534,27 +3534,34 @@ class Plots():
             list_files_distributions = [list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots]
         return list_files_distributions #list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots
     
-    def compare_intensities_spots_interpretation(merged_dataframe, list_dataframes, list_number_cells, list_labels,plot_title_suffix,destination_folder,remove_extreme_values= True,max_quantile=0.97,color_palete='CMRmap'):
-        file_name = 'comparing_ch_int_vs_spots_'+plot_title_suffix+'.pdf'
+    def compare_intensities_spots_interpretation(merged_dataframe, list_dataframes, list_number_cells,  list_labels, plot_title_suffix, destination_folder, column_name, remove_extreme_values= True,max_quantile=0.97,color_palete='CMRmap'):
+        file_name = 'comparing_ch_int_vs_spots_'+plot_title_suffix+'__'+column_name+'.pdf'
         sns.set(font_scale = 1.5)
         sns.set_style("white")
         # Counting the number of color channels in the dataframe
-        pattern = r'^spot_int_ch_\d'
-        string_list = list_dataframes[0].columns
-        number_color_channels = 0
-        for string in string_list:
-            match = re.match(pattern, string)
-            if match:
-                number_color_channels += 1
-        number_color_channels
+        # pattern = r'^spot_int_ch_\d'
+        # string_list = list_dataframes[0].columns
+        # number_color_channels = 0
+        # for string in string_list:
+        #     match = re.match(pattern, string)
+        #     if match:
+        #         number_color_channels += 1
+        # number_color_channels
+        
+        # Detecting the number of columns in the dataset
+        my_list = list_dataframes[0].columns
+        filtered_list = [elem for elem in my_list if column_name in elem]
+        list_column_names = sorted(filtered_list)
+        number_color_channels = len(list_column_names)
+        
         # Iterating for each color channel
         y_value_label = 'Spot_Count'
         list_file_names =[]
-        for i in range(number_color_channels):
+        for i,column_with_intensity in enumerate(list_column_names):
             x_value_label = 'Channel '+str(i) +' Intensity'
             title_plot='temp__'+str(np.random.randint(1000, size=1)[0])+'_ch_'+str(i)+'_spots.png'
             list_file_names.append(title_plot)
-            column_with_intensity = 'spot_int_ch_'+str(i)
+            #column_with_intensity = column_name +str(i)
             list_cell_int = []
             for j in range (len(list_dataframes)):
                 list_cell_int.append( Utilities.function_get_df_columns_as_array(df=list_dataframes[j], colum_to_extract=column_with_intensity, extraction_type='values_per_cell')  )
