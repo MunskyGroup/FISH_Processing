@@ -3153,39 +3153,55 @@ class Plots():
         return None
 
 
-    def plot_TS_bar_stacked(df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False):
+    def plot_TS_bar_stacked(df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False,normalize=True):
+        if (normalize == True) and (remove_zeros == True):
+            warnings.warn("Warining: notice that normalization is only possible if zeros are not removed. To normalize the output use the options as follows: remove_zeros=False, normalize=True ")
         df= df_original.copy()
         color_palete = 'OrRd'
         sns.set(font_scale = 1.5)
         sns.set_style("white")
+        
         if remove_zeros == True:
             for col in df.columns:
                 df[col] = np.where(df[col]==0, np.nan, df[col])
             min_range = 1
             num_labels =4
-            column_labels =[1,2,'>2']
+            column_labels =['1 TS','2 TS','>2 TS']
             ts_values = list(range(min_range,num_labels )) # 1,2,3
+            max_ts_count = 1
         else:
             min_range = 0
             num_labels =4
-            column_labels =[0,1,2,'>2']
-            ts_values = list(range(min_range,num_labels )) # 0,1,2,3
-        max_ts_count = 2
+            column_labels =['0 TS','1 TS','2 TS','>2 TS']
+            max_ts_count = 2
+            ts_values = list(range(min_range, num_labels )) # 0,1,2,3
         num_columns = len(list(df.columns))
-        table_data = np.zeros((len(ts_values),num_columns))    
+        table_data = np.zeros((len(ts_values),num_columns)) 
+        
         for i, col in enumerate(df.columns):
             for indx, ts_size in enumerate (ts_values):
-                if indx<2:
+                if indx<=max_ts_count:
                     table_data[indx,i] = df.loc[df[col] == ts_size, col].count()
                 else:
-                    table_data[indx,i] = df.loc[df[col] > max_ts_count, col].count()
-        df_new = pd.DataFrame(table_data.T, columns = column_labels,index=list(df.columns))
+                    
+                    table_data[indx,i] = df.loc[df[col] >= ts_size, col].count()
+        
+        if (normalize == True) and (remove_zeros == False):
+            number_cells = np.sum(table_data,axis =0)
+            normalized_table = table_data/number_cells
+            df_new = pd.DataFrame(normalized_table.T, columns = column_labels,index=list(df.columns))
+            ylabel_text = ' TS (Int. >= ' +str (minimum_spots_cluster) +' <RNAs>) / Cell' 
+        else:
+            df_new = pd.DataFrame(table_data.T, columns = column_labels,index=list(df.columns))
+            ylabel_text = 'No. Cells with TS (Int. >= ' +str (minimum_spots_cluster) +' <RNAs>)' 
         # Plotting
         b= df_new.plot(kind='bar', stacked=True,figsize=(12,7)) #, cmap=color_palete
+        b.legend(fontsize=12)
         b.set_xlabel('time after treatment')
-        b.set_ylabel('No. Cells with TS (Int. >= ' +str (minimum_spots_cluster) +' <RNAs>)' )
+        b.set_ylabel(ylabel_text )
         b.set_title(plot_title)
-        plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
+        if normalize == False:
+            plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
         name_plot = plot_title +'.pdf'  
         plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
@@ -3581,7 +3597,7 @@ class Plots():
             b.set_xlabel(x_value_label)
             b.set_ylabel(y_value_label)
             #b.set_title('Channel_intensity')
-            b.legend(fontsize=8)
+            b.legend(fontsize=10)
             plt.xticks(rotation=45, ha="right")
             plt.savefig(title_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
             plt.close()
