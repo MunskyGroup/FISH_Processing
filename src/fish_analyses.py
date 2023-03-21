@@ -40,6 +40,7 @@ import datetime
 import getpass
 import pkg_resources
 import platform
+import math
 from cellpose import models
 import os; from os import listdir; from os.path import isfile, join
 import warnings
@@ -2130,19 +2131,15 @@ class PipelineFISH():
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
-        
         self.threshold_for_spot_detection = Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
-
         self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
         self.save_filtered_images= save_filtered_images
         
         
-        
     def run(self):
         # Creating folder to store outputs.
         output_identification_string = Utilities.create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
-
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 10000
         # Prealocating arrays
         list_masks_complete_cells=[]
@@ -2262,11 +2259,16 @@ class PipelineFISH():
                                                             image_name=temp_segmentation_img_name,
                                                             show_plots=self.show_plots,
                                                             df_labels=df_labels)
-
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images,df_subset,df_labels
                 counter+=1
             # appending cell segmentation flag
             list_segmentation_succesful.append(segmentation_succesful)
+        
+        # Saving all original images as a PDF
+        print('CREATING THE PLOT WITH ORIGINAL IMAGES')
+        image_name= 'all_original_images_' + self.name_for_files +'.pdf'
+        Plots.plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
+        
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
@@ -2416,16 +2418,6 @@ class Utilities():
         # Creating the directory
         os.makedirs(analysis_folder_name) 
         return output_identification_string
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     
     def  create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection=None):
@@ -2758,7 +2750,8 @@ class Utilities():
         if not (file_plots_bleed_thru is None):
             pathlib.Path().absolute().joinpath(file_plots_bleed_thru).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_bleed_thru))
 
-        
+        # all original images
+        pathlib.Path().absolute().joinpath('all_original_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'all_original_images_'+ data_folder_path.name +'.pdf'))
         #metadata_path
         pathlib.Path().absolute().joinpath('metadata_'+ data_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'metadata_'+ data_folder_path.name +'.txt'))
         #dataframe_path 
@@ -2855,6 +2848,37 @@ class Plots():
     '''
     def __init__(self):
         pass
+    
+    def plotting_all_original_images(list_images,list_files_names,image_name,show_plots=True):
+        number_images = len(list_images)
+        NUM_COLUMNS = 5
+        NUM_ROWS = np.max ( (2, math.ceil(number_images/ NUM_COLUMNS)))
+        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (15, NUM_ROWS*3))
+        r = 0
+        c = 0
+        counter = 0
+        for i in range(0, number_images):
+            temp_img =  list_images[i] #imread(str( local_data_dir.joinpath(list_files_names[i]) ))
+            image_normalized = np.max (temp_img,axis =0)
+            max_nun_channels = np.min([3, image_normalized.shape[2]])
+            img_title= list_files_names[i]
+            image_int8 = Utilities.convert_to_int8(image_normalized[ :, :, 0:max_nun_channels], rescale=True, min_percentile=1, max_percentile=95)  
+            axes[r,c].imshow( image_int8)
+            axes[r,c].grid(False)
+            axes[r,c].set_xticks([])
+            axes[r,c].set_yticks([])
+            axes[r,c].set_title(img_title[:-4], fontsize=6 )
+            c+=1
+            if (c>0) and (c%NUM_COLUMNS ==0):
+                c=0
+                r+=1
+            counter +=1
+        plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        if show_plots ==True:
+            plt.show()
+        else:
+            plt.close()
+        plt.show()
     
     def plot_images(image,figsize=(8.5, 5),image_name='temp',show_plots=True):
         '''
