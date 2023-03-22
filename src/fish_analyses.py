@@ -353,8 +353,6 @@ class ReadImages():
             path_files = path_files_complete[0:self.number_of_images_to_process]
             list_files_names = list_files_names_complete[0:self.number_of_images_to_process]
             number_files = self.number_of_images_to_process
-
-        
         return list_images, path_files, list_files_names, number_files
 
 
@@ -2503,6 +2501,7 @@ class Utilities():
                 im_zeros[:,:,ch] = RemoveExtrema(image[:,:,ch],min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
             image = im_zeros
         image_new= np.zeros_like(image)
+        
         for i in range(0, image.shape[2]):  # iterate for each channel
             temp = image[:,:,i].copy()
             image_new[:,:,i]= ( (temp-np.min(temp))/(np.max(temp)-np.min(temp)) ) * 255
