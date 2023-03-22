@@ -2838,6 +2838,62 @@ class Utilities():
         # Save to csv
         df_for_model.to_csv(pathlib.Path().absolute().joinpath(destination_folder,plot_title_suffix+'.csv'))
         return df_for_model
+    def extract_images_masks_dataframe( data_folder_path,path_to_masks_dir, mandatory_substring, path_to_config_file,connect_to_NAS, rescale=False,max_percentile=99.5):
+        local_folder_path = pathlib.Path().absolute().joinpath('temp_local__'+data_folder_path.name)
+        # This section downloads results including the dataframe
+        if connect_to_NAS == True:
+            list_local_files = Utilities.read_zipfiles_from_NAS(list_dirs=data_folder_path,path_to_config_file=path_to_config_file,share_name='share', mandatory_substring=mandatory_substring, local_folder_path=local_folder_path)
+            list_local_folders = Utilities.unzip_local_folders(list_local_files,local_folder_path)
+        else: 
+            list_local_folders = data_folder_path # Use this line to process files from a local repository
+        # Extracting the dataframe
+        dataframe_file_path = glob.glob( str(list_local_folders[0].joinpath('dataframe_*')) )[0]
+        dataframe = pd.read_csv(dataframe_file_path)
+        # Extracting Original images
+        local_data_dir, masks_dir, number_images, number_color_channels, list_files_names = Utilities.read_images_from_folder( path_to_config_file, data_folder_path = data_folder_path, path_to_masks_dir = path_to_masks_dir,  download_data_from_NAS = connect_to_NAS, substring_to_detect_in_file_name = '.*_C0.tif')
+        # Reading images from folders
+        list_images, path_files, list_files_names, _ = ReadImages(directory= local_data_dir).read()
+        list_masks, path_files_masks, list_files_names_masks, _ = ReadImages(directory= masks_dir).read()
+        # Converting the images to int8
+        #list_images_int8 = [fa.Utilities.convert_to_int8(img, rescale=rescale, min_percentile=0, max_percentile=max_percentile) for img in list_images  ]
+        return list_images, list_masks, dataframe, number_images, number_color_channels
+    def image_cell_selection(cell_id, list_images, dataframe):
+        # selecting only the dataframe containing the values for the selected field
+        df_selected_cell = dataframe.loc[   (dataframe['cell_id']==cell_id)]
+        selected_image_id = df_selected_cell.image_id.values[0]
+        print('cell located in image_id: ', str(selected_image_id))
+        # Cell location in image
+        scaling_value_radius_cell = 1 # use this parameter to increase or decrease the number of radius to plot from the center of the cell.
+        nuc_loc_x = df_selected_cell.nuc_loc_x.values[0]
+        nuc_loc_y = df_selected_cell.nuc_loc_y.values[0]
+        cyto_loc_x = df_selected_cell.cyto_loc_x.values[0]
+        cyto_loc_y = df_selected_cell.cyto_loc_y.values[0]
+        nuc_radius_px =  int(np.sqrt(df_selected_cell.nuc_area_px.values[0])*scaling_value_radius_cell)
+        cyto_radius_px = int(np.sqrt(df_selected_cell.cyto_area_px.values[0])*scaling_value_radius_cell)
+        # Detecting if a mask for the cytosol was used. If true, the code will plot the complete cell. Else, it will only plot the cell nucleus.
+        if cyto_loc_x:
+            plot_complete_cell = True
+        else:
+            plot_complete_cell = False
+        if plot_complete_cell == True:
+            x_min_value = cyto_loc_x - cyto_radius_px
+            x_max_value = cyto_loc_x + cyto_radius_px
+            y_min_value = cyto_loc_y - cyto_radius_px
+            y_max_value = cyto_loc_y + cyto_radius_px
+        else:
+            x_min_value = nuc_loc_x - nuc_radius_px
+            x_max_value = nuc_loc_x + nuc_radius_px
+            y_min_value = nuc_loc_y - nuc_radius_px
+            y_max_value = nuc_loc_y + nuc_radius_px
+        # coordinates to select in the image 
+        subsection_image_with_selected_cell = list_images[selected_image_id][:,y_min_value: y_max_value,x_min_value:x_max_value,:]
+        # spots
+        df_spots = df_selected_cell[['spot_id', 'z', 'y', 'x','is_nuc', 'is_cluster','cluster_size','spot_type']]
+        df_spots = df_spots.reset_index(drop=True)
+        # Removing columns with -1. 
+        df_spots = df_spots[df_spots.spot_id >= 0]
+        
+        return subsection_image_with_selected_cell, df_spots
 
 
 
