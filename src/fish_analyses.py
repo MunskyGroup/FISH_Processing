@@ -18,6 +18,10 @@ Stringer, Carsen, et al. "Cellpose: a generalist algorithm for cellular segmenta
 # module_name, package_name, ClassName, method_name,
 # ExceptionName, function_name, GLOBAL_CONSTANT_NAME,
 # global_var_name, instance_var_name, function_parameter_name, local_var_name.
+from skimage import img_as_float64, img_as_uint
+from skimage.filters import gaussian
+from joblib import Parallel, delayed
+import multiprocessing
 
 import bigfish.stack as stack
 import bigfish.plot as plot
@@ -107,6 +111,50 @@ class Banner():
             "|                          &    ,%%%%                        | \n"
             "|___________________________/%%^_____________________________| \n" )
         return None
+    
+class GaussianFilter():
+    '''
+    This class is intended to apply high and low bandpass filters to the video. The format of the video must be [Z, Y, X, C]. This class uses **difference_of_gaussians** from skimage.filters.
+
+    Parameters
+
+    video : NumPy array
+        Array of images with dimensions [Z, Y, X, C].
+    sigma : float, optional
+        Sigma value for the gaussian filter. The default is 1.
+    
+
+    '''
+    def __init__(self, video:np.ndarray, sigma:float = 1):
+        # Making the values for the filters are odd numbers
+        self.video = video
+        self.sigma = sigma
+        self.NUMBER_OF_CORES = multiprocessing.cpu_count()
+    def apply_filter(self):
+        '''
+        This method applies high and low bandpass filters to the video.
+
+        Returns
+        
+        video_filtered : np.uint16
+            Filtered video resulting from the bandpass process. Array with format [T, Y, X, C].
+        '''
+        video_bp_filtered_float = np.zeros_like(self.video, dtype = np.float64)
+        video_filtered = np.zeros_like(self.video, dtype = np.uint16)
+        number_time_points, number_channels   = self.video.shape[0], self.video.shape[3]
+        for index_channels in range(0, number_channels):
+            for index_time in range(0, number_time_points):
+                video_bp_filtered_float[index_time, :, :, index_channels] = gaussian(self.video[index_time, :, :, index_channels], self.sigma)
+        # temporal function that converts floats to uint
+        def img_uint(image):
+            temp_vid = img_as_uint(image)
+            return temp_vid
+        # returning the image normalized as uint. Notice that difference_of_gaussians converts the image into float.
+        for index_channels in range(0, number_channels):
+            init_video = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(img_uint)(video_bp_filtered_float[i, :, :, index_channels]) for i in range(0, number_time_points))
+            video_filtered[:,:,:,index_channels] = np.asarray(init_video)
+        
+        return video_filtered
 
 
 class NASConnection():
@@ -1455,6 +1503,11 @@ class DataProcessing():
                 # if NO spots are detected populate  with -1
                 array_complete[:,2] = -1     # spot_id
                 array_complete[:,8:self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME] = -1
+                array_complete[:,13] = 0                             # is_nuc
+                array_complete[:,14] = 0                             # is_cluster
+                array_complete[:,15] = 0                             # cluster_size
+                array_complete[:,16] = -1                           # spot_type
+                array_complete[:,17] =  is_cell_in_border            # is_cell_fragmented
             else:
                 # if spots are detected populate  the reported  array
                 array_complete[:,2] = spot_idx.T     # spot_id
@@ -2398,7 +2451,7 @@ class Utilities():
         if data_folder_path.name[0:5] == 'temp_':
             original_folder_name = data_folder_path.name[5:]
         else:
-            data_folder_path.name
+            original_folder_name= data_folder_path.name
         # Creating the output_identification_string
         if (threshold_for_spot_detection is None):
             output_identification_string = original_folder_name+'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts_auto'
@@ -2857,13 +2910,13 @@ class Utilities():
         # Converting the images to int8
         #list_images_int8 = [fa.Utilities.convert_to_int8(img, rescale=rescale, min_percentile=0, max_percentile=max_percentile) for img in list_images  ]
         return list_images, list_masks, dataframe, number_images, number_color_channels
-    def image_cell_selection(cell_id, list_images, dataframe):
+    def image_cell_selection(cell_id, list_images, dataframe,scaling_value_radius_cell=1):
         # selecting only the dataframe containing the values for the selected field
         df_selected_cell = dataframe.loc[   (dataframe['cell_id']==cell_id)]
         selected_image_id = df_selected_cell.image_id.values[0]
         print('cell located in image_id: ', str(selected_image_id))
         # Cell location in image
-        scaling_value_radius_cell = 1 # use this parameter to increase or decrease the number of radius to plot from the center of the cell.
+        scaling_value_radius_cell = scaling_value_radius_cell # use this parameter to increase or decrease the number of radius to plot from the center of the cell.
         nuc_loc_x = df_selected_cell.nuc_loc_x.values[0]
         nuc_loc_y = df_selected_cell.nuc_loc_y.values[0]
         cyto_loc_x = df_selected_cell.cyto_loc_x.values[0]

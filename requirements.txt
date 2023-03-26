@@ -11,3 +11,4 @@ fpdf>=1.7.2
 seaborn>=0.11.2
 PyYAML>=6.0
 croparray~=0.0.8
+matplotlib-scalebar~=0.8.1
