@@ -706,7 +706,7 @@ class Cellpose():
         self.use_brute_force = use_brute_force
         self.MINIMUM_CELL_AREA = 3000
         self.BATCH_SIZE = 80
-        self.use_omni_pose = True
+        #self.use_omni_pose = True
         
     def calculate_masks(self):
         '''
@@ -723,7 +723,7 @@ class Cellpose():
         #old_stdout = sys.stdout
         #sys.stdout = open(os.devnull, "w")
         
-        model = models.Cellpose(gpu = 1, model_type = self.model_type, omni = self.use_omni_pose) # model_type = 'cyto' or model_type = 'nuclei'
+        model = models.Cellpose(gpu = 1, model_type = self.model_type) # , omni = self.use_omni_pose# model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
