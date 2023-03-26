@@ -2397,6 +2397,8 @@ class ColocalizationDistance():
         '''
         number_cells = self.df['cell_id'].nunique()
         array_spot_type_per_cell = np.zeros((number_cells, 12)).astype(int) # this array will store the spots separated  as types: spot_0_only, spot_1_only, or spot_0_1
+        list_labels_coordinates_colocalized_spots = ['z','y','x','cell_id']
+        list_coordinates_colocalized_spots=[]
         for cell_id in range(number_cells):
             image_id = self.df[self.df["cell_id"] == cell_id]['image_id'].values[0]
             # retrieving the coordinates for spots type 0 and 1 for each cell 
@@ -2416,10 +2418,22 @@ class ColocalizationDistance():
             mask_distance_matrix = (distance_matrix <= self.threshold_distance) 
             # Selecting the right-lower quadrant as a subsection of the distance matrix that compares one spot type versus the other. 
             subsection_mask_distance_matrix = mask_distance_matrix[total_spots0:, 0:total_spots0].copy()
+            # creating a subdataframe containing the coordinates of colocalized spots
+            index_true_distance_matrix = np.transpose((subsection_mask_distance_matrix>0).nonzero())
+            colocalized_spots_in_spots0 = index_true_distance_matrix[:,1]
+            coordinates_colocalized_spots = array_spots_0[ colocalized_spots_in_spots0]
+            column_with_cell_id = np.zeros((coordinates_colocalized_spots.shape[0], 1))+ cell_id # zeros column as 2D array
+            coordinates_colocalized_spots = np.hstack((coordinates_colocalized_spots, column_with_cell_id))   # append column
+            list_coordinates_colocalized_spots.append(coordinates_colocalized_spots)
+            
             if self.show_plots == True:
+                print('Cell_Id: ', str(cell_id))
                 #plt.imshow(mask_distance_matrix, cmap='Greys_r')
                 plt.imshow(subsection_mask_distance_matrix, cmap='Greys_r')
                 plt.title('Subsection bool mask distance matrix') 
+                plt.xlabel('Spots 0')
+                plt.ylabel('Spots 1')   
+                plt.show()        
             # Calculating each type of spots in cell
             inv_subsection_mask_distance_matrix = ~subsection_mask_distance_matrix
             # Calculating each type of spots in cell
@@ -2437,7 +2451,12 @@ class ColocalizationDistance():
             list_labels = ['time','ts_intensity_0','ts_intensity_1','ts_distance','image_id','cell_id','num_0_only','num_1_only','num_0_1','num_0', 'num_1','total']
             # creating a dataframe
             df_spots_classification = pd.DataFrame(data=array_spot_type_per_cell, columns=list_labels)
-        return df_spots_classification  
+        coordinates_colocalized_spots_all_cells = np.concatenate(list_coordinates_colocalized_spots)
+        df_coordinates_colocalized_spots = pd.DataFrame(data=coordinates_colocalized_spots_all_cells, columns=list_labels_coordinates_colocalized_spots)
+        new_dtypes = { 'cell_id':int, 'z':int,'y':int,'x':int}
+        df_coordinates_colocalized_spots = df_coordinates_colocalized_spots.astype(new_dtypes)
+        return df_spots_classification ,df_coordinates_colocalized_spots
+
 
 class Utilities():
     '''
