@@ -1138,7 +1138,7 @@ class BigFISH():
     The description of the parameters is taken from `Big-FISH <https://github.com/fish-quant/big-fish>`_ BSD 3-Clause License. Copyright © 2020, Arthur Imbert. For a complete description of the parameters used check the `Big-FISH documentation <https://big-fish.readthedocs.io/en/stable/>`_ .
     
     image : NumPy array
-        Array of images with dimensions [Z, Y, X, C] .
+        Array of images with dimensions [Z, Y, X, C]  or [Y, X, C].
     FISH_channel : int
         Specific channel with FISH spots that are used for the quantification
     voxel_size_z : int, optional
@@ -1167,6 +1167,8 @@ class BigFISH():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     '''
     def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+        if len(image.shape)<4:
+            image= np.expand_dims(image,axis =0)
         self.image = image
         self.FISH_channel = FISH_channel
         self.voxel_size_z = voxel_size_z
@@ -1753,7 +1755,7 @@ class SpotDetection():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     
     '''
-    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,200]], list_psfs=[[300,100]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         self.image = image
         self.number_color_channels = image.shape[-1]
         self.channels_with_cytosol=channels_with_cytosol
@@ -2415,8 +2417,9 @@ class ColocalizationDistance():
             # Selecting the right-lower quadrant as a subsection of the distance matrix that compares one spot type versus the other. 
             subsection_mask_distance_matrix = mask_distance_matrix[total_spots0:, 0:total_spots0].copy()
             if self.show_plots == True:
-                plt.imshow(mask_distance_matrix, cmap='Greys_r')
-                plt.imshow(subsection_mask_distance_matrix,cmap='Greys_r')
+                #plt.imshow(mask_distance_matrix, cmap='Greys_r')
+                plt.imshow(subsection_mask_distance_matrix, cmap='Greys_r')
+                plt.title('Subsection bool mask distance matrix') 
             # Calculating each type of spots in cell
             inv_subsection_mask_distance_matrix = ~subsection_mask_distance_matrix
             # Calculating each type of spots in cell
