@@ -1344,6 +1344,8 @@ class DataProcessing():
         self.channels_with_nucleus=channels_with_nucleus
         self.number_color_channels=number_color_channels
         self.yx_spot_size_in_px =yx_spot_size_in_px
+        if len(image.shape)<4:
+            image= np.expand_dims(image,axis =0)
         self.image = image
         if isinstance(masks_complete_cells, list) or (masks_complete_cells is None):
             self.masks_complete_cells=masks_complete_cells
@@ -1756,6 +1758,8 @@ class SpotDetection():
     
     '''
     def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=350, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+        if len(image.shape)<4:
+            image= np.expand_dims(image,axis =0)
         self.image = image
         self.number_color_channels = image.shape[-1]
         self.channels_with_cytosol=channels_with_cytosol
