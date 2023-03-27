@@ -1579,7 +1579,6 @@ class DataProcessing():
         else:
             n_masks = len(self.masks_complete_cells)  
             
-            
         # Initializing Dataframe
         if (not ( self.dataframe is None))   and  ( self.reset_cell_counter == False): # IF the dataframe exist and not reset for multi-channel fish is passed
             new_dataframe = self.dataframe
@@ -1831,25 +1830,6 @@ class SpotDetection():
             list_fish_images.append(image_filtered)
         return dataframe_FISH, list_fish_images
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     
 class Metadata():
     '''
@@ -1942,7 +1922,6 @@ class Metadata():
                     fd.write('\n        voxel_size_yx: ' + str(self.list_voxels[k][1]) )
                     fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
                     fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
-                    
                     if not(self.threshold_for_spot_detection in (None, [None]) ):
                         fd.write('\n        threshold_spot_detection: ' + str(self.threshold_for_spot_detection[k]) )
                     else:
@@ -1978,9 +1957,6 @@ class Metadata():
         create_data_file(self.filename)
         write_data_in_file(self.filename)
         return None
-
-
-
 
 
 class ReportPDF():
@@ -2193,7 +2169,6 @@ class PipelineFISH():
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
         self.save_filtered_images= save_filtered_images
         
-        
     def run(self):
         # Creating folder to store outputs.
         output_identification_string = Utilities.create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
@@ -2289,11 +2264,25 @@ class PipelineFISH():
             print('SPOT DETECTION')
             if segmentation_succesful==True:
                 temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
-                dataframe_FISH, list_fish_images = SpotDetection(self.list_images[i],self.channels_with_FISH,self.channels_with_cytosol,self.channels_with_nucleus, cluster_radius=self.CLUSTER_RADIUS,minimum_spots_cluster=self.minimum_spots_cluster,
-                                                                masks_complete_cells=masks_complete_cells, masks_nuclei=masks_nuclei, masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, 
-                                                                dataframe=dataframe,image_counter=counter, list_voxels=self.list_voxels,list_psfs=self.list_psfs, show_plots=self.show_plots,image_name = temp_detection_img_name,
-                                                                save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,
-                                                                use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
+                dataframe_FISH, list_fish_images = SpotDetection(self.list_images[i],
+                                                                self.channels_with_FISH,
+                                                                self.channels_with_cytosol,
+                                                                self.channels_with_nucleus, 
+                                                                cluster_radius=self.CLUSTER_RADIUS,
+                                                                minimum_spots_cluster=self.minimum_spots_cluster,
+                                                                masks_complete_cells=masks_complete_cells,
+                                                                masks_nuclei=masks_nuclei, 
+                                                                masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, 
+                                                                dataframe=dataframe,
+                                                                image_counter=counter, 
+                                                                list_voxels=self.list_voxels,
+                                                                list_psfs=self.list_psfs, 
+                                                                show_plots=self.show_plots,
+                                                                image_name = temp_detection_img_name,
+                                                                save_all_images=self.save_all_images,
+                                                                display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,
+                                                                use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,
+                                                                threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
                 dataframe = dataframe_FISH
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
@@ -2401,8 +2390,9 @@ class ColocalizationDistance():
         '''
         number_cells = self.df['cell_id'].nunique()
         array_spot_type_per_cell = np.zeros((number_cells, 12)).astype(int) # this array will store the spots separated  as types: spot_0_only, spot_1_only, or spot_0_1
-        list_labels_coordinates_colocalized_spots = ['z','y','x','cell_id']
         list_coordinates_colocalized_spots=[]
+        list_coordinates_spots_0_only = []
+        list_coordinates_spots_1_only = []
         for cell_id in range(number_cells):
             image_id = self.df[self.df["cell_id"] == cell_id]['image_id'].values[0]
             # retrieving the coordinates for spots type 0 and 1 for each cell 
@@ -2422,27 +2412,39 @@ class ColocalizationDistance():
             mask_distance_matrix = (distance_matrix <= self.threshold_distance) 
             # Selecting the right-lower quadrant as a subsection of the distance matrix that compares one spot type versus the other. 
             subsection_mask_distance_matrix = mask_distance_matrix[total_spots0:, 0:total_spots0].copy()
+            index_true_distance_matrix = np.transpose((subsection_mask_distance_matrix==1).nonzero())
+            # To calulate 0 and 1 spots only the negation (NOT) of the subsection_mask_distance_matrix is used.
+            negation_subsection_mask_distance_matrix = ~subsection_mask_distance_matrix
             # creating a subdataframe containing the coordinates of colocalized spots
-            index_true_distance_matrix = np.transpose((subsection_mask_distance_matrix>0).nonzero())
-            colocalized_spots_in_spots0 = index_true_distance_matrix[:,1]
+            colocalized_spots_in_spots0 = index_true_distance_matrix[:,1] # selecting the x-axis in [Y,X] matrix
             coordinates_colocalized_spots = array_spots_0[ colocalized_spots_in_spots0]
             column_with_cell_id = np.zeros((coordinates_colocalized_spots.shape[0], 1))+ cell_id # zeros column as 2D array
             coordinates_colocalized_spots = np.hstack((coordinates_colocalized_spots, column_with_cell_id))   # append column
             list_coordinates_colocalized_spots.append(coordinates_colocalized_spots)
-            
+            # creating a subdataframe containing the coordinates of 0_only spots
+            is_spot_only_type_0 = np.all(negation_subsection_mask_distance_matrix, axis =0 ) # Testing if all the columns are ones of inv(subsection_mask_distance_matrix). Representing spot type 0. Notice that np.all(arr, axis=0) does the calculation along the columns.
+            localized_spots_in_spots_0_only = (is_spot_only_type_0 > 0).nonzero() #index_false_distance_matrix[:,1] # selecting the x-axis in [Y,X] matrix for 0_only spots
+            coordinates_spots_0_only = array_spots_0[ localized_spots_in_spots_0_only]
+            column_with_cell_id_0_only = np.zeros((coordinates_spots_0_only.shape[0], 1))+ cell_id # zeros column as 2D array
+            coordinates_spots_0_only = np.hstack((coordinates_spots_0_only, column_with_cell_id_0_only))   # append column
+            list_coordinates_spots_0_only.append(coordinates_spots_0_only)
+            # creating a subdataframe containing the coordinates of 1_only spots
+            is_spot_only_type_1 = np.all(negation_subsection_mask_distance_matrix, axis =1 ) #  Testing if all the rows are ones of inv(subsection_mask_distance_matrix). Representing spot type 1. Notice that np.all(arr, axis=1) does the calculation along the rows.    
+            localized_spots_in_spots_1_only = (is_spot_only_type_1 > 0).nonzero() # index_false_distance_matrix[:,0] # selecting the y-axis in [Y,X] matrix for 1_only spots
+            coordinates_spots_1_only = array_spots_1[ localized_spots_in_spots_1_only]
+            column_with_cell_id_1_only = np.zeros((coordinates_spots_1_only.shape[0], 1))+ cell_id # zeros column as 2D array
+            coordinates_spots_1_only = np.hstack((coordinates_spots_1_only, column_with_cell_id_1_only))   # append column
+            list_coordinates_spots_1_only.append(coordinates_spots_1_only)
+            # plotting the distance matrix. True values indicate that the combination of spots are inside the minimal selected radius.
             if self.show_plots == True:
                 print('Cell_Id: ', str(cell_id))
-                #plt.imshow(mask_distance_matrix, cmap='Greys_r')
                 plt.imshow(subsection_mask_distance_matrix, cmap='Greys_r')
                 plt.title('Subsection bool mask distance matrix') 
                 plt.xlabel('Spots 0')
                 plt.ylabel('Spots 1')   
                 plt.show()        
             # Calculating each type of spots in cell
-            inv_subsection_mask_distance_matrix = ~subsection_mask_distance_matrix
             # Calculating each type of spots in cell
-            is_spot_only_type_0 = np.all(inv_subsection_mask_distance_matrix, axis =0 ) # Testing if all the columns are ones of inv(subsection_mask_distance_matrix). Representing spot type 0. Notice that np.all(arr, axis=0) does the calculation along the columns.
-            is_spot_only_type_1 = np.all(inv_subsection_mask_distance_matrix, axis =1 ) #  Testing if all the rows are ones of inv(subsection_mask_distance_matrix). Representing spot type 1. Notice that np.all(arr, axis=1) does the calculation along the rows.    
             num_type_0_only = np.sum(is_spot_only_type_0) 
             num_type_1_only =np.sum(is_spot_only_type_1) 
             num_type_0_1 = (total_spots0 - num_type_0_only) + (total_spots1 - num_type_1_only) # Number of spots in both channels
@@ -2455,11 +2457,22 @@ class ColocalizationDistance():
             list_labels = ['time','ts_intensity_0','ts_intensity_1','ts_distance','image_id','cell_id','num_0_only','num_1_only','num_0_1','num_0', 'num_1','total']
             # creating a dataframe
             df_spots_classification = pd.DataFrame(data=array_spot_type_per_cell, columns=list_labels)
-        coordinates_colocalized_spots_all_cells = np.concatenate(list_coordinates_colocalized_spots)
-        df_coordinates_colocalized_spots = pd.DataFrame(data=coordinates_colocalized_spots_all_cells, columns=list_labels_coordinates_colocalized_spots)
+        # Creating dataframes for coordinates
+        list_labels_coordinates = ['z','y','x','cell_id']
         new_dtypes = { 'cell_id':int, 'z':int,'y':int,'x':int}
+        # Colocalized spots
+        coordinates_colocalized_spots_all_cells = np.concatenate(list_coordinates_colocalized_spots)
+        df_coordinates_colocalized_spots = pd.DataFrame(data=coordinates_colocalized_spots_all_cells, columns=list_labels_coordinates)
         df_coordinates_colocalized_spots = df_coordinates_colocalized_spots.astype(new_dtypes)
-        return df_spots_classification ,df_coordinates_colocalized_spots
+        # 0-only spots
+        coordinates_0_only_spots_all_cells = np.concatenate(list_coordinates_spots_0_only)
+        df_coordinates_0_only_spots = pd.DataFrame(data=coordinates_0_only_spots_all_cells, columns=list_labels_coordinates)
+        df_coordinates_0_only_spots = df_coordinates_0_only_spots.astype(new_dtypes)
+        # 1-only spots
+        coordinates_1_only_spots_all_cells = np.concatenate(list_coordinates_spots_1_only)
+        df_coordinates_1_only_spots = pd.DataFrame(data=coordinates_1_only_spots_all_cells, columns=list_labels_coordinates)
+        df_coordinates_1_only_spots = df_coordinates_1_only_spots.astype(new_dtypes)
+        return df_spots_classification, df_coordinates_colocalized_spots, df_coordinates_0_only_spots, df_coordinates_1_only_spots
 
 
 class Utilities():
@@ -2713,9 +2726,6 @@ class Utilities():
         df_transcription_sites = Utilities.convert_list_to_df (list_number_cells, list_transcription_sites, list_labels, remove_extreme_values= remove_extreme_values)
         #print('number of cells in each dataset: ', list_number_cells)
         return df_all, df_cyto, df_nuc, df_transcription_sites, list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size 
-
-    
-    
     
     def function_get_df_columns_as_array(df, colum_to_extract, extraction_type='all_values'):
         '''This method is intended to extract a column from a dataframe and convert its values to an array format.
