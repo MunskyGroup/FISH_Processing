@@ -57,6 +57,8 @@ from scipy import signal
 from scipy import ndimage
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
+import matplotlib as mpl
+mpl.rc('image', cmap='viridis')
 plt.style.use('ggplot')  # ggplot  #default
 from joblib import Parallel, delayed
 import multiprocessing
@@ -1194,6 +1196,8 @@ class BigFISH():
         spotDetectionCSV :  np.int64 with shape (nb_spots, 4) or (nb_spots, 3).
             Coordinates of the detected spots. One coordinate per dimension (zyx or yx coordinates) plus the index of the cluster assigned to the spot. If no cluster was assigned, the value is -1.
         '''
+        # Setting the colormap
+        mpl.rc('image', cmap='viridis')
         rna=self.image[:,:,:,self.FISH_channel]
         # Calculating Sigma with  the parameters for the PSF.
         spot_radius_px = detection.get_object_radius_pixel(
@@ -2344,6 +2348,8 @@ class ColocalizationDistance():
     dataframe : Pandas Dataframe 
         Pandas dataframe with the following columns. image_id, cell_id, spot_id, nuc_loc_y, nuc_loc_x, cyto_loc_y, cyto_loc_x, nuc_area_px, cyto_area_px, cell_area_px, z, y, x, is_nuc, is_cluster, cluster_size, spot_type, is_cell_fragmented. 
         The default must contain spots detected in two different color channels.
+    list_spot_type_to_compare : list, optional
+        List indicating the combination of two values in spot_type to compare from the dataframe. The default is list_spot_type_to_compare =[0,1] indicating that spot_types 0 and 1 are compared.
     time_point : int, optional.
         Integer indicating the time point at which the data was collected. This number is displayed as a column in the final dataframe. The default value is 0.
     threshold_intensity_0 : int, optional
@@ -2358,19 +2364,22 @@ class ColocalizationDistance():
         These values indicate the microscope voxel size. These parameters are optional and should be included only if a normalization to the z-axis is needed to calculate distance.
     psf_z, psf_yx: float, optional.
         These values indicate the microscope point spread function value. These parameters are optional and should be included only if a normalization to the z-axis is needed to calculate distance.
-    
+    report_codetected_spots_in_both_channels : bool, optional
+        This option report the number of co-detected spots in channel both channels. Notice that this represents the total number of codetected spots in ch0 and ch1. The default is True.
     '''
-    def __init__(self, df, time_point=0,threshold_intensity_0=0,threshold_intensity_1=0,threshold_distance=2,show_plots = False,voxel_size_z=None,psf_z=None,voxel_size_yx=None,psf_yx=None):
+    def __init__(self, df,list_spot_type_to_compare =[0,1], time_point=0,threshold_intensity_0=0,threshold_intensity_1=0,threshold_distance=2,show_plots = False,voxel_size_z=None,psf_z=None,voxel_size_yx=None,psf_yx=None,report_codetected_spots_in_both_channels=True):
         self.df = df
         self.time_point= time_point
         self.threshold_intensity_0 = threshold_intensity_0
         self.threshold_intensity_1 = threshold_intensity_1
         self.threshold_distance = threshold_distance
         self.show_plots = show_plots
+        self.list_spot_type_to_compare = list_spot_type_to_compare
         if not (voxel_size_z is None):
             self.scale = np.array ([ voxel_size_z/psf_z, voxel_size_yx/psf_yx, voxel_size_yx/psf_yx ])
         else:
             self.scale = 1
+        self.report_codetected_spots_in_both_channels = report_codetected_spots_in_both_channels
     
     def extract_spot_classification_from_df(self):
         '''
@@ -2396,10 +2405,12 @@ class ColocalizationDistance():
         for cell_id in range(number_cells):
             image_id = self.df[self.df["cell_id"] == cell_id]['image_id'].values[0]
             # retrieving the coordinates for spots type 0 and 1 for each cell 
-            array_spots_0 = np.asarray( self.df[['z','y','x']][(self.df["cell_id"] == cell_id) & (self.df["spot_type"] == 0)] ) # coordinates for spot_type_0 with shape [num_spots_type_0, 3]
-            array_spots_1 = np.asarray( self.df[['z','y','x']][(self.df["cell_id"] == cell_id) & (self.df["spot_type"] == 1)] ) # coordinates for spot_type_1 with shape [num_spots_type_1, 3]
+            spot_type_0 = self.list_spot_type_to_compare[0] 
+            spot_type_1 = self.list_spot_type_to_compare[1]
+            array_spots_0 = np.asarray( self.df[['z','y','x']][(self.df["cell_id"] == cell_id) & (self.df["spot_type"] == spot_type_0)] ) # coordinates for spot_type_0 with shape [num_spots_type_0, 3]
+            array_spots_1 = np.asarray( self.df[['z','y','x']][(self.df["cell_id"] == cell_id) & (self.df["spot_type"] == spot_type_1)] ) # coordinates for spot_type_1 with shape [num_spots_type_1, 3]
             total_spots0 = array_spots_0.shape[0]
-            total_spots1 = array_spots_1.shape[0]
+            total_spots1 = array_spots_1.shape[0]            
             # Concatenating arrays from spots 0 and 1
             array_all_spots = np.concatenate((array_spots_0,array_spots_1), axis=0) 
             # Calculating a distance matrix. 
@@ -2418,6 +2429,7 @@ class ColocalizationDistance():
             # creating a subdataframe containing the coordinates of colocalized spots
             colocalized_spots_in_spots0 = index_true_distance_matrix[:,1] # selecting the x-axis in [Y,X] matrix
             coordinates_colocalized_spots = array_spots_0[ colocalized_spots_in_spots0]
+            #coordinates_colocalized_spots = array_spots_0[ index_true_distance_matrix[:,1]]
             column_with_cell_id = np.zeros((coordinates_colocalized_spots.shape[0], 1))+ cell_id # zeros column as 2D array
             coordinates_colocalized_spots = np.hstack((coordinates_colocalized_spots, column_with_cell_id))   # append column
             list_coordinates_colocalized_spots.append(coordinates_colocalized_spots)
@@ -2445,18 +2457,31 @@ class ColocalizationDistance():
                 plt.show()        
             # Calculating each type of spots in cell
             # Calculating each type of spots in cell
-            num_type_0_only = np.sum(is_spot_only_type_0) 
-            num_type_1_only =np.sum(is_spot_only_type_1) 
-            num_type_0_1 = (total_spots0 - num_type_0_only) + (total_spots1 - num_type_1_only) # Number of spots in both channels
-            array_spot_type_per_cell[cell_id,:] = np.array([self.time_point, self.threshold_intensity_0, self.threshold_intensity_1, self.threshold_distance, image_id, cell_id, 
+            num_type_0_only = coordinates_spots_0_only.shape[0]#np.sum(is_spot_only_type_0) 
+            num_type_1_only = coordinates_spots_1_only.shape[0]#np.sum(is_spot_only_type_1) 
+            #num_type_0_1 =  coordinates_colocalized_spots.shape[0] # This will display the number of colocalized spots only in channel 0
+            if self.report_codetected_spots_in_both_channels == True:
+                num_type_0_1 =  (total_spots0 - num_type_0_only) + (total_spots1 - num_type_1_only) # Number of spots in both channels
+                total_spots = num_type_0_only+num_type_1_only+num_type_0_1
+            else:
+                num_type_0_1 =  coordinates_colocalized_spots.shape[0] # This will display the number of colocalized spots only in channel 0
+                total_spots = num_type_0_only+num_type_1_only+num_type_0_1
+            array_spot_type_per_cell[cell_id,:] = np.array([self.time_point, 
+                                                            self.threshold_intensity_0, 
+                                                            self.threshold_intensity_1, 
+                                                            self.threshold_distance, 
+                                                            image_id, 
+                                                            cell_id, 
                                                             num_type_0_only, 
-                                                            num_type_1_only, num_type_0_1, 
+                                                            num_type_1_only, 
+                                                            num_type_0_1, 
                                                             num_type_0_only+num_type_0_1, 
                                                             num_type_1_only+num_type_0_1, 
-                                                            num_type_0_only+num_type_1_only+num_type_0_1]).astype(int)
+                                                            total_spots]).astype(int)
             list_labels = ['time','ts_intensity_0','ts_intensity_1','ts_distance','image_id','cell_id','num_0_only','num_1_only','num_0_1','num_0', 'num_1','total']
             # creating a dataframe
             df_spots_classification = pd.DataFrame(data=array_spot_type_per_cell, columns=list_labels)
+            del coordinates_colocalized_spots,is_spot_only_type_0,is_spot_only_type_1,coordinates_spots_0_only,coordinates_spots_1_only
         # Creating dataframes for coordinates
         list_labels_coordinates = ['z','y','x','cell_id']
         new_dtypes = { 'cell_id':int, 'z':int,'y':int,'x':int}
@@ -2593,7 +2618,6 @@ class Utilities():
                 im_zeros[:,:,ch] = RemoveExtrema(image[:,:,ch],min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
             image = im_zeros
         image_new= np.zeros_like(image)
-        
         for i in range(0, image.shape[2]):  # iterate for each channel
             temp = image[:,:,i].copy()
             image_new[:,:,i]= ( (temp-np.min(temp))/(np.max(temp)-np.min(temp)) ) * 255
@@ -2981,8 +3005,29 @@ class Utilities():
         df_spots = df_spots.reset_index(drop=True)
         # Removing columns with -1. 
         df_spots = df_spots[df_spots.spot_id >= 0]
-        
         return subsection_image_with_selected_cell, df_spots
+    
+    def spot_crops (image,df,number_crops_to_show,spot_size=5):
+        number_crops_to_show = np.min((number_crops_to_show, len(df)/2))
+        def return_crop(image, x, y,spot_size):
+            spot_range = np.linspace(-(spot_size - 1) / 2, (spot_size - 1) / 2, spot_size,dtype=int)
+            crop_image = image[y+spot_range[0]:y+(spot_range[-1]+1), x+spot_range[0]:x+(spot_range[-1]+1)].copy()
+            return crop_image
+        list_crops_0 = []
+        list_crops_1 = []
+        counter =0
+        i =0
+        while counter <= number_crops_to_show:
+            x_co = df['x'].values[i]
+            y_co = df['y'].values[i]
+            if (x_co> (spot_size - 1) / 2) and (y_co>(spot_size - 1) / 2):
+                crop_0 = return_crop(image=image[:,:,0], x=x_co, y=y_co, spot_size=spot_size)
+                crop_1 = return_crop(image=image[:,:,1], x=x_co, y=y_co, spot_size=spot_size)
+                list_crops_0.append(crop_0) 
+                list_crops_1.append(crop_1)
+                counter+=1
+            i+=1
+        return list_crops_0, list_crops_1
 
 
 
