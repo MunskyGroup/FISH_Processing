@@ -60,25 +60,25 @@ cd FISH_Processing
 ```
 * Create an environment from this yml file.
 ```sh
-/opt/ohpc/pub/apps/anaconda3/bin/conda env create -f FISH_env.yml
+conda env create -f FISH_env.yml
 ```
 
 ###  If an error occurs while creating the environment from the yml file, try using the following instructions.
 
 * Create the environment
 ```sh
-/opt/ohpc/pub/apps/anaconda3/bin/conda init 
-/opt/ohpc/pub/apps/anaconda3/bin/conda create -n FISH_processing python=3.8 -y
-/opt/ohpc/pub/apps/anaconda3/bin/conda init bash
+conda init 
+conda create -n FISH_processing python=3.8 -y
+conda init bash
 source ~/.bashrc
 ```
 
 * Then, activate the environment and manually install the dependencies.
 
 ```sh
-/opt/ohpc/pub/apps/anaconda3/bin/conda activate FISH_processing
+conda activate FISH_processing
 cd FISH_Processing
-/opt/ohpc/pub/apps/anaconda3/bin/conda install pytorch cudatoolkit=10.2 -c pytorch -y
+conda install pytorch cudatoolkit=10.2 -c pytorch -y
 pip install -r requirements.txt
 ```
 
