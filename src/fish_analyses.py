@@ -22,7 +22,6 @@ from skimage import img_as_float64, img_as_uint
 from skimage.filters import gaussian
 from joblib import Parallel, delayed
 import multiprocessing
-
 import bigfish.stack as stack
 import bigfish.plot as plot
 import bigfish.detection as detection
@@ -677,7 +676,7 @@ class Cellpose():
     Parameters
     
     image : NumPy array
-        Array of images with dimensions [T, Y, X, C].
+        Array of images with dimensions [Z, Y, X, C].
     num_iterations : int, optional
         Number of iterations for the optimization process. The default is 5.
     channels : List, optional
@@ -2079,6 +2078,30 @@ class ReportPDF():
         return None
 
 
+
+class Detection_Segmentation():
+    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
+        self.image = image
+        self.num_iterations = num_iterations
+        self.minimum_probability = 0.2
+        self.maximum_probability = 0.6
+        self.channels = channels
+        self.diameter = diameter
+        self.model_type = model_type # options are 'cyto' or 'nuclei'
+        self.selection_method = selection_method # options are 'max_area' or 'max_cells'
+        self.NUMBER_OF_CORES = NUMBER_OF_CORES
+        self.default_flow_threshold = 0.4 # default is 0.4
+        self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
+        self.use_brute_force = use_brute_force
+        self.MINIMUM_CELL_AREA = 3000
+        self.cellpose = Cellpose
+    # property of cellpose.
+    # 
+    # Cell segmentation
+    #mask = Cellpose(image).calculate_masks()
+    # Spot Detection
+    
+
 class PipelineFISH():
     '''
     This class is intended to perform complete FISH analyses including cell segmentation and spot detection.
@@ -2819,7 +2842,7 @@ class Utilities():
             masks_dir = None
         return local_data_dir, masks_dir
     
-    def read_images_from_folder( path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS, substring_to_detect_in_file_name = '.*_C0.tif'):
+    def read_images_from_folder( path_to_config_file, data_folder_path,  download_data_from_NAS, path_to_masks_dir=None,substring_to_detect_in_file_name = '.*_C0.tif'):
         # Download data from NAS
         if download_data_from_NAS == True:
             share_name = 'share'
@@ -2954,7 +2977,7 @@ class Utilities():
         # Save to csv
         df_for_model.to_csv(pathlib.Path().absolute().joinpath(destination_folder,plot_title_suffix+'.csv'))
         return df_for_model
-    def extract_images_masks_dataframe( data_folder_path,path_to_masks_dir, mandatory_substring, path_to_config_file,connect_to_NAS, rescale=False,max_percentile=99.5):
+    def extract_images_masks_dataframe( data_folder_path, mandatory_substring, path_to_config_file,connect_to_NAS,path_to_masks_dir=None, rescale=False,max_percentile=99.5):
         local_folder_path = pathlib.Path().absolute().joinpath('temp_local__'+data_folder_path.name)
         # This section downloads results including the dataframe
         if connect_to_NAS == True:
@@ -2969,10 +2992,13 @@ class Utilities():
         local_data_dir, masks_dir, number_images, number_color_channels, list_files_names = Utilities.read_images_from_folder( path_to_config_file, data_folder_path = data_folder_path, path_to_masks_dir = path_to_masks_dir,  download_data_from_NAS = connect_to_NAS, substring_to_detect_in_file_name = '.*_C0.tif')
         # Reading images from folders
         list_images, path_files, list_files_names, _ = ReadImages(directory= local_data_dir).read()
-        list_masks, path_files_masks, list_files_names_masks, _ = ReadImages(directory= masks_dir).read()
+        if not (path_to_masks_dir is None):
+            list_masks, path_files_masks, list_files_names_masks, _ = ReadImages(directory= masks_dir).read()
+        else:
+            list_masks = None
         # Converting the images to int8
-        #list_images_int8 = [fa.Utilities.convert_to_int8(img, rescale=rescale, min_percentile=0, max_percentile=max_percentile) for img in list_images  ]
         return list_images, list_masks, dataframe, number_images, number_color_channels
+    
     def image_cell_selection(cell_id, list_images, dataframe,scaling_value_radius_cell=1.2):
         # selecting only the dataframe containing the values for the selected field
         df_selected_cell = dataframe.loc[   (dataframe['cell_id']==cell_id)]
@@ -3012,24 +3038,24 @@ class Utilities():
         df_spots_subsection_coordinates = df_spots.copy()
         df_spots_subsection_coordinates['y'] = df_spots_subsection_coordinates['y'] - y_min_value
         df_spots_subsection_coordinates['x'] = df_spots_subsection_coordinates['x'] - x_min_value
-        
         return subsection_image_with_selected_cell, df_spots_subsection_coordinates
     
-    def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= 4):
-        # Locating the spots in the dataframe
-        df_spots_subsection_coordinates = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
-        number_spots = len (  df_spots_subsection_coordinates  )
-        min_ts_size = 5
+    def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= None):
+        # Locating spots in the dataframe
+        df_spots = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
+        number_spots = len (  df_spots  )
+        y_spot_locations = df_spots['y'].values
+        x_spot_locations = df_spots['x'].values
         # locating the TS in  the dataframe 
-        df_TS_spot_type_0 = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==1) & (df['cluster_size']>=min_ts_size) ] 
-        number_TS = len (  df_TS_spot_type_0  )
-        # Spot location 
-        y_spot_locations = df_spots_subsection_coordinates['y'].values
-        x_spot_locations = df_spots_subsection_coordinates['x'].values
+        if not (min_ts_size is None):
+            df_TS = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==1) & (df['cluster_size']>=min_ts_size) ] 
+        else:
+            df_TS = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==1)]
+        number_TS = len (  df_TS  )
         # TS location
         if number_TS >0:
-            y_TS_locations = df_TS_spot_type_0['y'].values
-            x_TS_locations = df_TS_spot_type_0['x'].values
+            y_TS_locations = df_TS['y'].values
+            x_TS_locations = df_TS['x'].values
         return y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations,number_spots, number_TS
     
     def spot_crops (image,df,number_crops_to_show,spot_size=5):
@@ -3876,7 +3902,7 @@ class Plots():
                 if number_TS >0:
                     for ts in range (number_TS):
                         circleTS=plt.Circle((x_TS_locations[ts], y_TS_locations[ts]), 6, color = 'b', fill = False,lw=3)
-                        axes[i].add_artist(circleTS)   
+                        axes[i].add_artist(circleTS)  
             if not (microns_per_pixel is None): 
                 scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
                 axes[i].add_artist(scalebar)
@@ -3888,7 +3914,7 @@ class Plots():
         plt.show()
         return None
     
-    def plot_single_cell(image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None):
+    def plot_single_cell(image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,):
         # Extracting spot localization
         y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # maximum and minimum values to plot
@@ -3931,13 +3957,25 @@ class Plots():
             if show_spots == True:
                 # Plotting spots on image
                 for i in range (number_spots):
-                    circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=1)
+                    if i < number_spots-1:
+                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=1)
+                    else:
+                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=1, label='Spots = '+str(number_spots))
                     axes[1].add_artist(circle1)     
                 # Plotting TS
                 if number_TS >0:
                     for i in range (number_TS):
-                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3)
-                        axes[1].add_artist(circleTS)   
+                        if i < number_TS-1:
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3 )
+                        else:
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3, label= 'TS = '+str(number_TS) )
+                        axes[1].add_artist(circleTS )
+                # showing label with number of spots and ts.
+                if show_legend == True: 
+                    legend = axes[1].legend(loc='upper right',facecolor= 'white')
+                    legend.get_frame().set_alpha(None)
+            
+            
         # Saving the image
         if not (image_name is None):                
             if image_name[-4:] != '.png':
@@ -3972,7 +4010,7 @@ class Plots():
         return None
     
     
-    def plot_selected_cell_colors(image, df, spot_type=0, min_ts_size=4, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None):
+    def plot_selected_cell_colors(image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True):
         # Extracting spot location
         y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # Applying Gaussian filter
@@ -4013,15 +4051,25 @@ class Plots():
                 scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
                 axes[1].add_artist(scalebar)
         if show_spots == True:
-            # Plotting spots
-            for i in range (number_spots):
-                circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 1, color = 'k', fill = False,lw=1)
-                axes[1].add_artist(circle1)     
-            if number_TS >0:
-                for i in range (number_TS):
-                    circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'm', fill = False,lw=3)
-                    axes[1].add_artist(circleTS)   
-            # Saving the image
+            # Plotting spots on image
+                for i in range (number_spots):
+                    if i < number_spots-1:
+                        circle=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=1)
+                    else:
+                        circle=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=1, label='Spots = '+str(number_spots))
+                    axes[1].add_artist(circle)     
+                # Plotting TS
+                if number_TS >0:
+                    for i in range (number_TS):
+                        if i < number_TS-1:
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'y', fill = False,lw=3 )
+                        else:
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'y', fill = False,lw=3, label= 'TS = '+str(number_TS) )
+                        axes[1].add_artist(circleTS ) 
+                if show_legend == True: 
+                    legend = axes[1].legend(loc='upper right',facecolor= 'white')
+                    legend.get_frame().set_alpha(None)
+        # Saving the image
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
