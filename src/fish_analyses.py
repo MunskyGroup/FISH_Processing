@@ -2076,32 +2076,8 @@ class ReportPDF():
         pdf_name =  'pdf_report_' + self.directory.name[13:].replace(" ", "") + '.pdf'
         pdf.output(pdf_name, 'F')
         return None
-
-
-
-class Detection_Segmentation():
-    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
-        self.image = image
-        self.num_iterations = num_iterations
-        self.minimum_probability = 0.2
-        self.maximum_probability = 0.6
-        self.channels = channels
-        self.diameter = diameter
-        self.model_type = model_type # options are 'cyto' or 'nuclei'
-        self.selection_method = selection_method # options are 'max_area' or 'max_cells'
-        self.NUMBER_OF_CORES = NUMBER_OF_CORES
-        self.default_flow_threshold = 0.4 # default is 0.4
-        self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
-        self.use_brute_force = use_brute_force
-        self.MINIMUM_CELL_AREA = 3000
-        self.cellpose = Cellpose
-    # property of cellpose.
-    # 
-    # Cell segmentation
-    #mask = Cellpose(image).calculate_masks()
-    # Spot Detection
     
-
+    
 class PipelineFISH():
     '''
     This class is intended to perform complete FISH analyses including cell segmentation and spot detection.
@@ -3003,7 +2979,8 @@ class Utilities():
         # selecting only the dataframe containing the values for the selected field
         df_selected_cell = dataframe.loc[   (dataframe['cell_id']==cell_id)]
         selected_image_id = df_selected_cell.image_id.values[0]
-        print('cell located in image_id: ', str(selected_image_id))
+        y_max_image_shape = list_images[selected_image_id].shape[1]
+        x_max_image_shape = list_images[selected_image_id].shape[2]
         # Cell location in image
         scaling_value_radius_cell = scaling_value_radius_cell # use this parameter to increase or decrease the number of radius to plot from the center of the cell.
         nuc_loc_x = df_selected_cell.nuc_loc_x.values[0]
@@ -3027,6 +3004,12 @@ class Utilities():
             x_max_value = nuc_loc_x + nuc_radius_px
             y_min_value = nuc_loc_y - nuc_radius_px
             y_max_value = nuc_loc_y + nuc_radius_px
+            
+        # making sure that the selection doesnt go outside the limits of the original image
+            x_min_value = np.max((0,x_min_value ))
+            y_min_value = np.max((0,y_min_value ))
+            x_max_value = np.min((x_max_value,x_max_image_shape))
+            y_max_value = np.min((y_max_value,y_max_image_shape))
         # coordinates to select in the image 
         subsection_image_with_selected_cell = list_images[selected_image_id][:,y_min_value: y_max_value,x_min_value:x_max_value,:]
         # spots
@@ -3044,8 +3027,12 @@ class Utilities():
         # Locating spots in the dataframe
         df_spots = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
         number_spots = len (  df_spots  )
-        y_spot_locations = df_spots['y'].values
-        x_spot_locations = df_spots['x'].values
+        if number_spots >0:
+            y_spot_locations = df_spots['y'].values
+            x_spot_locations = df_spots['x'].values
+        else:
+            y_spot_locations = None
+            x_spot_locations = None
         # locating the TS in  the dataframe 
         if not (min_ts_size is None):
             df_TS = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==1) & (df['cluster_size']>=min_ts_size) ] 
@@ -3056,6 +3043,9 @@ class Utilities():
         if number_TS >0:
             y_TS_locations = df_TS['y'].values
             x_TS_locations = df_TS['x'].values
+        else:
+            y_TS_locations = None
+            x_TS_locations = None
         return y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations,number_spots, number_TS
     
     def spot_crops (image,df,number_crops_to_show,spot_size=5):
@@ -3280,35 +3270,6 @@ class Plots():
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
         max_x_val = df.max().max()
-        
-        # Histograms
-        #plt.figure(figsize=(10,5))
-        #sns.set(font_scale = 1)
-        #sns.set_style("white")
-        #p_dist =sns.histplot(data=df,palette=color_palete, element="step", fill=False,bins=20,lw=5) #binwidth=10
-        #p_dist.set_xlabel("Spots")
-        #p_dist.set_ylabel("Histogram")
-        #p_dist.set_title(plot_title)
-        #p_dist.set(xlim=(0, max_x_val))
-        #name_plot = 'Hist_'+plot_title+'.pdf'
-        #plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
-        #plt.show()
-        #pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
-        
-        # Violin plots
-        #plt.figure(figsize=(10,5))
-        #sns.set(font_scale = 1)
-        #sns.set_style("white")
-        #p_dist =sns.violinplot(data=df, scale="count",palette=color_palete,cut=0)
-        #p_dist =sns.stripplot(data=df,color='white',alpha = 0.1,size = 1)
-        #p_dist.set_xlabel("Spot count")
-        #p_dist.set_ylabel("Count")
-        #p_dist.set_title(plot_title)
-        #name_plot = 'Vio_'+plot_title+'.pdf'
-        #plt.xticks(rotation=45, ha="right")
-        #plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
-        #plt.show()
-        #pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
         # Distribution
         plt.figure(figsize=(10,5))
@@ -3818,22 +3779,11 @@ class Plots():
         file_name = 'comparing_ch_int_vs_spots_'+plot_title_suffix+'__'+column_name+'.pdf'
         sns.set(font_scale = 1.5)
         sns.set_style("white")
-        # Counting the number of color channels in the dataframe
-        # pattern = r'^spot_int_ch_\d'
-        # string_list = list_dataframes[0].columns
-        # number_color_channels = 0
-        # for string in string_list:
-        #     match = re.match(pattern, string)
-        #     if match:
-        #         number_color_channels += 1
-        # number_color_channels
-        
         # Detecting the number of columns in the dataset
         my_list = list_dataframes[0].columns
         filtered_list = [elem for elem in my_list if column_name in elem]
         list_column_names = sorted(filtered_list)
         number_color_channels = len(list_column_names)
-        
         # Iterating for each color channel
         y_value_label = 'Spot_Count'
         list_file_names =[]
@@ -3974,8 +3924,6 @@ class Plots():
                 if show_legend == True: 
                     legend = axes[1].legend(loc='upper right',facecolor= 'white')
                     legend.get_frame().set_alpha(None)
-            
-            
         # Saving the image
         if not (image_name is None):                
             if image_name[-4:] != '.png':
@@ -4105,6 +4053,176 @@ class Plots():
                 if X_cell_location>moving_scale:
                     X_cell_location = X_cell_location-moving_scale   
                 axes.text(x=X_cell_location, y=Y_cell_location, s=cell_idx_string, fontsize=12, color='w')
+        # Saving the image
+        if not (image_name is None):                
+            if image_name[-4:] != '.png':
+                image_name = image_name+'.png'
+            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+        plt.show()
+        return None
+    
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,):
+        #Calculating number of subplots 
+        number_cells = np.max(complete_dataframe['cell_id'].values)+1
+        NUM_COLUMNS = 8
+        NUM_ROWS = np.max ( (2, math.ceil(number_cells/ NUM_COLUMNS))) *2 
+        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, NUM_ROWS*4))
+        # Extracting image with cell and specific dataframe
+        for i in range (0, NUM_ROWS):
+            for j in range(0,NUM_COLUMNS):
+                axes[i,j].grid(False)
+                axes[i,j].set_xticks([])
+                axes[i,j].set_yticks([])
+        # Plotting cells only
+        r = 0
+        c = 0
+        for cell_id in range(0, number_cells):
+            image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            # Extracting spot localization
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            # maximum and minimum values to plot
+            temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
+            max_visualization_value = np.percentile(temp_image,99.5)
+            min_visualization_value = np.percentile(temp_image, 0)
+            # Plotting
+            # Visualizing image only
+            axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+            axes[r,c].grid(False)
+            axes[r,c].set_xticks([])
+            axes[r,c].set_yticks([])
+            axes[r,c].set_title('Cell '+str(cell_id) )
+            #Showing scale bar
+            if not (microns_per_pixel is None): 
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                axes[r,c].add_artist(scalebar)
+            # Updating indexes
+            c+=1
+            if (c>0) and (c%NUM_COLUMNS ==0):
+                c=0
+                r+=2
+        # Plotting cells with detected spots
+        r = 1
+        c = 0
+        for cell_id in range(0, number_cells):
+            image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            # Extracting spot localization
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            # maximum and minimum values to plot
+            temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
+            max_visualization_value = np.percentile(temp_image,99.5)
+            min_visualization_value = np.percentile(temp_image, 0)
+            # Plotting
+            axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+            axes[r,c].grid(False)
+            axes[r,c].set_xticks([])
+            axes[r,c].set_yticks([])
+            axes[r,c].set_title('Cell '+str(cell_id) + ' - Detection')
+            # Plotting spots on image
+            if number_spots >0:
+                for i in range (number_spots):
+                    if i < number_spots-1:
+                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5)
+                    else:
+                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5, label='Spots: '+str(number_spots))
+                    axes[r,c].add_artist(circle1)     
+            # Plotting TS
+            if number_TS >0:
+                for i in range (number_TS):
+                    if i < number_TS-1:
+                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3 )
+                    else:
+                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3, label= 'TS: '+str(number_TS) )
+                    axes[r,c].add_artist(circleTS )
+            # showing label with number of spots and ts.
+            if (show_legend == True) and (number_spots>0): 
+                legend = axes[r,c].legend(loc='upper right',facecolor= 'white',prop={'size': 9})
+                legend.get_frame().set_alpha(None)
+            #Showing scale bar
+            if not (microns_per_pixel is None): 
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                axes[r,c].add_artist(scalebar)
+            # Updating indexes
+            c+=1
+            if (c>0) and (c%NUM_COLUMNS ==0):
+                c=0
+                r+=2
+        # Saving the image
+        if not (image_name is None):                
+            if image_name[-4:] != '.png':
+                image_name = image_name+'.png'
+            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+        plt.show()
+        return None
+    
+    
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,):
+        #Calculating number of subplots 
+        number_cells = np.max(complete_dataframe['cell_id'].values)+1
+        NUM_COLUMNS = 8
+        NUM_ROWS = np.max ( (2, math.ceil(number_cells/ NUM_COLUMNS)))
+        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, NUM_ROWS*4))
+        # Extracting image with cell and specific dataframe
+        temp_blank_image = np.zeros((20,20))
+        for i in range (0, NUM_ROWS):
+            for j in range(0,NUM_COLUMNS):
+                axes[i,j].imshow( temp_blank_image,cmap = 'Greys')
+                axes[i,j].grid(False)
+                axes[i,j].set_xticks([])
+                axes[i,j].set_yticks([])
+        r = 0
+        c = 0
+        for cell_id in range(0, number_cells):
+            image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            # Extracting spot localization
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            # maximum and minimum values to plot
+            temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
+            max_visualization_value = np.percentile(temp_image,99.5)
+            min_visualization_value = np.percentile(temp_image, 0)
+            # Plotting
+            # Visualizing image only
+            if show_spots == False:
+                axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+                axes[r,c].grid(False)
+                axes[r,c].set_xticks([])
+                axes[r,c].set_yticks([])
+                axes[r,c].set_title('Cell ID '+str(cell_id) )
+            # Visualization image with detected spots
+            else:
+                axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+                axes[r,c].grid(False)
+                axes[r,c].set_xticks([])
+                axes[r,c].set_yticks([])
+                axes[r,c].set_title('Cell ID '+str(cell_id))
+                # Plotting spots on image
+                if number_spots >0:
+                    for i in range (number_spots):
+                        if i < number_spots-1:
+                            circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5)
+                        else:
+                            circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5, label='Spots: '+str(number_spots))
+                        axes[r,c].add_artist(circle1)     
+                # Plotting TS
+                if number_TS >0:
+                    for i in range (number_TS):
+                        if i < number_TS-1:
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3 )
+                        else:
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3, label= 'TS: '+str(number_TS) )
+                        axes[r,c].add_artist(circleTS )
+                # showing label with number of spots and ts.
+                if (show_legend == True) and (number_spots>0): 
+                    legend = axes[r,c].legend(loc='upper right',facecolor= 'white',prop={'size': 9})
+                    legend.get_frame().set_alpha(None)
+            #Showing scale bar
+            if not (microns_per_pixel is None): 
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                axes[r,c].add_artist(scalebar)
+            # Updating indexes
+            c+=1
+            if (c>0) and (c%NUM_COLUMNS ==0):
+                c=0
+                r+=1
         # Saving the image
         if not (image_name is None):                
             if image_name[-4:] != '.png':
