@@ -3107,7 +3107,7 @@ class Plots():
                 c=0
                 r+=1
             counter +=1
-        plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         if show_plots ==True:
             plt.show()
         else:
@@ -3284,7 +3284,7 @@ class Plots():
         p_dist.set_title(plot_title)
         p_dist.set(xlim=(0, max_x_val))
         name_plot = 'Dist_'+plot_title+'.pdf'
-        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
@@ -3299,7 +3299,7 @@ class Plots():
         p_dist.set_ylim(0,1.05)
         p_dist.set(xlim=(0, max_x_val))
         name_plot = 'ECDF_'+ plot_title+'.pdf'
-        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
@@ -3322,7 +3322,7 @@ class Plots():
         p.set_title(plot_title)
         sns.set(font_scale = 1.5)
         name_plot = 'Bar_'+plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3352,7 +3352,7 @@ class Plots():
         b.set_title(plot_title)
         plt.xticks(rotation=45, ha="right") 
         name_plot = plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3375,7 +3375,7 @@ class Plots():
         plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
         name_plot = plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3432,7 +3432,7 @@ class Plots():
             plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
         name_plot = plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3487,7 +3487,7 @@ class Plots():
             subplot_counter+=1
             f.add_subplot(1,number_subplots,subplot_counter)  
             plot_probability_distribution(number_of_TS_per_cell ,  numBins=20, title='Number TS per cell', xlab='[TS (>= '+str(minimum_spots_cluster)+' rna)]', ylab=ylab, fig=f, color=selected_color)
-        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf' )
+        plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf' )
         plt.show()
         return file_name
 
@@ -3513,12 +3513,12 @@ class Plots():
         name_plot = plot_title 
         if temporal_figure == True:
             file_name = 'temp__'+str(np.random.randint(1000, size=1)[0])+'__'+name_plot+'.png' # gerating a random name for the temporal plot
-            plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
             plt.close(b.fig)
         else:
             file_name = name_plot+'.pdf'
         if (save_plot == True) and (temporal_figure == False):
-            plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+            plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
             plt.show()
         if not (destination_folder is None) and (save_plot == True) and (temporal_figure==False):
             pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
@@ -3588,7 +3588,7 @@ class Plots():
         axes[2].grid(False)
         axes[2].set_xticks([])
         axes[2].set_yticks([])
-        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
 
@@ -3651,7 +3651,7 @@ class Plots():
                 os.remove(fig_temp_name)
                 del x, y
             counter +=1
-        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
 
@@ -3690,7 +3690,7 @@ class Plots():
             axes[i].set_yticks([])
             del x, y 
             os.remove(fig_temp_name)
-        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
     
@@ -3749,7 +3749,7 @@ class Plots():
             #ax[i].set_title('spot_type')
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
-        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
     
@@ -3816,7 +3816,7 @@ class Plots():
             #b.set_title('Channel_intensity')
             b.legend(fontsize=10)
             plt.xticks(rotation=45, ha="right")
-            plt.savefig(title_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(title_plot, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
             plt.close()
             del b, data_frames, df_int_melt, df_all_melt, df_cell_int
         # Saving a plot with all channels
@@ -3827,7 +3827,7 @@ class Plots():
             axes[i].grid(False)
             axes[i].set_xticks([])
             axes[i].set_yticks([])
-        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(file_name).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         
@@ -3863,7 +3863,7 @@ class Plots():
         if not (image_name is None):               
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -3931,7 +3931,7 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -3956,7 +3956,7 @@ class Plots():
         if not (image_name is None):             
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -4024,7 +4024,7 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -4060,7 +4060,7 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -4168,7 +4168,7 @@ class Plots():
             if image_name[-4:] != '.pdf':
                 image_name = image_name+'.pdf' 
             try:
-                plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+                plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
             except:
                 plt.savefig(image_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
         if show_plot == True:
@@ -4258,7 +4258,7 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.pdf':
                 image_name = image_name+'.pdf'
-            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+            plt.savefig(image_name, transparent=False,dpi=480, bbox_inches = 'tight', format='pdf')
         if show_plot == True:
             plt.show()
         else:
