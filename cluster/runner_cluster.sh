@@ -3,7 +3,7 @@
 #SBATCH --nodelist=gpu2    # gpu2 gpu3 gpu4
 #SBATCH --partition=all
 #SBATCH --ntasks=4
-#SBATCH --job-name=test
+#SBATCH --job-name=t2
 
 # module purge
 module load gnu9/9.4.0 

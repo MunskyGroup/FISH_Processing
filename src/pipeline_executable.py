@@ -99,7 +99,7 @@ save_filtered_images = int(sys.argv[20])
 
 ######################################
 ######################################
-minimum_spots_cluster = 6                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
+minimum_spots_cluster = 4                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
 spot_type = 0
 number_of_images_to_process = None       # This section allows the user to select a subset of images to process. Use an integer to indicate the n images to process.
 show_plots=True
