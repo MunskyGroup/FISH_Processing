@@ -2301,13 +2301,13 @@ class PipelineFISH():
                 df_labels = df_subset.loc[ :, ['image_id','cell_id','nuc_loc_y','nuc_loc_x','cyto_loc_y','cyto_loc_x']].drop_duplicates()
                 # Plotting cells 
                 Plots.plotting_masks_and_original_image(image= self.list_images[i], 
-                                                            masks_complete_cells=masks_complete_cells, 
-                                                            masks_nuclei=masks_nuclei, 
-                                                            channels_with_cytosol=self.channels_with_cytosol, 
-                                                            channels_with_nucleus = self.channels_with_nucleus,
-                                                            image_name=temp_segmentation_img_name,
-                                                            show_plots=self.show_plots,
-                                                            df_labels=df_labels)
+                                                        masks_complete_cells=masks_complete_cells, 
+                                                        masks_nuclei=masks_nuclei, 
+                                                        channels_with_cytosol=self.channels_with_cytosol, 
+                                                        channels_with_nucleus = self.channels_with_nucleus,
+                                                        image_name=temp_segmentation_img_name,
+                                                        show_plots=self.show_plots,
+                                                        df_labels=df_labels)
                 del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images,df_subset,df_labels
                 counter+=1
             # appending cell segmentation flag
@@ -2317,7 +2317,17 @@ class PipelineFISH():
         print('CREATING THE PLOT WITH ORIGINAL IMAGES')
         image_name= 'all_original_images_' + self.name_for_files +'.pdf'
         Plots.plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
-        
+        # Saving all cells in a single image file
+        print('CREATING THE PLOT WITH ALL CELL IMAGES') 
+        for i in range (len(self.channels_with_FISH)):
+            Plots.plot_all_cells_and_spots(list_images=self.list_images, 
+                                        complete_dataframe=dataframe, 
+                                        selected_channel=self.channels_with_FISH[i], 
+                                        spot_type=i,
+                                        min_ts_size=6,
+                                        image_name='all_cells_channel_'+ str(self.channels_with_FISH[i])+'_'+ self.name_for_files +'.png',
+                                        microns_per_pixel=None,
+                                        show_legend = True)
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
@@ -2843,8 +2853,8 @@ class Utilities():
         
     def save_output_to_folder (output_identification_string, data_folder_path,
                                 list_files_distributions=None,
-                                file_plots_bleed_thru = None):
-
+                                file_plots_bleed_thru = None,
+                                channels_with_FISH=None):
         #  Moving figures to the final folder 
         if not (list_files_distributions is None) and (type(list_files_distributions) is list):
             file_plots_distributions = list_files_distributions[0]
@@ -2866,6 +2876,10 @@ class Utilities():
 
         # all original images
         pathlib.Path().absolute().joinpath('all_original_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'all_original_images_'+ data_folder_path.name +'.pdf'))
+        # all cell images
+        for i in range (len(channels_with_FISH)):
+            temp_plot_name = 'all_cells_channel_'+ str(channels_with_FISH[i])+'_'+ data_folder_path.name +'.png'
+            pathlib.Path().absolute().joinpath(temp_plot_name).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),temp_plot_name))
         #metadata_path
         pathlib.Path().absolute().joinpath('metadata_'+ data_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'metadata_'+ data_folder_path.name +'.txt'))
         #dataframe_path 
