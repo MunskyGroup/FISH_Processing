@@ -1600,18 +1600,9 @@ class DataProcessing():
                 list_columns_intensity_nuc.append( 'nuc_int_ch_' + str(c) )
                 list_columns_intensity_cyto.append( 'cyto_int_ch_' + str(c) )
                 list_intensity_spots.append( 'spot_int_ch_' + str(c) )
-                #list_intensity_clusters.append( 'cluster_int_ch_' + str(c) )
             # creating the main dataframe with column names
             new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_intensity_spots+list_intensity_clusters )
-            #try:
-            #    print('cell counter', np.max( self.dataframe['cell_id'].values)  )
-            #    print(num_ts,num_nuc,num_cyto) 
-            #    raise
-            #except:
-            #    pass
             counter_total_cells = 0
-            
-            
         # loop for each cell in image
         for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
             # calculating nuclear area and center of mass
@@ -1685,22 +1676,6 @@ class DataProcessing():
                                         cell_counter =counter_total_cells,
                                         nuc_int=nuc_int,
                                         cyto_int=cyto_int)
-            #else:
-            #    print('cell_id', counter_total_cells)
-            #    print('spots')
-            #    print(self.spotDetectionCSV)
-            #    print('cluster')
-            #    print(self.clusterDetectionCSV)
-                
-                
-            # except Exception as e: 
-            #     print(e)
-            #     print('cell_id', counter_total_cells)
-            #     print('spots')
-            #     print(self.spotDetectionCSV)
-            #     print('cluster')
-            #     print(self.clusterDetectionCSV)
-            #     raise
             counter_total_cells +=1
         return new_dataframe
 
@@ -2323,9 +2298,10 @@ class PipelineFISH():
                                         complete_dataframe=dataframe, 
                                         selected_channel=self.channels_with_FISH[k], 
                                         spot_type=k,
-                                        image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.png',
+                                        image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
-                                        show_legend = True)
+                                        show_legend = True,
+                                        show_plot= self.show_plots)
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
@@ -2572,7 +2548,6 @@ class Utilities():
             List of Numpy arrays, where each array has dimensions [Y, X] with values 0 and 1, where 0 represents the background and 1 the cell mask in the image.
         '''
         n_masks = len(list_masks)
-        print('n_masks',n_masks)
         if not ( n_masks is None):
             if n_masks > 1: # detecting if more than 1 mask are detected per cell
                 base_image = np.zeros_like(list_masks[0])
@@ -2758,7 +2733,6 @@ class Utilities():
         df_cyto = Utilities.convert_list_to_df (list_number_cells, list_spots_cytosol, list_labels, remove_extreme_values= remove_extreme_values)
         df_nuc = Utilities.convert_list_to_df (list_number_cells, list_spots_nuc, list_labels, remove_extreme_values= remove_extreme_values)
         df_transcription_sites = Utilities.convert_list_to_df (list_number_cells, list_transcription_sites, list_labels, remove_extreme_values= remove_extreme_values)
-        #print('number of cells in each dataset: ', list_number_cells)
         return df_all, df_cyto, df_nuc, df_transcription_sites, list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size 
     
     def function_get_df_columns_as_array(df, colum_to_extract, extraction_type='all_values'):
@@ -2809,7 +2783,6 @@ class Utilities():
         if not (path_to_masks_dir is None):
             local_folder_path_masks = pathlib.Path().absolute().joinpath( path_to_masks_dir.stem  )
             zip_file_path = local_folder_path_masks.joinpath( path_to_masks_dir.stem +'.zip')
-            print(zip_file_path)
             NASConnection(path_to_config_file,share_name = share_name).download_file(path_to_masks_dir, local_folder_path_masks,timeout=timeout)
             # Unzip downloaded images and update mask directory
             file_to_unzip = zipfile.ZipFile(str(zip_file_path)) # opens zip
@@ -2876,7 +2849,7 @@ class Utilities():
         pathlib.Path().absolute().joinpath('all_original_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'all_original_images_'+ data_folder_path.name +'.pdf'))
         # all cell images
         for i in range (len(channels_with_FISH)):
-            temp_plot_name = 'all_cells_channel_'+ str(channels_with_FISH[i])+'_'+ data_folder_path.name +'.png'
+            temp_plot_name = 'all_cells_channel_'+ str(channels_with_FISH[i])+'_'+ data_folder_path.name +'.pdf'
             pathlib.Path().absolute().joinpath(temp_plot_name).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),temp_plot_name))
         #metadata_path
         pathlib.Path().absolute().joinpath('metadata_'+ data_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'metadata_'+ data_folder_path.name +'.txt'))
@@ -3097,33 +3070,44 @@ class Plots():
     def plotting_all_original_images(list_images,list_files_names,image_name,show_plots=True):
         number_images = len(list_images)
         NUM_COLUMNS = 5
-        NUM_ROWS = np.max ( (2, math.ceil(number_images/ NUM_COLUMNS)))
+        NUM_ROWS = math.ceil(number_images/ NUM_COLUMNS)
+        # Plotting
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (15, NUM_ROWS*3))
+        # Prealocating plots
         for i in range (0, NUM_ROWS):
             for j in range(0,NUM_COLUMNS):
-                axes[i,j].grid(False)
-                axes[i,j].set_xticks([])
-                axes[i,j].set_yticks([])
+                if NUM_ROWS == 1:
+                    axis_index = axes[j]
+                else:
+                    axis_index = axes[i,j]
+                axis_index.grid(False)
+                axis_index.set_xticks([])
+                axis_index.set_yticks([])
+        # Plotting each image
         r = 0
         c = 0
         counter = 0
         for i in range(0, number_images):
+            if NUM_ROWS == 1:
+                axis_index = axes[c]
+            else:
+                axis_index = axes[r,c]
             temp_img =  list_images[i] #imread(str( local_data_dir.joinpath(list_files_names[i]) ))
             image_normalized = np.max (temp_img,axis =0)
             max_nun_channels = np.min([3, image_normalized.shape[2]])
             img_title= list_files_names[i]
             image_int8 = Utilities.convert_to_int8(image_normalized[ :, :, 0:max_nun_channels], rescale=True, min_percentile=1, max_percentile=95)  
-            axes[r,c].imshow( image_int8)
-            axes[r,c].grid(False)
-            axes[r,c].set_xticks([])
-            axes[r,c].set_yticks([])
-            axes[r,c].set_title(img_title[:-4], fontsize=6 )
+            axis_index.imshow( image_int8)
+            axis_index.grid(False)
+            axis_index.set_xticks([])
+            axis_index.set_yticks([])
+            axis_index.set_title(img_title[:-4], fontsize=6 )
             c+=1
             if (c>0) and (c%NUM_COLUMNS ==0):
                 c=0
                 r+=1
             counter +=1
-        plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         if show_plots ==True:
             plt.show()
         else:
@@ -3141,7 +3125,6 @@ class Plots():
         figsize : tuple with figure size, optional.
             Tuple with format (x_size, y_size). the default is (8.5, 5).
         '''
-        print(image.shape)
         number_channels = image.shape[3]
         center_slice = image.shape[0]//2
         _, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=figsize)
@@ -3301,7 +3284,7 @@ class Plots():
         p_dist.set_title(plot_title)
         p_dist.set(xlim=(0, max_x_val))
         name_plot = 'Dist_'+plot_title+'.pdf'
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
@@ -3316,7 +3299,7 @@ class Plots():
         p_dist.set_ylim(0,1.05)
         p_dist.set(xlim=(0, max_x_val))
         name_plot = 'ECDF_'+ plot_title+'.pdf'
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
@@ -3339,7 +3322,7 @@ class Plots():
         p.set_title(plot_title)
         sns.set(font_scale = 1.5)
         name_plot = 'Bar_'+plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3369,7 +3352,7 @@ class Plots():
         b.set_title(plot_title)
         plt.xticks(rotation=45, ha="right") 
         name_plot = plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3392,7 +3375,7 @@ class Plots():
         plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
         name_plot = plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3449,7 +3432,7 @@ class Plots():
             plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
         plt.xticks(rotation=45, ha="right")
         name_plot = plot_title +'.pdf'  
-        plt.savefig(name_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(name_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
         return None
@@ -3504,7 +3487,7 @@ class Plots():
             subplot_counter+=1
             f.add_subplot(1,number_subplots,subplot_counter)  
             plot_probability_distribution(number_of_TS_per_cell ,  numBins=20, title='Number TS per cell', xlab='[TS (>= '+str(minimum_spots_cluster)+' rna)]', ylab=ylab, fig=f, color=selected_color)
-        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf' )
+        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf' )
         plt.show()
         return file_name
 
@@ -3530,12 +3513,12 @@ class Plots():
         name_plot = plot_title 
         if temporal_figure == True:
             file_name = 'temp__'+str(np.random.randint(1000, size=1)[0])+'__'+name_plot+'.png' # gerating a random name for the temporal plot
-            plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
             plt.close(b.fig)
         else:
             file_name = name_plot+'.pdf'
         if (save_plot == True) and (temporal_figure == False):
-            plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+            plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
             plt.show()
         if not (destination_folder is None) and (save_plot == True) and (temporal_figure==False):
             pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
@@ -3605,7 +3588,7 @@ class Plots():
         axes[2].grid(False)
         axes[2].set_xticks([])
         axes[2].set_yticks([])
-        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
 
@@ -3668,7 +3651,7 @@ class Plots():
                 os.remove(fig_temp_name)
                 del x, y
             counter +=1
-        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
 
@@ -3707,7 +3690,7 @@ class Plots():
             axes[i].set_yticks([])
             del x, y 
             os.remove(fig_temp_name)
-        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
     
@@ -3766,7 +3749,7 @@ class Plots():
             #ax[i].set_title('spot_type')
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
-        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
     
@@ -3833,7 +3816,7 @@ class Plots():
             #b.set_title('Channel_intensity')
             b.legend(fontsize=10)
             plt.xticks(rotation=45, ha="right")
-            plt.savefig(title_plot, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(title_plot, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
             plt.close()
             del b, data_frames, df_int_melt, df_all_melt, df_cell_int
         # Saving a plot with all channels
@@ -3844,7 +3827,7 @@ class Plots():
             axes[i].grid(False)
             axes[i].set_xticks([])
             axes[i].set_yticks([])
-        plt.savefig(file_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
+        plt.savefig(file_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(file_name).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         
@@ -3880,7 +3863,7 @@ class Plots():
         if not (image_name is None):               
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -3948,7 +3931,7 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -3973,7 +3956,7 @@ class Plots():
         if not (image_name is None):             
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -4041,7 +4024,7 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
@@ -4077,26 +4060,36 @@ class Plots():
         if not (image_name is None):                
             if image_name[-4:] != '.png':
                 image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
+            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='png')
         plt.show()
         return None
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,):
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 8
-        NUM_ROWS = np.max ( (2, math.ceil(number_cells/ NUM_COLUMNS))) *2 
-        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, NUM_ROWS*4))
+        NUM_ROWS =  math.ceil(number_cells/ NUM_COLUMNS) *2 
+        max_size_y_image_size = 800
+        y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
+        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, y_image_size))
         # Extracting image with cell and specific dataframe
         for i in range (0, NUM_ROWS):
             for j in range(0,NUM_COLUMNS):
-                axes[i,j].grid(False)
-                axes[i,j].set_xticks([])
-                axes[i,j].set_yticks([])
+                if NUM_ROWS == 1:
+                    axis_index = axes[j]
+                else:
+                    axis_index = axes[i,j]
+                axis_index.grid(False)
+                axis_index.set_xticks([])
+                axis_index.set_yticks([])
         # Plotting cells only
         r = 0
         c = 0
         for cell_id in range(0, number_cells):
+            if NUM_ROWS == 1:
+                axis_index = axes[r]
+            else:
+                axis_index = axes[r,c]
             image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
@@ -4106,15 +4099,15 @@ class Plots():
             min_visualization_value = np.percentile(temp_image, 0)
             # Plotting
             # Visualizing image only
-            axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
-            axes[r,c].grid(False)
-            axes[r,c].set_xticks([])
-            axes[r,c].set_yticks([])
-            axes[r,c].set_title('Cell '+str(cell_id) )
+            axis_index.imshow( temp_image,cmap = 'Greys', vmin=min_visualization_value, vmax=max_visualization_value)
+            axis_index.grid(False)
+            axis_index.set_xticks([])
+            axis_index.set_yticks([])
+            axis_index.set_title('Cell '+str(cell_id) )
             #Showing scale bar
             if not (microns_per_pixel is None): 
                 scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
-                axes[r,c].add_artist(scalebar)
+                axis_index.add_artist(scalebar)
             # Updating indexes
             c+=1
             if (c>0) and (c%NUM_COLUMNS ==0):
@@ -4124,6 +4117,10 @@ class Plots():
         r = 1
         c = 0
         for cell_id in range(0, number_cells):
+            if NUM_ROWS == 1:
+                axis_index = axes[r]
+            else:
+                axis_index = axes[r,c]
             image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
@@ -4132,35 +4129,35 @@ class Plots():
             max_visualization_value = np.percentile(temp_image,99.5)
             min_visualization_value = np.percentile(temp_image, 0)
             # Plotting
-            axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
-            axes[r,c].grid(False)
-            axes[r,c].set_xticks([])
-            axes[r,c].set_yticks([])
-            axes[r,c].set_title('Cell '+str(cell_id) + ' - Detection')
+            axis_index.imshow( temp_image,cmap = 'Greys', vmin=min_visualization_value, vmax=max_visualization_value)
+            axis_index.grid(False)
+            axis_index.set_xticks([])
+            axis_index.set_yticks([])
+            axis_index.set_title('Cell '+str(cell_id) + ' - Detection')
             # Plotting spots on image
             if number_spots >0:
                 for i in range (number_spots):
                     if i < number_spots-1:
-                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5)
+                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'r', fill = False,lw=0.3)
                     else:
-                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5, label='Spots: '+str(number_spots))
-                    axes[r,c].add_artist(circle1)     
+                        circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'r', fill = False,lw=0.3, label='Spots: '+str(number_spots))
+                    axis_index.add_artist(circle1)     
             # Plotting TS
             if number_TS >0:
                 for i in range (number_TS):
                     if i < number_TS-1:
-                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3 )
+                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'cyan', fill = False,lw=2.5 )
                     else:
-                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3, label= 'TS: '+str(number_TS) )
-                    axes[r,c].add_artist(circleTS )
+                        circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'cyan', fill = False,lw=2.5, label= 'TS: '+str(number_TS) )
+                    axis_index.add_artist(circleTS )
             # showing label with number of spots and ts.
             if (show_legend == True) and (number_spots>0): 
-                legend = axes[r,c].legend(loc='upper right',facecolor= 'white',prop={'size': 9})
+                legend = axis_index.legend(loc='upper right',facecolor= 'white',prop={'size': 9})
                 legend.get_frame().set_alpha(None)
             #Showing scale bar
             if not (microns_per_pixel is None): 
                 scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
-                axes[r,c].add_artist(scalebar)
+                axis_index.add_artist(scalebar)
             # Updating indexes
             c+=1
             if (c>0) and (c%NUM_COLUMNS ==0):
@@ -4168,28 +4165,44 @@ class Plots():
                 r+=2
         # Saving the image
         if not (image_name is None):                
-            if image_name[-4:] != '.png':
-                image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
-        plt.show()
+            if image_name[-4:] != '.pdf':
+                image_name = image_name+'.pdf' 
+            try:
+                plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+            except:
+                plt.savefig(image_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+        if show_plot == True:
+            plt.show()
+        else:
+            plt.close()
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,):
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
-        NUM_COLUMNS = 8
-        NUM_ROWS = np.max ( (2, math.ceil(number_cells/ NUM_COLUMNS)))
-        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, NUM_ROWS*4))
+        NUM_COLUMNS = 10
+        NUM_ROWS = math.ceil(number_cells/ NUM_COLUMNS)
+        max_size_y_image_size = 400
+        y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
+        _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, y_image_size))
         # Extracting image with cell and specific dataframe
         for i in range (0, NUM_ROWS):
             for j in range(0,NUM_COLUMNS):
-                axes[i,j].grid(False)
-                axes[i,j].set_xticks([])
-                axes[i,j].set_yticks([])
+                if NUM_ROWS == 1:
+                    axis_index = axes[j]
+                else:
+                    axis_index = axes[i,j]
+                axis_index.grid(False)
+                axis_index.set_xticks([])
+                axis_index.set_yticks([])
         r = 0
         c = 0
         for cell_id in range(0, number_cells):
+            if NUM_ROWS == 1:
+                axis_index = axes[r]
+            else:
+                axis_index = axes[r,c]
             image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
@@ -4200,18 +4213,18 @@ class Plots():
             # Plotting
             # Visualizing image only
             if show_spots == False:
-                axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
-                axes[r,c].grid(False)
-                axes[r,c].set_xticks([])
-                axes[r,c].set_yticks([])
-                axes[r,c].set_title('Cell ID '+str(cell_id) )
+                axis_index.imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+                axis_index.grid(False)
+                axis_index.set_xticks([])
+                axis_index.set_yticks([])
+                axis_index.set_title('Cell ID '+str(cell_id) )
             # Visualization image with detected spots
             else:
-                axes[r,c].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
-                axes[r,c].grid(False)
-                axes[r,c].set_xticks([])
-                axes[r,c].set_yticks([])
-                axes[r,c].set_title('Cell ID '+str(cell_id))
+                axis_index.imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+                axis_index.grid(False)
+                axis_index.set_xticks([])
+                axis_index.set_yticks([])
+                axis_index.set_title('Cell ID '+str(cell_id))
                 # Plotting spots on image
                 if number_spots >0:
                     for i in range (number_spots):
@@ -4219,7 +4232,7 @@ class Plots():
                             circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5)
                         else:
                             circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5, label='Spots: '+str(number_spots))
-                        axes[r,c].add_artist(circle1)     
+                        axis_index.add_artist(circle1)     
                 # Plotting TS
                 if number_TS >0:
                     for i in range (number_TS):
@@ -4227,15 +4240,15 @@ class Plots():
                             circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3 )
                         else:
                             circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3, label= 'TS: '+str(number_TS) )
-                        axes[r,c].add_artist(circleTS )
+                        axis_index.add_artist(circleTS )
                 # showing label with number of spots and ts.
                 if (show_legend == True) and (number_spots>0): 
-                    legend = axes[r,c].legend(loc='upper right',facecolor= 'white',prop={'size': 9})
+                    legend = axis_index.legend(loc='upper right',facecolor= 'white',prop={'size': 9})
                     legend.get_frame().set_alpha(None)
             #Showing scale bar
             if not (microns_per_pixel is None): 
                 scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
-                axes[r,c].add_artist(scalebar)
+                axis_index.add_artist(scalebar)
             # Updating indexes
             c+=1
             if (c>0) and (c%NUM_COLUMNS ==0):
@@ -4243,8 +4256,11 @@ class Plots():
                 r+=1
         # Saving the image
         if not (image_name is None):                
-            if image_name[-4:] != '.png':
-                image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='png')
-        plt.show()
+            if image_name[-4:] != '.pdf':
+                image_name = image_name+'.pdf'
+            plt.savefig(image_name, transparent=False,dpi=1000, bbox_inches = 'tight', format='pdf')
+        if show_plot == True:
+            plt.show()
+        else:
+            plt.close()
         return None
