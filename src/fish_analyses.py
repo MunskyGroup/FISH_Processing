@@ -2828,7 +2828,7 @@ class Utilities():
             masks_dir = None
         return local_data_dir, masks_dir
     
-    def read_images_from_folder( path_to_config_file, data_folder_path,  download_data_from_NAS, path_to_masks_dir=None,substring_to_detect_in_file_name = '.*_C0.tif'):
+    def read_images_from_folder( path_to_config_file, data_folder_path, path_to_masks_dir=None, download_data_from_NAS=False, substring_to_detect_in_file_name = '.*_C0.tif'):
         # Download data from NAS
         if download_data_from_NAS == True:
             share_name = 'share'

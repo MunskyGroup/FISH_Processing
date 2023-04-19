@@ -14,3 +14,4 @@ croparray~=0.0.8
 matplotlib-scalebar~=0.8.1
 fastapi~=0.95.1
 pydantic~=1.10.7
+matplotlib-scalebar~=0.8.1
