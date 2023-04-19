@@ -707,7 +707,6 @@ class Cellpose():
         self.use_brute_force = use_brute_force
         self.MINIMUM_CELL_AREA = 3000
         self.BATCH_SIZE = 80
-        #self.use_omni_pose = True
         
     def calculate_masks(self):
         '''
@@ -724,7 +723,7 @@ class Cellpose():
         #old_stdout = sys.stdout
         #sys.stdout = open(os.devnull, "w")
         
-        model = models.Cellpose(gpu = 1, model_type = self.model_type) # , omni = self.use_omni_pose# model_type = 'cyto' or model_type = 'nuclei'
+        model = models.Cellpose(gpu = 1, model_type = self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -2319,13 +2318,12 @@ class PipelineFISH():
         Plots.plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
         # Saving all cells in a single image file
         print('CREATING THE PLOT WITH ALL CELL IMAGES') 
-        for i in range (len(self.channels_with_FISH)):
+        for k in range (len(self.channels_with_FISH)):
             Plots.plot_all_cells_and_spots(list_images=self.list_images, 
                                         complete_dataframe=dataframe, 
-                                        selected_channel=self.channels_with_FISH[i], 
-                                        spot_type=i,
-                                        min_ts_size=6,
-                                        image_name='all_cells_channel_'+ str(self.channels_with_FISH[i])+'_'+ self.name_for_files +'.png',
+                                        selected_channel=self.channels_with_FISH[k], 
+                                        spot_type=k,
+                                        image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.png',
                                         microns_per_pixel=None,
                                         show_legend = True)
         # Creating the dataframe       
@@ -2989,20 +2987,22 @@ class Utilities():
         # Converting the images to int8
         return list_images, list_masks, dataframe, number_images, number_color_channels
     
-    def image_cell_selection(cell_id, list_images, dataframe,scaling_value_radius_cell=1.2):
+    def image_cell_selection(cell_id, list_images, dataframe,scaling_value_radius_cell=1.1):
+        SCALING_RADIUS_NUCLEUS = scaling_value_radius_cell #1.1
+        SCALING_RADIUS_CYTOSOL = scaling_value_radius_cell
         # selecting only the dataframe containing the values for the selected field
         df_selected_cell = dataframe.loc[   (dataframe['cell_id']==cell_id)]
         selected_image_id = df_selected_cell.image_id.values[0]
-        y_max_image_shape = list_images[selected_image_id].shape[1]
-        x_max_image_shape = list_images[selected_image_id].shape[2]
+        y_max_image_shape = list_images[selected_image_id].shape[1]-1
+        x_max_image_shape = list_images[selected_image_id].shape[2]-1
         # Cell location in image
         scaling_value_radius_cell = scaling_value_radius_cell # use this parameter to increase or decrease the number of radius to plot from the center of the cell.
         nuc_loc_x = df_selected_cell.nuc_loc_x.values[0]
         nuc_loc_y = df_selected_cell.nuc_loc_y.values[0]
         cyto_loc_x = df_selected_cell.cyto_loc_x.values[0]
         cyto_loc_y = df_selected_cell.cyto_loc_y.values[0]
-        nuc_radius_px =  int(np.sqrt(df_selected_cell.nuc_area_px.values[0])*scaling_value_radius_cell)
-        cyto_radius_px = int(np.sqrt(df_selected_cell.cyto_area_px.values[0])*scaling_value_radius_cell)
+        nuc_radius_px =  int(np.sqrt(df_selected_cell.nuc_area_px.values[0])*SCALING_RADIUS_NUCLEUS)
+        cyto_radius_px = int(np.sqrt(df_selected_cell.cyto_area_px.values[0])*SCALING_RADIUS_CYTOSOL)
         # Detecting if a mask for the cytosol was used. If true, the code will plot the complete cell. Else, it will only plot the cell nucleus.
         if cyto_loc_x:
             plot_complete_cell = True
@@ -3020,10 +3020,11 @@ class Utilities():
             y_max_value = nuc_loc_y + nuc_radius_px
             
         # making sure that the selection doesnt go outside the limits of the original image
-            x_min_value = np.max((0,x_min_value ))
-            y_min_value = np.max((0,y_min_value ))
-            x_max_value = np.min((x_max_value,x_max_image_shape))
-            y_max_value = np.min((y_max_value,y_max_image_shape))
+        x_min_value = np.max((0,x_min_value ))
+        y_min_value = np.max((0,y_min_value ))
+        x_max_value = np.min((x_max_value,x_max_image_shape))
+        y_max_value = np.min((y_max_value,y_max_image_shape))
+                        
         # coordinates to select in the image 
         subsection_image_with_selected_cell = list_images[selected_image_id][:,y_min_value: y_max_value,x_min_value:x_max_value,:]
         # spots
@@ -3098,6 +3099,11 @@ class Plots():
         NUM_COLUMNS = 5
         NUM_ROWS = np.max ( (2, math.ceil(number_images/ NUM_COLUMNS)))
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (15, NUM_ROWS*3))
+        for i in range (0, NUM_ROWS):
+            for j in range(0,NUM_COLUMNS):
+                axes[i,j].grid(False)
+                axes[i,j].set_xticks([])
+                axes[i,j].set_yticks([])
         r = 0
         c = 0
         counter = 0
@@ -4176,10 +4182,8 @@ class Plots():
         NUM_ROWS = np.max ( (2, math.ceil(number_cells/ NUM_COLUMNS)))
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, NUM_ROWS*4))
         # Extracting image with cell and specific dataframe
-        temp_blank_image = np.zeros((20,20))
         for i in range (0, NUM_ROWS):
             for j in range(0,NUM_COLUMNS):
-                axes[i,j].imshow( temp_blank_image,cmap = 'Greys')
                 axes[i,j].grid(False)
                 axes[i,j].set_xticks([])
                 axes[i,j].set_yticks([])
