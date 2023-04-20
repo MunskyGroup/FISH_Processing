@@ -9,6 +9,10 @@
 module load gnu9/9.4.0 
 module load cudnn/8.3-10.2
 
+echo "Starting my job..."
+# Start timing the process
+start_time=$(date +%s)
+
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>
 
 #list_test=('smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min')
@@ -60,6 +64,13 @@ done
 #     ((counter++))
 #     wait
 #done
+# End timing the process
+
+end_time=$(date +%s)
+total_time=$(( (end_time - start_time) / 60 ))
+
+# Print the time to complete the process
+echo "Total time to complete the job: $total_time minutes"
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
 # run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown

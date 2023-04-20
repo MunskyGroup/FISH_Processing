@@ -59,7 +59,7 @@ done
 conda deactivate
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: source runner.sh /dev/null 2>&1 & disown
+# run as: source runner_local.sh /dev/null 2>&1 & disown
 
 # ########### TO MONITOR PROGRESS #########################
 # To check if the process is still running

@@ -3134,7 +3134,7 @@ class Plots():
             axes[i].imshow( img_2D ,cmap='Spectral') 
             axes[i].set_title('Channel_'+str(i))
             axes[i].grid(color='k', ls = '-.', lw = 0.5)
-        plt.savefig(image_name,bbox_inches='tight')
+        plt.savefig(image_name,bbox_inches='tight',dpi=180)
         if show_plots ==True:
             plt.show()
         else:
@@ -3257,7 +3257,7 @@ class Plots():
                         X_cell_location = df_labels.loc[df_labels['cell_id'] == label, 'nuc_loc_x'].item()
                         axes[2].text(x=X_cell_location, y=Y_cell_location, s=cell_idx_string, fontsize=12, color='black')
         if not(image_name is None):
-            plt.savefig(image_name,bbox_inches='tight')
+            plt.savefig(image_name,bbox_inches='tight',dpi=180)
         if show_plots == 1:
             plt.show()
         else:
@@ -3746,7 +3746,6 @@ class Plots():
                 spot_intensity = spot_intensity [spot_intensity > min_val]
                 spot_intensity = spot_intensity [spot_intensity < max_val]
             ax[i].hist(x=spot_intensity, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
-            #ax[i].set_title('spot_type')
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
         plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
@@ -4168,9 +4167,9 @@ class Plots():
             if image_name[-4:] != '.pdf':
                 image_name = image_name+'.pdf' 
             try:
-                plt.savefig(image_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+                plt.savefig(image_name, transparent=False,dpi=120, bbox_inches = 'tight', format='pdf')
             except:
-                plt.savefig(image_name, transparent=False,dpi=180, bbox_inches = 'tight', format='pdf')
+                plt.savefig(image_name, transparent=False,dpi=90, bbox_inches = 'tight', format='pdf')
         if show_plot == True:
             plt.show()
         else:
