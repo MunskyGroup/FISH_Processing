@@ -2297,6 +2297,7 @@ class PipelineFISH():
             Plots.plot_all_cells_and_spots(list_images=self.list_images, 
                                         complete_dataframe=dataframe, 
                                         selected_channel=self.channels_with_FISH[k], 
+                                        list_masks = list_masks_complete_cells,
                                         spot_type=k,
                                         image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
@@ -2960,7 +2961,7 @@ class Utilities():
         # Converting the images to int8
         return list_images, list_masks, dataframe, number_images, number_color_channels
     
-    def image_cell_selection(cell_id, list_images, dataframe,scaling_value_radius_cell=1.1):
+    def image_cell_selection(cell_id, list_images, dataframe, mask_image=None, scaling_value_radius_cell=1.1):
         SCALING_RADIUS_NUCLEUS = scaling_value_radius_cell #1.1
         SCALING_RADIUS_CYTOSOL = scaling_value_radius_cell
         # selecting only the dataframe containing the values for the selected field
@@ -3000,6 +3001,13 @@ class Utilities():
                         
         # coordinates to select in the image 
         subsection_image_with_selected_cell = list_images[selected_image_id][:,y_min_value: y_max_value,x_min_value:x_max_value,:]
+        # coordinates to select in the mask image
+        if not (mask_image is None):
+            subsection_mask_image = mask_image[y_min_value: y_max_value,x_min_value:x_max_value]
+            subsection_mask_image[0, :] = 0; subsection_mask_image[-1, :] = 0; subsection_mask_image[:, 0] = 0; subsection_mask_image[:, -1] = 0
+        else:
+            subsection_mask_image = None
+        
         # spots
         df_spots = df_selected_cell[['spot_id', 'z', 'y', 'x','is_nuc', 'is_cluster','cluster_size','spot_type']]
         df_spots = df_spots.reset_index(drop=True)
@@ -3009,7 +3017,8 @@ class Utilities():
         df_spots_subsection_coordinates = df_spots.copy()
         df_spots_subsection_coordinates['y'] = df_spots_subsection_coordinates['y'] - y_min_value
         df_spots_subsection_coordinates['x'] = df_spots_subsection_coordinates['x'] - x_min_value
-        return subsection_image_with_selected_cell, df_spots_subsection_coordinates
+        
+        return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_image
     
     def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= None):
         # Locating spots in the dataframe
@@ -3178,6 +3187,8 @@ class Plots():
                 # Remove border for plotting
                 temp_nucleus_mask= erode_mask(tested_mask_nuc)
                 temp_complete_mask = erode_mask(tested_mask_cyto)
+                temp_nucleus_mask[0, :] = 0; temp_nucleus_mask[-1, :] = 0; temp_nucleus_mask[:, 0] = 0; temp_nucleus_mask[:, -1] = 0
+                temp_complete_mask[0, :] = 0; temp_complete_mask[-1, :] = 0; temp_complete_mask[:, 0] = 0; temp_complete_mask[:, -1] = 0
                 temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high',positive_orientation='high')
                 temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high',positive_orientation='high')
                 contours_connected_n = np.vstack((temp_contour_n))
@@ -3214,6 +3225,7 @@ class Plots():
                     tested_mask_cyto = np.where(masks_complete_cells == i, 1, 0).astype(bool)
                     # Remove border for plotting
                     temp_complete_mask = erode_mask(tested_mask_cyto)
+                    temp_complete_mask[0, :] = 0; temp_complete_mask[-1, :] = 0; temp_complete_mask[:, 0] = 0; temp_complete_mask[:, -1] = 0
                     temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high',positive_orientation='high')
                     contours_connected_c = np.vstack((temp_contour_c))
                     contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
@@ -3242,6 +3254,7 @@ class Plots():
                     tested_mask_nuc = np.where(masks_nuclei == i, 1, 0).astype(bool)
                     # Remove border for plotting
                     temp_nucleus_mask= erode_mask(tested_mask_nuc)
+                    temp_nucleus_mask[0, :] = 0; temp_nucleus_mask[-1, :] = 0; temp_nucleus_mask[:, 0] = 0; temp_nucleus_mask[:, -1] = 0
                     temp_contour_n = find_contours(temp_nucleus_mask, 0.1, fully_connected='high',positive_orientation='high')
                     contours_connected_n = np.vstack((temp_contour_n))
                     contour_n = np.vstack((contours_connected_n[-1,:],contours_connected_n))
@@ -4063,13 +4076,22 @@ class Plots():
         plt.show()
         return None
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel,list_masks=None, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 8
         NUM_ROWS =  math.ceil(number_cells/ NUM_COLUMNS) *2 
         max_size_y_image_size = 800
         y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
+        # Read the list of masks
+        if not (list_masks is None):
+            NUM_POINTS_MASK_EDGE_LINE = 100
+            list_cell_masks = []
+            for _, masks_image in enumerate (list_masks):
+                n_masks =np.max(masks_image)
+                for i in range(1, n_masks+1 ):
+                    tested_mask = np.where(masks_image == i, 1, 0).astype(bool)
+                    list_cell_masks.append(tested_mask)
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, y_image_size))
         # Extracting image with cell and specific dataframe
         for i in range (0, NUM_ROWS):
@@ -4089,7 +4111,7 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            image, df, cell_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -4120,7 +4142,7 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            image, df, cell_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images,mask_image=list_cell_masks[cell_id], dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -4133,6 +4155,12 @@ class Plots():
             axis_index.set_xticks([])
             axis_index.set_yticks([])
             axis_index.set_title('Cell '+str(cell_id) + ' - Detection')
+            # plotting the mask if exitsts
+            if not( cell_mask is None):
+                temp_contour = find_contours(cell_mask, 0.5, fully_connected='high',positive_orientation='high')
+                contour = np.asarray(temp_contour[0])
+                downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
+                axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=1.5) 
             # Plotting spots on image
             if number_spots >0:
                 for i in range (number_spots):
@@ -4177,13 +4205,22 @@ class Plots():
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks=None, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 10
         NUM_ROWS = math.ceil(number_cells/ NUM_COLUMNS)
         max_size_y_image_size = 400
         y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
+        # Read the list of masks
+        if not (list_masks is None):
+            NUM_POINTS_MASK_EDGE_LINE = 100
+            list_cell_masks = []
+            for _, masks_image in enumerate (list_masks):
+                n_masks =np.max(masks_image)
+                for i in range(1, n_masks+1 ):
+                    tested_mask = np.where(masks_image == i, 1, 0).astype(bool)
+                    list_cell_masks.append(tested_mask)
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, y_image_size))
         # Extracting image with cell and specific dataframe
         for i in range (0, NUM_ROWS):
@@ -4202,7 +4239,7 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            image, df, cell_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -4219,26 +4256,32 @@ class Plots():
                 axis_index.set_title('Cell ID '+str(cell_id) )
             # Visualization image with detected spots
             else:
-                axis_index.imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value, vmax=max_visualization_value)
+                axis_index.imshow( temp_image,cmap = 'Greys', vmin=min_visualization_value, vmax=max_visualization_value)
                 axis_index.grid(False)
                 axis_index.set_xticks([])
                 axis_index.set_yticks([])
                 axis_index.set_title('Cell ID '+str(cell_id))
+                # plotting the mask if exitsts
+                if not( cell_mask is None):
+                    temp_contour = find_contours(cell_mask, 0.5, fully_connected='high',positive_orientation='high')
+                    contour = np.asarray(temp_contour[0])
+                    downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
+                    axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=1.5) 
                 # Plotting spots on image
                 if number_spots >0:
                     for i in range (number_spots):
                         if i < number_spots-1:
-                            circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5)
+                            circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'r', fill = False,lw=0.5)
                         else:
-                            circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'k', fill = False,lw=0.5, label='Spots: '+str(number_spots))
+                            circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'r', fill = False,lw=0.5, label='Spots: '+str(number_spots))
                         axis_index.add_artist(circle1)     
                 # Plotting TS
                 if number_TS >0:
                     for i in range (number_TS):
                         if i < number_TS-1:
-                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3 )
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'cyan', fill = False,lw=3 )
                         else:
-                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'b', fill = False,lw=3, label= 'TS: '+str(number_TS) )
+                            circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'cyan', fill = False,lw=3, label= 'TS: '+str(number_TS) )
                         axis_index.add_artist(circleTS )
                 # showing label with number of spots and ts.
                 if (show_legend == True) and (number_spots>0): 

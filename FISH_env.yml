@@ -58,6 +58,7 @@ dependencies:
     - llvmlite==0.38.0
     - matplotlib==3.5.1
     - matplotlib-inline==0.1.3
+    - matplotlib-scalebar==0.8.1
     - mrc==0.2.0
     - mypy-extensions==0.4.3
     - natsort==8.1.0
