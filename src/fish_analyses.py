@@ -3740,8 +3740,8 @@ class Plots():
                 number_color_channels += 1
         # Plotting
         _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 5))
-        max_percentile =99
-        min_percentile = 1
+        max_percentile = 98
+        min_percentile = 0.5
         title_plot  = 'spot_intensities'
         file_name = title_plot +'_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
         colors = ['r','g','b','m']
