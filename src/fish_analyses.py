@@ -2297,7 +2297,8 @@ class PipelineFISH():
             Plots.plot_all_cells_and_spots(list_images=self.list_images, 
                                         complete_dataframe=dataframe, 
                                         selected_channel=self.channels_with_FISH[k], 
-                                        list_masks = list_masks_complete_cells,
+                                        list_masks_complete_cells = list_masks_complete_cells,
+                                        list_masks_nuclei = list_masks_nuclei,
                                         spot_type=k,
                                         image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
@@ -2961,7 +2962,7 @@ class Utilities():
         # Converting the images to int8
         return list_images, list_masks, dataframe, number_images, number_color_channels
     
-    def image_cell_selection(cell_id, list_images, dataframe, mask_image=None, scaling_value_radius_cell=1.1):
+    def image_cell_selection(cell_id, list_images, dataframe, mask_cell=None, mask_nuc=None, scaling_value_radius_cell=1.1):
         SCALING_RADIUS_NUCLEUS = scaling_value_radius_cell #1.1
         SCALING_RADIUS_CYTOSOL = scaling_value_radius_cell
         # selecting only the dataframe containing the values for the selected field
@@ -2992,22 +2993,24 @@ class Utilities():
             x_max_value = nuc_loc_x + nuc_radius_px
             y_min_value = nuc_loc_y - nuc_radius_px
             y_max_value = nuc_loc_y + nuc_radius_px
-            
         # making sure that the selection doesnt go outside the limits of the original image
         x_min_value = np.max((0,x_min_value ))
         y_min_value = np.max((0,y_min_value ))
         x_max_value = np.min((x_max_value,x_max_image_shape))
         y_max_value = np.min((y_max_value,y_max_image_shape))
-                        
         # coordinates to select in the image 
         subsection_image_with_selected_cell = list_images[selected_image_id][:,y_min_value: y_max_value,x_min_value:x_max_value,:]
-        # coordinates to select in the mask image
-        if not (mask_image is None):
-            subsection_mask_image = mask_image[y_min_value: y_max_value,x_min_value:x_max_value]
-            subsection_mask_image[0, :] = 0; subsection_mask_image[-1, :] = 0; subsection_mask_image[:, 0] = 0; subsection_mask_image[:, -1] = 0
+        # coordinates to select in the masks image
+        if not (mask_cell is None):
+            subsection_mask_cell = mask_cell[y_min_value: y_max_value,x_min_value:x_max_value]
+            subsection_mask_cell[0, :] = 0; subsection_mask_cell[-1, :] = 0; subsection_mask_cell[:, 0] = 0; subsection_mask_cell[:, -1] = 0
         else:
-            subsection_mask_image = None
-        
+            subsection_mask_cell = None
+        if not (mask_nuc is None):
+            subsection_mask_nuc = mask_nuc[y_min_value: y_max_value,x_min_value:x_max_value]
+            subsection_mask_nuc[0, :] = 0; subsection_mask_nuc[-1, :] = 0; subsection_mask_nuc[:, 0] = 0; subsection_mask_nuc[:, -1] = 0
+        else:
+            subsection_mask_nuc = None 
         # spots
         df_spots = df_selected_cell[['spot_id', 'z', 'y', 'x','is_nuc', 'is_cluster','cluster_size','spot_type']]
         df_spots = df_spots.reset_index(drop=True)
@@ -3017,8 +3020,8 @@ class Utilities():
         df_spots_subsection_coordinates = df_spots.copy()
         df_spots_subsection_coordinates['y'] = df_spots_subsection_coordinates['y'] - y_min_value
         df_spots_subsection_coordinates['x'] = df_spots_subsection_coordinates['x'] - x_min_value
-        
-        return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_image
+        return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_cell, subsection_mask_nuc
+    
     
     def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= None):
         # Locating spots in the dataframe
@@ -4076,22 +4079,35 @@ class Plots():
         plt.show()
         return None
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel,list_masks=None, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= None, list_masks_nuclei=None, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 8
         NUM_ROWS =  math.ceil(number_cells/ NUM_COLUMNS) *2 
         max_size_y_image_size = 800
         y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
+        
         # Read the list of masks
-        if not (list_masks is None):
-            NUM_POINTS_MASK_EDGE_LINE = 100
+        NUM_POINTS_MASK_EDGE_LINE = 100
+        if not (list_masks_complete_cells[0] is None):
             list_cell_masks = []
-            for _, masks_image in enumerate (list_masks):
+            for _, masks_image in enumerate (list_masks_complete_cells):
                 n_masks =np.max(masks_image)
                 for i in range(1, n_masks+1 ):
                     tested_mask = np.where(masks_image == i, 1, 0).astype(bool)
                     list_cell_masks.append(tested_mask)
+        else:
+            list_cell_masks=[None]
+        if not (list_masks_nuclei[0] is None):
+            list_nuc_masks = []
+            for _, masks_image in enumerate (list_masks_nuclei):
+                n_masks =np.max(masks_image)
+                for i in range(1, n_masks+1 ):
+                    tested_mask = np.where(masks_image == i, 1, 0).astype(bool)
+                    list_nuc_masks.append(tested_mask)
+        else:
+            list_nuc_masks=[None]
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, y_image_size))
         # Extracting image with cell and specific dataframe
         for i in range (0, NUM_ROWS):
@@ -4111,7 +4127,7 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df, cell_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -4142,7 +4158,15 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df, cell_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images,mask_image=list_cell_masks[cell_id], dataframe=complete_dataframe)
+            if not(list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+            if (list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
+            if not(list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+            if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
+            
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -4161,6 +4185,11 @@ class Plots():
                 contour = np.asarray(temp_contour[0])
                 downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
                 axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=1.5) 
+            if not (nuc_mask is None):
+                temp_contour = find_contours(nuc_mask, 0.5, fully_connected='high',positive_orientation='high')
+                contour = np.asarray(temp_contour[0])
+                downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
+                axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'b', linewidth=1.5) 
             # Plotting spots on image
             if number_spots >0:
                 for i in range (number_spots):
@@ -4205,7 +4234,7 @@ class Plots():
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks=None, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=None, list_masks_nuclei=None,spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 10
@@ -4213,14 +4242,25 @@ class Plots():
         max_size_y_image_size = 400
         y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
         # Read the list of masks
-        if not (list_masks is None):
-            NUM_POINTS_MASK_EDGE_LINE = 100
+        NUM_POINTS_MASK_EDGE_LINE = 100
+        if not (list_masks_complete_cells[0] is None):
             list_cell_masks = []
-            for _, masks_image in enumerate (list_masks):
+            for _, masks_image in enumerate (list_masks_complete_cells):
                 n_masks =np.max(masks_image)
                 for i in range(1, n_masks+1 ):
                     tested_mask = np.where(masks_image == i, 1, 0).astype(bool)
                     list_cell_masks.append(tested_mask)
+        else:
+            list_cell_masks=[None]
+        if not (list_masks_nuclei[0] is None):
+            list_nuc_masks = []
+            for _, masks_image in enumerate (list_masks_nuclei):
+                n_masks =np.max(masks_image)
+                for i in range(1, n_masks+1 ):
+                    tested_mask = np.where(masks_image == i, 1, 0).astype(bool)
+                    list_nuc_masks.append(tested_mask)
+        else:
+            list_nuc_masks=[None]
         _, axes = plt.subplots(nrows = NUM_ROWS, ncols = NUM_COLUMNS, figsize = (30, y_image_size))
         # Extracting image with cell and specific dataframe
         for i in range (0, NUM_ROWS):
@@ -4239,7 +4279,15 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df, cell_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            if not(list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+            if (list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
+            if not(list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+            if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
+                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
+            
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -4267,6 +4315,11 @@ class Plots():
                     contour = np.asarray(temp_contour[0])
                     downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
                     axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=1.5) 
+                if not (nuc_mask is None):
+                    temp_contour = find_contours(nuc_mask, 0.5, fully_connected='high',positive_orientation='high')
+                    contour = np.asarray(temp_contour[0])
+                    downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
+                    axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'b', linewidth=1.5) 
                 # Plotting spots on image
                 if number_spots >0:
                     for i in range (number_spots):
