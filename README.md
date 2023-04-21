@@ -1,4 +1,4 @@
-# FISH processing repository
+# Automated ​Fluorescence In Situ Hybridization (FISH) processing
 
 Authors: Luis U. Aguilera, Linda Forero-Quintero, Eric Ron, Joshua Cook, Brian Munsky
 

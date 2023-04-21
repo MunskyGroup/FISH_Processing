@@ -591,7 +591,7 @@ class Intensity():
                     intensities_std[sp,i] = np.max((0, np.std(values_disk)))# std intensity in the crop
                 elif self.method == 'gaussian_fit':
                     intensities_mean[sp,i], intensities_std[sp,i] = gaussian_fit(values_disk)# disk_donut(crop_image, self.disk_size
-        return intensities_mean, intensities_std, intensities_snr, intensities_background_mean, intensities_background_std
+        return np.round(intensities_mean,4), np.round(intensities_std,4), np.round(intensities_snr,4), np.round(intensities_background_mean,4), np.round(intensities_background_std,4)
 
 
 class RemoveExtrema():
@@ -4184,7 +4184,7 @@ class Plots():
                 temp_contour = find_contours(cell_mask, 0.5, fully_connected='high',positive_orientation='high')
                 contour = np.asarray(temp_contour[0])
                 downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
-                axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=1.5) 
+                axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'm', linewidth=1.5) 
             if not (nuc_mask is None):
                 temp_contour = find_contours(nuc_mask, 0.5, fully_connected='high',positive_orientation='high')
                 contour = np.asarray(temp_contour[0])
@@ -4314,7 +4314,7 @@ class Plots():
                     temp_contour = find_contours(cell_mask, 0.5, fully_connected='high',positive_orientation='high')
                     contour = np.asarray(temp_contour[0])
                     downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
-                    axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=1.5) 
+                    axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'm', linewidth=1.5) 
                 if not (nuc_mask is None):
                     temp_contour = find_contours(nuc_mask, 0.5, fully_connected='high',positive_orientation='high')
                     contour = np.asarray(temp_contour[0])
