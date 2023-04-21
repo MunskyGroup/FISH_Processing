@@ -4080,7 +4080,7 @@ class Plots():
         return None
     
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= None, list_masks_nuclei=None, spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 8
@@ -4234,7 +4234,7 @@ class Plots():
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=None, list_masks_nuclei=None,spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 10
