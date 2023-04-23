@@ -62,7 +62,6 @@ git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
 * To install pytorch for CPU usage in Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```sh
  conda install pytorch -c pytorch
- 
 ```
 * To include the rest of the requirements use:
 ```sh
