@@ -689,10 +689,8 @@ class Cellpose():
         Option to use the optimization algorithm to maximize the number of cells or maximize the size options are 'max_area' or 'max_cells' or 'max_cells_and_area'. The default is 'max_cells_and_area'.
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
-    use_brute_force : bool, optional
-        Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1, use_brute_force=False):
+    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimum_probability = 0.2
@@ -704,7 +702,6 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
-        self.use_brute_force = use_brute_force
         self.MINIMUM_CELL_AREA = 3000
         self.BATCH_SIZE = 80
         
@@ -815,10 +812,8 @@ class CellSegmentation():
         If true, it shows a plot with the detected masks. The default is True.
     image_name : str or None.
         Name for the image with detected spots. The default is None.
-    use_brute_force : bool, optional
-        Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     '''
-    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,use_brute_force=False,NUMBER_OF_CORES=1, running_in_pipeline = False ):
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='z_slice_segmentation', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,NUMBER_OF_CORES=1, running_in_pipeline = False ):
         self.image = image
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -827,7 +822,6 @@ class CellSegmentation():
         self.show_plots = show_plots
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
-        self.use_brute_force = use_brute_force
         self.number_z_slices = image.shape[0]
         self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,10))
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
@@ -895,13 +889,11 @@ class CellSegmentation():
         # Function to find masks
         def function_to_find_masks (image):                    
             if not (self.channels_with_cytosol is None):
-                masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES,
-                                        use_brute_force=self.use_brute_force).calculate_masks()
+                masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
             else:
                 masks_cyto = np.zeros_like(image[:, :, 0])
             if not (self.channels_with_nucleus is None):
-                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diameter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES,
-                                        use_brute_force=self.use_brute_force).calculate_masks()
+                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diameter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
             else:
                 masks_nuclei= np.zeros_like(image[:, :, 0])
             if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
@@ -973,7 +965,6 @@ class CellSegmentation():
                         masks_cyto = np.zeros_like(masks_cyto)
                         reordered_mask_nuclei = np.zeros_like(masks_nuclei)
                     return masks_cyto, reordered_mask_nuclei
-                                
                 # Matching nuclei and cytosol
                 masks_cyto, masks_nuclei = matching_masks(masks_cyto, masks_nuclei)                
                 #Generating mask for cyto without nuc
@@ -991,7 +982,6 @@ class CellSegmentation():
                     masks_complete_cells = masks_nuclei
                     masks_cytosol_no_nuclei = None
             return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
-        
         # TESTING IF A MASK PATH WAS PASSED TO THE CODE
         # OPTIMIZATION METHODS FOR SEGMENTATION
         if (self.optimization_segmentation_method == 'intensity_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
@@ -1116,7 +1106,6 @@ class CellSegmentation():
         else:
             # no optimization is applied if a 2D image is passed
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(image_normalized)
-        
         if self.running_in_pipeline == False :
             Plots.plotting_masks_and_original_image(image = image_normalized, 
                                                         masks_complete_cells = masks_complete_cells, 
@@ -2079,14 +2068,12 @@ class PipelineFISH():
         Uses Big_FISH log_filter. The default is True.
     threshold_for_spot_detection: scalar, list, or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
-    use_brute_force : bool, optional
-        Flag to perform cell segmentation using all possible combination of parameters. The default is False.
     list_selected_z_slices : list or None
     number_of_images_to_process: int or None, optional
         This number indicates a subset of images to process from a given repository. The default is None, and this indicates that the code will process all images in the given repository.
     '''
 
-    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],use_brute_force=False,NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None):
+    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None):
         list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
@@ -2142,7 +2129,6 @@ class PipelineFISH():
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
         self.threshold_for_spot_detection = Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
-        self.use_brute_force =use_brute_force
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
         self.save_filtered_images= save_filtered_images
         
@@ -2186,7 +2172,7 @@ class PipelineFISH():
             if (self.masks_dir is None):
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],self.channels_with_cytosol, self.channels_with_nucleus, diameter_cytosol = self.diameter_cytosol, 
                                                                                                 diameter_nucleus=self.diameter_nucleus, show_plots=self.show_plots,optimization_segmentation_method = self.optimization_segmentation_method,
-                                                                                                image_name = temp_segmentation_img_name,use_brute_force=self.use_brute_force,NUMBER_OF_CORES=self.NUMBER_OF_CORES, running_in_pipeline = True ).calculate_masks() 
+                                                                                                image_name = temp_segmentation_img_name,NUMBER_OF_CORES=self.NUMBER_OF_CORES, running_in_pipeline = True ).calculate_masks() 
             # test if segmentation was succcesful
                 if (self.channels_with_cytosol  is None):
                     detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
@@ -3285,11 +3271,9 @@ class Plots():
         color_palete = 'CMRmap'
         #color_palete = 'OrRd'
         sns.set_style("white")
-        
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
         max_x_val = df.max().max()
-
         # Distribution
         plt.figure(figsize=(10,5))
         sns.set(font_scale = 1)
@@ -3404,7 +3388,6 @@ class Plots():
         color_palete = 'OrRd'
         sns.set(font_scale = 1.5)
         sns.set_style("white")
-        
         if remove_zeros == True:
             for col in df.columns:
                 df[col] = np.where(df[col]==0, np.nan, df[col])
@@ -3462,7 +3445,6 @@ class Plots():
                 title_string = output_identification_string[0:index_string]
             else :
                 title_string = ''
-        
         # Plotting intensity distributions
         def plot_probability_distribution(data_to_plot, numBins = 10, title='', xlab='', ylab='', color='r', subplots=False, show_grid=True, fig=plt.figure() ):
             n, bins, _ = plt.hist(data_to_plot,bins=numBins,density=False,color=color)
@@ -3510,7 +3492,6 @@ class Plots():
 
 
     def plot_scatter_and_distributions(x,y, plot_title,  x_label_scatter='cell_size', y_lable_scatter = 'number_of_spots_per_cell', destination_folder=None, selected_color = '#1C00FE',save_plot=False,temporal_figure=False):
-
         r, p = stats.pearsonr(x, y)
         df_join_distribution = pd.DataFrame({x_label_scatter:x,y_lable_scatter:y})
         sns.set(font_scale = 1.3)
@@ -3828,7 +3809,6 @@ class Plots():
             b= sns.scatterplot( data = data_frames, x = x_value_label, y = y_value_label, hue = 'variable',  alpha = 0.9, palette = color_palete)
             b.set_xlabel(x_value_label)
             b.set_ylabel(y_value_label)
-            #b.set_title('Channel_intensity')
             b.legend(fontsize=10)
             plt.xticks(rotation=45, ha="right")
             plt.savefig(title_plot, transparent=False,dpi=360, bbox_inches = 'tight', format='png')
@@ -4087,7 +4067,6 @@ class Plots():
         NUM_ROWS =  math.ceil(number_cells/ NUM_COLUMNS) *2 
         max_size_y_image_size = 800
         y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
-        
         # Read the list of masks
         NUM_POINTS_MASK_EDGE_LINE = 100
         if not (list_masks_complete_cells[0] is None):
@@ -4287,7 +4266,6 @@ class Plots():
                 image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
                 image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
-            
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot

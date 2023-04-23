@@ -10,16 +10,30 @@ Authors: Luis U. Aguilera, Linda Forero-Quintero, Eric Ron, Joshua Cook, Brian M
 
 Repository to automatically process ​Fluorescence In Situ Hybridization (FISH) images. This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
 
-## Code overview and architecture
+# Code architecture
 
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/code_architecture.png alt="drawing" width="1200"/>
 
+# Code overview
 
-# Output
+## Cell segmentation
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/cell_segmentation.png alt="drawing" width="1200"/>
 
-The code generates a repository with the quantification results, masks, metadata, and a pdf to easily visualize the complete pipeline output in all the processed images.
+## Spot detection
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/single_cells.png alt="drawing" width="1200"/>
 
-<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/FISH_processing.gif alt="drawing" width="900"/>
+## Spot counting 
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/scatter_cell_size_vs_spots.png alt="drawing" width="1200"/>
+
+## Spot intensity quantification
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/spot_intensities.png alt="drawing" width="1200"/>
+
+## Data management
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/dataframe.png alt="drawing" width="1200"/>
+
+## Data reproducibility report
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/metadata.png alt="drawing" width="1200"/>
+
 
 # Installation 
 
@@ -67,24 +81,6 @@ cd FISH_Processing
 conda env create -f FISH_env.yml
 ```
 
-###  If an error occurs while creating the environment from the yml file, try using the following instructions.
-
-* Create the environment
-```sh
-conda init 
-conda create -n FISH_processing python=3.8 -y
-conda init bash
-source ~/.bashrc
-```
-
-* Then, activate the environment and manually install the dependencies.
-
-```sh
-conda activate FISH_processing
-cd FISH_Processing
-conda install pytorch cudatoolkit=10.2 -c pytorch -y
-pip install -r requirements.txt
-```
 
 # Using this repository
 
@@ -101,7 +97,7 @@ Most codes are accessible as notebook scripts or executables.
 - A [Bash script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/runner.sh) is used to execute a [python script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/pipeline_executable.py) containing the image processing pipeline. Please adapt these scripts to your specific configuration and target folders.
 
 
-## Miscellaneous instructions:
+# Miscellaneous instructions:
 
 To login to the NAS, it is needed to provide a configuration YAML file with the format:
 ```yml
@@ -138,6 +134,7 @@ pip install Pygments
 # Licenses for dependencies
 
 Please check this [file](https://github.com/MunskyGroup/FISH_Processing/blob/main/Licenses_Dependencies.md) with the licenses for BIG-FISH, Cellpose, and PySMB.
+
 
 # Citation
 
