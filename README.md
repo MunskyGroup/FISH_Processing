@@ -34,11 +34,11 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 
 ## Data management
     * A complete data-frame for all processed images and cells is generated. This data-frame contains information about the location and intensity of each detected spot.
-<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/dataframe.png alt="drawing" width="800"/>
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/dataframe.png alt="drawing" width="1200"/>
 
 ## Data reproducibility report
-    * To increase reproducibility a complete report is generated. This report contains information about the list of images processed, the specific parameters used to process the data, the user that processed the data, and the version of the modules and packages used.
-<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/metadata.png alt="drawing" width="1200"/>
+    * To increase reproducibility a metadata report is generated. This report contains information about the list of images processed, the specific parameters used to process the data, the user that processed the data, and the version of the modules and packages used.
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/metadata.png alt="drawing" width="600"/>
 
 
 # Installation 
