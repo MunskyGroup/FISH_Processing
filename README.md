@@ -1,4 +1,4 @@
-# Automated ​Fluorescence In Situ Hybridization (FISH) processing
+# ​Fluorescence In Situ Hybridization (FISH) - automated image processing
 
 Authors: Luis U. Aguilera, Linda Forero-Quintero, Eric Ron, Joshua Cook, Brian Munsky
 
