@@ -29,7 +29,7 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/scatter_cell_size_vs_spots.png alt="drawing" width="1200"/>
 
 ## Spot intensity quantification
-    * The code allows quantifying the intensity of each spot, using the disk and a ring mask method developed by [Morisaki and Stasevich](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9191879/)
+    * The code allows quantifying the intensity of each spot, using the disk and a ring mask method developed by Morisaki and Stasevich, Methods Mol Biol. 2022.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/spot_intensities.png alt="drawing" width="1200"/>
 
 ## Data management
