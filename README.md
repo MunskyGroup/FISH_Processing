@@ -25,7 +25,7 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/single_cells.png alt="drawing" width="1200"/>
 
 ## Spot counting 
-   * The code quantifies the number of spots per cell and allows the visualization of these numbers as a function of cell size.
+    * The code quantifies the number of spots per cell and allows the visualization of these numbers as a function of cell size.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/scatter_cell_size_vs_spots.png alt="drawing" width="1200"/>
 
 ## Spot intensity quantification
