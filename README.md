@@ -93,13 +93,13 @@ Most codes are accessible as notebook scripts or executables.
 
 ### To use the codes locally with an interactive environment, use the [notebooks folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/notebooks)
 
-- To process images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_pipeline.ipynb)
+- To process images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/tree/main/notebooks/FISH_pipeline.ipynb)
 
 - After processing the images use the notebook [FISH pipeline](https://github.com/MunskyGroup/FISH_Processing/blob/main/notebooks/FISH_data_interpretaton.ipynb) to analyze multiple datasets 
 
 ### Executable codes are located in [cluster folder](https://github.com/MunskyGroup/FISH_Processing/tree/main/cluster)
 
-- A [Bash script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/runner.sh) is used to execute a [python script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/pipeline_executable.py) containing the image processing pipeline. Please adapt these scripts to your specific configuration and target folders.
+- A [Bash script](https://github.com/MunskyGroup/FISH_Processing/blob/main/cluster/runner_local.sh) is used to execute a [python script](https://github.com/MunskyGroup/FISH_Processing/blob/main/src/pipeline_executable.py) containing the image processing pipeline. Please adapt these scripts to your specific configuration and target folders.
 
 
 # Miscellaneous instructions:
