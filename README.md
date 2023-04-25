@@ -8,7 +8,7 @@ Authors: Luis U. Aguilera, Linda Forero-Quintero, Eric Ron, Joshua Cook, Brian M
 
 # Description
 
-Repository to automatically process ​Fluorescence In Situ Hybridization (FISH) images. This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
+Repository to automatically process ​Fluorescence In Situ Hybridization (FISH) images. This repository uses [PySMB](https://github.com/miketeo/pysmb) to allow the user to transfer data between Network-attached storage (NAS) and a remote or local server. Then it uses [Cellpose](https://github.com/MouseLand/cellpose) to detect and segment cells on microscope images. [Big-FISH](https://github.com/fish-quant/big-fish) is used to quantify the number of spots per cell. Data is processed using Pandas data frames for single-cell and cell population statistics.
 
 # Code architecture
 
@@ -39,6 +39,20 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 ## Data reproducibility report
     * To increase reproducibility a metadata report is generated. This report contains information about the list of images processed, the specific parameters used to process the data, the user that processed the data, and the version of the modules and packages used.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/metadata.png alt="drawing" width="600"/>
+
+## Data visualization and publication quality images.
+
+    * Plotting a complete field of view
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/complete_image.png alt="drawing" width="400"/>
+
+    * Plotting the detected spots and transcription sites in a selected cell.
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/visualizaton_cell.png alt="drawing" width="600"/>
+
+    * Plotting all color channels for a selected cell.
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/max_projection.png alt="drawing" width="1000"/>
+
+    * Plotting all z-slices for a selected cell.
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/z_slices_visualization.png alt="drawing" width="1200"/>
 
 
 # Installation 
