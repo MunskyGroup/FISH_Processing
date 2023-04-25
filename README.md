@@ -46,7 +46,7 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/complete_image.png alt="drawing" width="400"/>
 
     * Plotting the detected spots and transcription sites in a selected cell.
-<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/visualizaton_cell.png alt="drawing" width="600"/>
+<img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/visualization_cell.png alt="drawing" width="600"/>
 
     * Plotting all color channels for a selected cell.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/max_projection.png alt="drawing" width="1000"/>
