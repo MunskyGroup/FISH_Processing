@@ -93,6 +93,9 @@ else:
 #list_threshold_for_spot_detection = fa.Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
 NUMBER_OF_CORES=int(sys.argv[19])
 save_filtered_images = int(sys.argv[20])
+# Use this option to process data from the terminator scope
+convert_to_standard_format = int(sys.argv[21])
+
 ######################################
 ######################################
 
@@ -110,10 +113,16 @@ show_plots=True
 ######################################
 ######################################
 # Download data from NAS
-local_data_dir, masks_dir, _, _, _ = fa.Utilities.read_images_from_folder( path_to_config_file, 
-                                                                        data_folder_path, 
-                                                                        path_to_masks_dir,  
-                                                                        download_data_from_NAS)
+if convert_to_standard_format == False:
+    local_data_dir, masks_dir, _, _, _, _ = fa.Utilities.read_images_from_folder( path_to_config_file, 
+                                                                            data_folder_path, 
+                                                                            path_to_masks_dir,  
+                                                                            download_data_from_NAS)
+else:
+    local_data_dir,masks_dir, _, _, _= fa.Utilities.convert_to_standard_format(data_folder_path=data_folder_path, 
+                                                                                    path_to_config_file=path_to_config_file, 
+                                                                                    download_data_from_NAS = download_data_from_NAS, 
+                                                                                    path_to_masks_dir = path_to_masks_dir)
 # Running the pipeline
 dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_dir, 
                                                                     channels_with_cytosol, 

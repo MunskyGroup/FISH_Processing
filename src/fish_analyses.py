@@ -725,6 +725,8 @@ class Cellpose():
         def cellpose_max_area( optimization_parameter):
             try:
                 masks= model.eval(self.image, batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+                # removing artifacts.
+                masks=Utilities.remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
             except:
                 masks = 0
             n_masks = np.max(masks)
@@ -741,6 +743,8 @@ class Cellpose():
         def cellpose_max_cells(optimization_parameter):
             try:
                 masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter, diameter =self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+                # removing artifacts.
+                masks=Utilities.remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
             except:
                 masks =0
             return np.max(masks)
@@ -748,6 +752,8 @@ class Cellpose():
         def cellpose_max_cells_and_area( optimization_parameter):
             try:
                 masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter,diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+                # removing artifacts.
+                masks=Utilities.remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
             except:
                 masks = 0
             n_masks = np.max(masks)
@@ -2071,9 +2077,11 @@ class PipelineFISH():
     list_selected_z_slices : list or None
     number_of_images_to_process: int or None, optional
         This number indicates a subset of images to process from a given repository. The default is None, and this indicates that the code will process all images in the given repository.
+    remove_z_slices_borders : bool optional
+        This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None):
+    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='z_slice_segmentation',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True):
         list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
@@ -2083,6 +2091,10 @@ class PipelineFISH():
             list_images = list_images
         # Trimming the z-slices in each image based on 
         list_images_trimmed = []
+        num_z_silces = list_images[0].shape[0] 
+        MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE = 5 # This constant is only used to remove the extre z-slices on the original image.
+        if (remove_z_slices_borders == True) and  (list_selected_z_slices is None) and (num_z_silces>=MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE): 
+            list_selected_z_slices = np.arange(2,num_z_silces-1,1)
         if not (list_selected_z_slices is None):
             number_images = len(list_images)
             for i in range (number_images):
@@ -2289,7 +2301,7 @@ class PipelineFISH():
                                         image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
-                                        show_plot= self.show_plots)
+                                        show_plot= False)
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_segmentation_succesful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
@@ -2338,7 +2350,7 @@ class ColocalizationDistance():
     report_codetected_spots_in_both_channels : bool, optional
         This option report the number of co-detected spots in channel both channels. Notice that this represents the total number of codetected spots in ch0 and ch1. The default is True.
     '''
-    def __init__(self, df,list_spot_type_to_compare =[0,1], time_point=0,threshold_intensity_0=0,threshold_intensity_1=0,threshold_distance=2,show_plots = False,voxel_size_z=None,psf_z=None,voxel_size_yx=None,psf_yx=None,report_codetected_spots_in_both_channels=True):
+    def __init__(self, df,list_spot_type_to_compare =[0,1], time_point=0,threshold_intensity_0=0,threshold_intensity_1=0,threshold_distance=2,show_plots = False,voxel_size_z=None,psf_z=None,voxel_size_yx=None,psf_yx=None,report_codetected_spots_in_both_channels=False):
         self.df = df
         self.time_point= time_point
         self.threshold_intensity_0 = threshold_intensity_0
@@ -2481,6 +2493,67 @@ class Utilities():
     def __init__(self):
         pass
     
+    
+    
+    # Function that reorder the index to make it continuos 
+    def reorder_mask_image(mask_image_tested):
+        number_masks = np.max(mask_image_tested)
+        mask_new =np.zeros_like(mask_image_tested)
+        if number_masks>0:
+            counter = 0
+            for index_mask in range(1,number_masks+1):
+                if index_mask in mask_image_tested:
+                    counter = counter + 1
+                    if counter ==1:
+                        mask_new = np.where(mask_image_tested == index_mask, -counter, mask_image_tested)
+                    else:
+                        mask_new = np.where(mask_new == index_mask, -counter, mask_new)
+            reordered_mask = np.absolute(mask_new)
+        else:
+            reordered_mask = mask_new
+        return reordered_mask  
+    
+    # Function that reorder the index to make it continuos 
+    def remove_artifacts_from_mask_image(mask_image_tested, minimal_mask_area_size = 5000):
+        number_masks = np.max(mask_image_tested)
+        if number_masks>0:
+            for index_mask in range(1,number_masks+1):
+                mask_size = np.sum(mask_image_tested == index_mask)
+                if mask_size <= minimal_mask_area_size:
+                    mask_image_tested = np.where(mask_image_tested == index_mask, mask_image_tested, 0)
+            reordered_mask = Utilities.reorder_mask_image(mask_image_tested)
+        else:
+            reordered_mask=mask_image_tested
+        return reordered_mask  
+    
+    def convert_to_standard_format(data_folder_path,path_to_config_file, number_z_slices=None, number_color_channels=2, download_data_from_NAS = True, path_to_masks_dir = None):
+        # Creating a folder to store all plots
+        destination_folder = pathlib.Path().absolute().joinpath('temp_'+data_folder_path.name+'_standard_format')
+        if pathlib.Path.exists(destination_folder):
+            shutil.rmtree(str(destination_folder))
+            destination_folder.mkdir(parents=True, exist_ok=True)
+        else:
+            destination_folder.mkdir(parents=True, exist_ok=True)
+        # Downloading data
+        _, masks_dir, _, _, list_files_names, list_images = Utilities.read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+        # Re-arranging the image
+        if number_z_slices is None:
+            number_z_slices = list_images[0].shape[0]//2
+            print(number_z_slices)
+        list_images_standard_format= []
+        number_images = len(list_images)
+        y_shape, x_shape = list_images[0].shape[1], list_images[0].shape[2]
+        for i in range(number_images):
+            temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
+            temp_image[:,:,:,0] = list_images[i][::2,:,:] # even indexes
+            temp_image[:,:,:,1] = list_images[i][1::2,:,:] # odd indexes
+            list_images_standard_format.append(temp_image)
+        # Saving images as tif files
+        for i in range(number_images):
+            image_name = list_files_names[i].split(".")[0] +'.tif'
+            tifffile.imsave(str(destination_folder.joinpath(image_name)), list_images_standard_format[i], metadata={'axes': 'ZYXC'})
+        return destination_folder, masks_dir, list_files_names,list_images,list_images_standard_format
+    
     def create_output_folders(data_folder_path,diameter_nucleus,diameter_cytosol,psf_z,psf_yx,threshold_for_spot_detection,channels_with_FISH,list_threshold_for_spot_detection):
         # testing if the images were merged.
         if data_folder_path.name == 'merged':
@@ -2500,7 +2573,6 @@ class Utilities():
                 print ('Folder name: ' , output_identification_string)
         # Output folders
         analysis_folder_name = 'analysis_'+ output_identification_string
-        #output_dir_name =pathlib.Path().absolute().joinpath('analyses', analysis_folder_name)
         # Removing directory if exist
         if os.path.exists(analysis_folder_name):
             shutil.rmtree(analysis_folder_name)
@@ -2804,11 +2876,14 @@ class Utilities():
         else:
             list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()  # list_images, path_files, list_files_names, number_files
         # Printing image properties
-        number_color_channels = list_images[0].shape[-1] 
+        if len(list_images[0].shape) < 4:
+            number_color_channels = None
+        else:
+            number_color_channels = list_images[0].shape[-1] 
         print('Image shape: ', list_images[0].shape , '\n')
         print('Number of images: ',number_images , '\n')
         print('Local directory with images: ', local_data_dir, '\n')
-        return local_data_dir, masks_dir, number_images, number_color_channels, list_files_names
+        return local_data_dir, masks_dir, number_images, number_color_channels, list_files_names,list_images
         
     def save_output_to_folder (output_identification_string, data_folder_path,
                                 list_files_distributions=None,
@@ -3220,7 +3295,7 @@ class Plots():
                     contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
                     if contour_c.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
                         contour_c = signal.resample(contour_c, num = NUM_POINTS_MASK_EDGE_LINE)
-                    axes[2].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                        axes[2].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
                     axes[2].set(title = 'Original + Masks')
                 if not (df_labels is None):
                     cell_ids_labels = df_labels.loc[ :,'cell_id'].values
@@ -3266,7 +3341,7 @@ class Plots():
             plt.close()
 
 
-    def dist_plots(df, plot_title,destination_folder ):
+    def dist_plots(df, plot_title,destination_folder,y_lim_values=None ):
         #color_palete = 'colorblind'
         color_palete = 'CMRmap'
         #color_palete = 'OrRd'
@@ -3320,6 +3395,8 @@ class Plots():
         p.set_xlabel("time_after_treatment")
         p.set_ylabel("Spot Count")
         p.set_title(plot_title)
+        if not (y_lim_values is None):
+            p.set(ylim=y_lim_values)
         sns.set(font_scale = 1.5)
         name_plot = 'Bar_'+plot_title +'.pdf'  
         plt.savefig(name_plot, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
@@ -3672,6 +3749,10 @@ class Plots():
         combinations_channels = list(itertools.combinations(range(number_color_channels), 2))
         _, axes = plt.subplots(nrows = 1, ncols = len(combinations_channels), figsize = (20, 10))
         for i in range(len(combinations_channels)):
+            if len(combinations_channels) == 1:
+                axis_index = axes
+            else:
+                axis_index = axes[i]
             title_plot=title_string
             file_name  = 'bleed_thru_'+title_string+'.pdf'
             if not channels_with_cytosol in (None, 'None', 'none',['None'],['none'],[None]):
@@ -3681,30 +3762,30 @@ class Plots():
                 x = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
                 y = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
             _,fig_temp_name = Plots.plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='intensity_Ch_'+str(combinations_channels[i][0]), y_lable_scatter = 'intensity_Ch_'+str(combinations_channels[i][1]),temporal_figure=True)
-            axes[i].imshow(plt.imread(fig_temp_name))
-            axes[i].grid(False)
-            axes[i].set_xticks([])
-            axes[i].set_yticks([])
+            axis_index.imshow(plt.imread(fig_temp_name))
+            axis_index.grid(False)
+            axis_index.set_xticks([])
+            axis_index.set_yticks([])
             del x, y 
             os.remove(fig_temp_name)
         plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name
     
-    def plot_interpretation_distributions (df_all, df_cyto, df_nuc, destination_folder, plot_title_suffix=''):
+    def plot_interpretation_distributions (df_all, df_cyto, df_nuc, destination_folder, plot_title_suffix='',y_lim_values_all_spots=None, y_lim_values_cyto=None,y_lim_values_nuc=None):
         if (df_cyto.dropna().any().any() == True) and (df_nuc.dropna().any().any() == True):  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
             plot_title_complete = 'all_spots__'+plot_title_suffix
-            Plots.dist_plots(df_all, plot_title_complete, destination_folder)
+            Plots.dist_plots(df_all, plot_title_complete, destination_folder,y_lim_values_all_spots)
         
         if df_cyto.dropna().any().any() == True:  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
             # Plotting for all Cytosol only
             plot_title_cyto = 'cyto__'+plot_title_suffix
-            Plots.dist_plots(df_cyto, plot_title_cyto, destination_folder)
+            Plots.dist_plots(df_cyto, plot_title_cyto, destination_folder,y_lim_values_cyto)
         
         if df_nuc.dropna().any().any() == True:  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
             # Plotting for all nucleus
             plot_title_nuc = 'nuc__'+plot_title_suffix
-            Plots.dist_plots(df_nuc, plot_title_nuc, destination_folder)
+            Plots.dist_plots(df_nuc, plot_title_nuc, destination_folder,y_lim_values_nuc)
 
     def plot_spot_intensity_distributions(dataframe,output_identification_string=None,remove_outliers=True, spot_type=0):
         # Creating a name for the plot

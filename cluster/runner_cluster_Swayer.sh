@@ -15,8 +15,19 @@ start_time=$(date +%s)
 
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>
 
-#list_test=('smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min')
-list_test=('smFISH_images/Eric_smFISH_images/20230306/DUSP1_0nM_Dex_0min_012623')
+list_Swayer=(\
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_0min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_10min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_20min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_30min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_40min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_50min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_60min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_75min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_90min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_120min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_150min_031123' \
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_180min_031123' )
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -37,7 +48,7 @@ psf_z=350                            # Theoretical size of the PSF emitted by a 
 psf_yx=160                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx=160                    # Microscope conversion px to nanometers in the xy axis.
-channels_with_nucleus='[2]'                  # Channel to pass to python for nucleus segmentation
+channels_with_nucleus='None'                  # Channel to pass to python for nucleus segmentation
 channels_with_cytosol='[1]'                 # Channel to pass to python for cytosol segmentation
 channels_with_FISH='[0]'                   # Channel to pass to python for spot detection
 send_data_to_NAS=0                   # If data sent back to NAS use 1.
@@ -47,25 +58,15 @@ save_all_images=0                    # If true, it shows a all planes for the FI
 threshold_for_spot_detection='None'  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
 save_filtered_images=0               #         
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
-convert_to_standard_format=0
+convert_to_standard_format=1
 
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_test[*]}; do
+for folder in ${list_Swayer[*]}; do
      output_names=""output__"${folder////__}"".txt"
      ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $convert_to_standard_format >> "$output_names" &
      wait
 done
 
-# ########### PYTHON PROGRAM USING DIR FOR MASKS #############################
-#counter=0
-#for folder in ${list_test[*]}; do
-#     output_names=""output__"${folder////__}"".txt"
-#     path_to_masks_dir="${mask_list[counter]}"
-#     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diamter_nucleus $diameter_cytosol $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images >> "$output_names" &
-#     ((counter++))
-#     wait
-#done
-# End timing the process
 
 end_time=$(date +%s)
 total_time=$(( (end_time - start_time) / 60 ))
@@ -74,7 +75,7 @@ total_time=$(( (end_time - start_time) / 60 ))
 echo "Total time to complete the job: $total_time minutes"
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown
+# run as: sbatch runner_cluster_Swayer.sh /dev/null 2>&1 & disown
 
 exit 0
 
