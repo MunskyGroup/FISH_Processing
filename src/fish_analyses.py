@@ -690,11 +690,11 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 6, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
-        self.minimum_probability = 0.2
-        self.maximum_probability = 0.6
+        self.minimum_probability = 0.1
+        self.maximum_probability = 0.8
         self.channels = channels
         self.diameter = diameter
         self.model_type = model_type # options are 'cyto' or 'nuclei'
@@ -702,7 +702,7 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_probability, self.maximum_probability, self.num_iterations), 1) )
-        self.MINIMUM_CELL_AREA = 3000
+        self.MINIMUM_CELL_AREA = 2000
         self.BATCH_SIZE = 80
         
     def calculate_masks(self):
@@ -782,6 +782,7 @@ class Cellpose():
         if not (self.selection_method is None) and (np.max(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
             selected_masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = selected_conditions , diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+            selected_masks=Utilities.remove_artifacts_from_mask_image(selected_masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
         else:
             if len(self.image.shape) >= 3:
                 selected_masks = np.zeros_like(self.image[:,:,0])
@@ -791,6 +792,7 @@ class Cellpose():
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
             selected_masks= model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = self.default_flow_threshold, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
+            selected_masks=Utilities.remove_artifacts_from_mask_image(selected_masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
         return selected_masks
     
     
@@ -2971,6 +2973,13 @@ class Utilities():
         # Delete local temporal files
         temp_results_folder_name = pathlib.Path().absolute().joinpath('temp_results_' + data_folder_path.name)
         shutil.rmtree(temp_results_folder_name)
+        # Removing local folder
+        # Removing directory if exist
+        std_format_folder_name = 'temp_'+data_folder_path.name+'_standard_format'
+        std_format_folder_name_dir_name =pathlib.Path().absolute().joinpath(std_format_folder_name)
+        if os.path.exists(str(std_format_folder_name_dir_name)):
+            shutil.rmtree(str(std_format_folder_name_dir_name))
+        
         if (download_data_from_NAS == True):
             # Delete temporal images downloaded from NAS
             shutil.rmtree('temp_'+data_folder_path.name)
@@ -3291,11 +3300,14 @@ class Plots():
                     temp_complete_mask = erode_mask(tested_mask_cyto)
                     temp_complete_mask[0, :] = 0; temp_complete_mask[-1, :] = 0; temp_complete_mask[:, 0] = 0; temp_complete_mask[:, -1] = 0
                     temp_contour_c = find_contours(temp_complete_mask, 0.1, fully_connected='high',positive_orientation='high')
-                    contours_connected_c = np.vstack((temp_contour_c))
-                    contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
-                    if contour_c.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
-                        contour_c = signal.resample(contour_c, num = NUM_POINTS_MASK_EDGE_LINE)
-                        axes[2].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                    try:
+                        contours_connected_c = np.vstack((temp_contour_c))
+                        contour_c = np.vstack((contours_connected_c[-1,:],contours_connected_c))
+                        if contour_c.shape[0] > NUM_POINTS_MASK_EDGE_LINE :
+                            contour_c = signal.resample(contour_c, num = NUM_POINTS_MASK_EDGE_LINE)
+                            axes[2].fill(contour_c[:, 1], contour_c[:, 0], facecolor = 'none', edgecolor = 'red', linewidth=2) # mask cytosol
+                    except:
+                        contour_c = 0
                     axes[2].set(title = 'Original + Masks')
                 if not (df_labels is None):
                     cell_ids_labels = df_labels.loc[ :,'cell_id'].values
