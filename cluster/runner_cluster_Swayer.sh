@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --gres=gpu:4
-# #SBATCH --nodelist=gpu2    # gpu2 gpu3 gpu4
+#SBATCH --nodelist=gpu4    # gpu2 gpu3 gpu4
 #SBATCH --partition=all
 #SBATCH --ntasks=4
 #SBATCH --job-name=t2
@@ -45,7 +45,7 @@ path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 diameter_nucleus=100                 # Approximate nucleus size in pixels
 diameter_cytosol=230                 # Approximate cytosol size in pixels
 psf_z=350                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=96                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+psf_yx=180                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx=96                    # Microscope conversion px to nanometers in the xy axis.
 channels_with_nucleus='None'                  # Channel to pass to python for nucleus segmentation
@@ -55,7 +55,7 @@ send_data_to_NAS=0                   # If data sent back to NAS use 1.
 download_data_from_NAS=1             # Download data from NAS
 path_to_masks_dir='None'             # 'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 save_all_images=0                    # If true, it shows a all planes for the FISH plot detection.
-threshold_for_spot_detection=300  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
+threshold_for_spot_detection='None'  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
 save_filtered_images=0               #         
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 convert_to_standard_format=1

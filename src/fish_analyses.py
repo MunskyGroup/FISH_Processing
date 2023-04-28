@@ -503,11 +503,12 @@ class Intensity():
         self.method = method
         self.number_channels = original_image.shape[-1]
         self.PIXELS_AROUND_SPOT = 3 # THIS HAS TO BE AN EVEN NUMBER
-        if isinstance(spot_size,int):
+        if isinstance(spot_size,(int,np.int64,np.int,np.int32)) :
             self.spot_size = np.full(number_spots , spot_size)
         elif isinstance(spot_size , (list, np.ndarray) ):
             self.spot_size = spot_size.astype('int')
         else:
+            print(type(spot_size))
             raise ValueError("please use integer values for the spot_size or a numpy array with integer values ")
         
     
@@ -1794,10 +1795,10 @@ class SpotDetection():
                                                                                 threshold_for_spot_detection=self.threshold_for_spot_detection[i]).detect()
             
             # converting the psf to pixles
-            yx_spot_size_in_px = int(voxel_size_yx / psf_yx)
+            yx_spot_size_in_px = np.max((1,int(voxel_size_yx / psf_yx))).astype('int')
             
             dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.image, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus,
-                                            yx_spot_size_in_px, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i,number_color_channels=self.number_color_channels ).get_dataframe()
+                                            yx_spot_size_in_px=yx_spot_size_in_px, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i,number_color_channels=self.number_color_channels ).get_dataframe()
             # reset counter for image and cell number
             #if i >0:
             reset_cell_counter = True
@@ -2530,7 +2531,7 @@ class Utilities():
     
     def convert_to_standard_format(data_folder_path,path_to_config_file, number_z_slices=None, number_color_channels=2, download_data_from_NAS = True, path_to_masks_dir = None):
         # Creating a folder to store all plots
-        destination_folder = pathlib.Path().absolute().joinpath('temp_'+data_folder_path.name+'_standard_format')
+        destination_folder = pathlib.Path().absolute().joinpath('temp_'+data_folder_path.name+'_sf')
         if pathlib.Path.exists(destination_folder):
             shutil.rmtree(str(destination_folder))
             destination_folder.mkdir(parents=True, exist_ok=True)
@@ -2975,7 +2976,7 @@ class Utilities():
         shutil.rmtree(temp_results_folder_name)
         # Removing local folder
         # Removing directory if exist
-        std_format_folder_name = 'temp_'+data_folder_path.name+'_standard_format'
+        std_format_folder_name = 'temp_'+data_folder_path.name+'_sf'
         std_format_folder_name_dir_name =pathlib.Path().absolute().joinpath(std_format_folder_name)
         if os.path.exists(str(std_format_folder_name_dir_name)):
             shutil.rmtree(str(std_format_folder_name_dir_name))
