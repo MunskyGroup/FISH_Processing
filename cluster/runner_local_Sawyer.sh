@@ -1,21 +1,28 @@
-#!/bin/bash
-#SBATCH --gres=gpu:4
-#SBATCH --nodelist=gpu4    # gpu2 gpu3 gpu4
-#SBATCH --partition=all
-#SBATCH --ntasks=4
-#SBATCH --job-name=t2
+#!/bin/sh
 
-# module purge
-module load gnu9/9.4.0 
-module load cudnn/8.3-10.2
+# Bash script to run multiple python codes.
+# If needed, use this to change file permissions -> chmod 755 <<script_name.sh>>
 
-echo "Starting my job..."
-# Start timing the process
-start_time=$(date +%s)
+# ########### ACTIVATE ENV #############################
+# To load the env pass the specific location of the env and then activate it. 
+# If not sure about the env location use: source activate <<venv_name>>   echo $CONDA_PREFIX
+#source /home/"$USER"/anaconda3/envs/FISH_processing
+conda activate FISH_processing
+export CUDA_VISIBLE_DEVICES=0,1
 
-# If needed, use this to change file permissions -> chmod 755 <<script_name.sh>
+# ########### PROGRAM ARGUMENTS #############################
+# If the program requieres positional arguments. 
+# Read them in the python file using: sys.argv. This return a list of strings. 
+# Where sys.argv[0] is the name  of the <<python_file.py>>, and  the rest are in positional order 
+# Make sure to convert str to the desired data types.
 
-list_Swayer=(\
+# Paths with configuration files
+path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
+path_to_config_file="$HOME/Desktop/config.yml"
+
+# List or path to process
+#list_test=('smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min')
+list_Sawyer=(\
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_0min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_10min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_20min_031123' \
@@ -29,23 +36,12 @@ list_Swayer=(\
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_150min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_180min_031123' )
 
-# ########### PROGRAM ARGUMENTS #############################
-# If the program requieres positional arguments. 
-# Read them in the python file using: sys.argv. This return a list of strings. 
-# Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
-
-
-NUMBER_OF_CORES=4
-
-####################  PATHS TO CODE FILES  ############################
-path_to_config_file="$HOME/FISH_Processing/config.yml"
-path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
-
-####################  CODE PARAMETERS ############################
+# Software parameters
+NUMBER_OF_CORES=1
 diameter_nucleus=100                 # Approximate nucleus size in pixels
-diameter_cytosol=230                 # Approximate cytosol size in pixels
+diameter_cytosol=200                 # Approximate cytosol size in pixels
 psf_z=350                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx=105                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+psf_yx=96                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx=96                    # Microscope conversion px to nanometers in the xy axis.
 channels_with_nucleus='None'                  # Channel to pass to python for nucleus segmentation
@@ -60,34 +56,38 @@ save_filtered_images=0               #
 optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
 convert_to_standard_format=1
 
+
 # ########### PYTHON PROGRAM #############################
-for folder in ${list_Swayer[*]}; do
+for folder in ${list_Sawyer[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $convert_to_standard_format >> "$output_names" &
+     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $convert_to_standard_format >> "$output_names" &
      wait
 done
+# #####################################
+# #####################################
 
-
-end_time=$(date +%s)
-total_time=$(( (end_time - start_time) / 60 ))
-
-# Print the time to complete the process
-echo "Total time to complete the job: $total_time minutes"
+# Deactivating the environment
+conda deactivate
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster_Swayer.sh /dev/null 2>&1 & disown
+# run as: source runner_local_Sawyer.sh /dev/null 2>&1 & disown
 
-exit 0
+# ########### TO MONITOR PROGRESS #########################
+# To check if the process is still running
+# ps -ef | grep python3
+# ps -ef | grep python3 | grep "pipeline_"
+# ps -ef | grep python3 | grep "pipeline_" | awk '{print $2}'   # Processes running the pipeline.
+# kill $(ps -ef | grep python3 | grep "pipeline_" | awk '{print $2}')
 
-# ########### TO REMOVE SOME FILES #########################
+
+# nvidia-smi | grep 'Default'
 
 # To remove files
 # ls *.tif
+# ls *temp_ out*
+# rm *.tif out*
 # rm -r temp_*
 # rm -r analysis_*
-# rm -r slurm* out* temp_* masks_* 
+# rm -r slurm* output__* temp_* *.tif
 
-# ########### SLURM COMMANDS #########################
-# scancel [jobid]
-# squeue -u [username]
-# squeue
+exit 0
