@@ -691,7 +691,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 8, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 6, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimum_flow_threshold = 0.1
@@ -2321,6 +2321,7 @@ class PipelineFISH():
                                         list_masks_complete_cells = list_masks_complete_cells,
                                         list_masks_nuclei = list_masks_nuclei,
                                         spot_type=k,
+                                        list_segmentation_succesful=list_segmentation_succesful,
                                         image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
@@ -4174,10 +4175,13 @@ class Plots():
         return None
     
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_succesful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+        # removing images where segmentation was not successful
+        if not (list_segmentation_succesful is None):
+            list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_succesful[i]]
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
-        NUM_COLUMNS = 8
+        NUM_COLUMNS = 10
         NUM_ROWS =  math.ceil(number_cells/ NUM_COLUMNS) *2 
         max_size_y_image_size = 800
         y_image_size = np.min((max_size_y_image_size,NUM_ROWS*4))
@@ -4235,7 +4239,8 @@ class Plots():
             axis_index.grid(False)
             axis_index.set_xticks([])
             axis_index.set_yticks([])
-            axis_index.set_title('Cell_'+str(cell_id) +' w: '+str(image_width) + ' m: ' + str(max_int))
+            #axis_index.set_title('Cell_'+str(cell_id) +' w: '+str(image_width) + ' m: ' + str(max_int))
+            axis_index.set_title('Cell_'+str(cell_id) )
             #Showing scale bar
             if not (microns_per_pixel is None): 
                 scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
@@ -4329,7 +4334,10 @@ class Plots():
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,list_segmentation_succesful=None,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+        # removing images where segmentation was not successful
+        if not (list_segmentation_succesful is None):
+            list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_succesful[i]]
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 10
