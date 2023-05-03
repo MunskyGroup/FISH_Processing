@@ -1268,7 +1268,7 @@ class BigFISH():
             plot.plot_elbow(rna, 
                             voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
                             spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
-                            path_output = path_output_elbow, show=self.show_plots )
+                            path_output = path_output_elbow, show=bool(self.show_plots) )
             if self.show_plots ==True:
                 plt.show()
             else:
@@ -2347,7 +2347,7 @@ class PipelineFISH():
         
         # Saving all original images as a PDF
         print('CREATING THE PLOT WITH ORIGINAL IMAGES')
-        image_name= 'all_original_images_' + self.name_for_files +'.pdf'
+        image_name= 'original_images_' + self.name_for_files +'.pdf'
         Plots.plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
         # Creating an image with all segmentation results
         image_name= 'segmentation_images_' + self.name_for_files +'.pdf'
@@ -2366,7 +2366,7 @@ class PipelineFISH():
                                         list_masks_nuclei = list_masks_nuclei,
                                         spot_type=k,
                                         list_segmentation_succesful=list_segmentation_succesful,
-                                        image_name='all_cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
+                                        image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
                                         show_plot= False)
@@ -2579,9 +2579,7 @@ class Utilities():
     '''
     def __init__(self):
         pass
-    
-    
-    
+
     # Function that reorder the index to make it continuos 
     def reorder_mask_image(mask_image_tested):
         number_masks = np.max(mask_image_tested)
@@ -2637,6 +2635,9 @@ class Utilities():
                     number_z_slices = int(number_total_images_in_fov / (number_color_channels*number_of_fov))
                 else:
                     raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
+                if number_z_slices > 40:
+                    raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
+                
                 number_elements_on_fov = number_color_channels*number_z_slices
                 list_files_names = []
                 y_shape, x_shape = image_with_all_fov.shape[1], image_with_all_fov.shape[2]                
@@ -2666,6 +2667,8 @@ class Utilities():
             for i in range(number_images):
                 temp_image_fov = list_images_all_fov[i]
                 number_z_slices = temp_image_fov.shape[0]//2
+                if number_z_slices > 40:
+                    raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
                 y_shape, x_shape = temp_image_fov.shape[1], temp_image_fov.shape[2]
                 list_files_names.append(  list_files_names_all_fov[i].split(".")[0]+'_fov_'+str(i) +'.tif' )
                 temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
@@ -3036,10 +3039,10 @@ class Utilities():
             pathlib.Path().absolute().joinpath(file_plots_bleed_thru).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_bleed_thru))
 
         # all original images
-        pathlib.Path().absolute().joinpath('all_original_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'all_original_images_'+ data_folder_path.name +'.pdf'))
+        pathlib.Path().absolute().joinpath('original_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'original_images_'+ data_folder_path.name +'.pdf'))
         # all cell images
         for i in range (len(channels_with_FISH)):
-            temp_plot_name = 'all_cells_channel_'+ str(channels_with_FISH[i])+'_'+ data_folder_path.name +'.pdf'
+            temp_plot_name = 'cells_channel_'+ str(channels_with_FISH[i])+'_'+ data_folder_path.name +'.pdf'
             pathlib.Path().absolute().joinpath(temp_plot_name).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),temp_plot_name))
         #metadata_path
         pathlib.Path().absolute().joinpath('metadata_'+ data_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'metadata_'+ data_folder_path.name +'.txt'))

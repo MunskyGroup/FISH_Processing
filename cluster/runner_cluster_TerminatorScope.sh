@@ -81,7 +81,7 @@ total_time=$(( (end_time - start_time) / 60 ))
 echo "Total time to complete the job: $total_time minutes"
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster_Sawyer.sh /dev/null 2>&1 & disown
+# run as: sbatch runner_cluster_TerminatorScope.sh /dev/null 2>&1 & disown
 
 exit 0
 
