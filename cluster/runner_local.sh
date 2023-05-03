@@ -40,13 +40,20 @@ download_data_from_NAS=1             # Download data from NAS
 path_to_masks_dir='None'             # 'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 save_all_images=0                    # If true, it shows a all planes for the FISH plot detection.
 threshold_for_spot_detection='None'  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
-save_filtered_images=0               #         
-optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+save_filtered_images=0               #        
+optimization_segmentation_method='default' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+remove_z_slices_borders=False        # Use this flag to remove 2 z-slices from the top and bottom of the stack. This is needed to remove z-slices that are out of focus.
+# ######### Parameters to reformat images to standard format ########
 convert_to_standard_format=0
+number_color_channels=0
+number_of_fov=0
+# #####################################################################
+
+
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_test[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $convert_to_standard_format >> "$output_names" &
+     nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $remove_z_slices_borders $convert_to_standard_format $number_color_channels $number_of_fov >> "$output_names" &
      wait
 done
 # #####################################

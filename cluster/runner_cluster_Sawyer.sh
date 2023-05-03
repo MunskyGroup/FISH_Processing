@@ -37,11 +37,11 @@ list_Sawyer=(\
 
 NUMBER_OF_CORES=4
 
-####################  PATHS TO CODE FILES  ############################
+# ###################  PATHS TO CODE FILES  ############################
 path_to_config_file="$HOME/FISH_Processing/config.yml"
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 
-####################  CODE PARAMETERS ############################
+# ###################  CODE PARAMETERS ############################
 diameter_nucleus=100                 # Approximate nucleus size in pixels
 diameter_cytosol=230                 # Approximate cytosol size in pixels
 psf_z=350                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
@@ -51,23 +51,29 @@ voxel_size_yx=96                    # Microscope conversion px to nanometers in 
 channels_with_nucleus='None'                  # Channel to pass to python for nucleus segmentation
 channels_with_cytosol='[1]'                 # Channel to pass to python for cytosol segmentation
 channels_with_FISH='[0]'                   # Channel to pass to python for spot detection
-send_data_to_NAS=1                   # If data sent back to NAS use 1.
+send_data_to_NAS=0                   # If data sent back to NAS use 1.
 download_data_from_NAS=1             # Download data from NAS
 path_to_masks_dir='None'             # 'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 save_all_images=0                    # If true, it shows a all planes for the FISH plot detection.
 threshold_for_spot_detection='None'  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
 save_filtered_images=0               #         
-optimization_segmentation_method='z_slice_segmentation' # optimization_segmentation_method = 'intensity_segmentation' 'z_slice_segmentation', 'gaussian_filter_segmentation' , None
+optimization_segmentation_method='default' # optimization_segmentation_method = 'default' 'intensity_segmentation' 'z_slice_segmentation_marker', 'gaussian_filter_segmentation' , None
+remove_z_slices_borders=False        # Use this flag to remove 2 z-slices from the top and bottom of the stack. This is needed to remove z-slices that are out of focus.
+
+# ######### Parameters to reformat images to standard format ########
 convert_to_standard_format=1
+number_color_channels=0
+number_of_fov=0
+# #####################################################################
+
 
 # ########### PYTHON PROGRAM #############################
 for folder in ${list_Sawyer[*]}; do
      output_names=""output__"${folder////__}"".txt"
-     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $convert_to_standard_format >> "$output_names" &
+     ~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $remove_z_slices_borders $convert_to_standard_format $number_color_channels $number_of_fov >> "$output_names" &
      wait
 done
-
-
+# ###########################################################
 end_time=$(date +%s)
 total_time=$(( (end_time - start_time) / 60 ))
 

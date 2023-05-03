@@ -59,6 +59,8 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 
 ## Installation on a local computer
 
+To install this repository and all its dependencies. We recommend installing [Anaconda](https://www.anaconda.com). 
+
 * Clone the repository.
 ```sh
 git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
@@ -95,7 +97,7 @@ git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
 ```sh
 cd FISH_Processing 
 ```
-* Create an environment from this yml file.
+* Create an environment from this YAML file.
 ```sh
 conda env create -f FISH_env.yml
 ```
@@ -127,7 +129,7 @@ To login to the NAS, it is needed to provide a configuration YAML file with the 
         domain: remote_domain
 ```
 
-Creating an environment file (yml) use:
+Creating an environment file (YAML) use:
 ```sh
 conda env export > FISH_env.yml
 ```

@@ -93,19 +93,23 @@ else:
 #list_threshold_for_spot_detection = fa.Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
 NUMBER_OF_CORES=int(sys.argv[19])
 save_filtered_images = int(sys.argv[20])
-# Use this option to process data from the terminator scope
-convert_to_standard_format = int(sys.argv[21])
+remove_z_slices_borders = int(sys.argv[21])
 
+####################################################################
+########## Parameters to reformat images to standard format ########
+convert_to_standard_format = int(sys.argv[22])
+number_color_channels = int(sys.argv[23])
+number_of_fov = int(sys.argv[24])
 ######################################
 ######################################
+####################################################################
 
 
 ######################################
 ######################################
 minimum_spots_cluster = 4                # The number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
-spot_type = 0
 number_of_images_to_process = None       # This section allows the user to select a subset of images to process. Use an integer to indicate the n images to process.
-show_plots=True
+show_plots=False
 ######################################
 ######################################
 
@@ -115,14 +119,15 @@ show_plots=True
 # Download data from NAS
 if convert_to_standard_format == False:
     local_data_dir, masks_dir, _, _, _, _ = fa.Utilities.read_images_from_folder( path_to_config_file, 
-                                                                            data_folder_path, 
-                                                                            path_to_masks_dir,  
-                                                                            download_data_from_NAS)
+                                                                                    data_folder_path, 
+                                                                                    path_to_masks_dir,  
+                                                                                    download_data_from_NAS)
 else:
     local_data_dir,masks_dir, _, _, _= fa.Utilities.convert_to_standard_format(data_folder_path=data_folder_path, 
                                                                                     path_to_config_file=path_to_config_file, 
-                                                                                    download_data_from_NAS = download_data_from_NAS, 
-                                                                                    path_to_masks_dir = path_to_masks_dir)
+                                                                                    download_data_from_NAS = download_data_from_NAS,
+                                                                                    number_color_channels=number_color_channels,
+                                                                                    number_of_fov=number_of_fov )
 # Running the pipeline
 dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_dir, 
                                                                     channels_with_cytosol, 
@@ -143,7 +148,8 @@ dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_d
                                                                     threshold_for_spot_detection = threshold_for_spot_detection,
                                                                     NUMBER_OF_CORES = NUMBER_OF_CORES,
                                                                     save_filtered_images = save_filtered_images,
-                                                                    number_of_images_to_process = number_of_images_to_process).run()
+                                                                    number_of_images_to_process = number_of_images_to_process,
+                                                                    remove_z_slices_borders=remove_z_slices_borders).run()
 ######################################
 ######################################
 
