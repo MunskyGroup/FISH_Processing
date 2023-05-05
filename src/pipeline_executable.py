@@ -94,12 +94,13 @@ else:
 NUMBER_OF_CORES=int(sys.argv[19])
 save_filtered_images = int(sys.argv[20])
 remove_z_slices_borders = int(sys.argv[21])
+remove_out_of_focus_images= int(sys.argv[22])
 
 ####################################################################
 ########## Parameters to reformat images to standard format ########
-convert_to_standard_format = int(sys.argv[22])
-number_color_channels = int(sys.argv[23])
-number_of_fov = int(sys.argv[24])
+convert_to_standard_format = int(sys.argv[23])
+number_color_channels = int(sys.argv[24])
+number_of_fov = int(sys.argv[25])
 ######################################
 ######################################
 ####################################################################

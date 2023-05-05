@@ -911,15 +911,15 @@ class CellSegmentation():
                 
         # Function to find masks
         def function_to_find_masks (image):                    
-            if not (self.channels_with_cytosol is None):
+            if not (self.channels_with_cytosol in (None,[None])):
                 masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
             else:
                 masks_cyto = np.zeros_like(image[:, :, 0])
-            if not (self.channels_with_nucleus is None):
+            if not (self.channels_with_nucleus in (None,[None])):
                 masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diameter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
             else:
                 masks_nuclei= np.zeros_like(image[:, :, 0])
-            if not (self.channels_with_cytosol is None) and not(self.channels_with_nucleus is None):
+            if not (self.channels_with_cytosol in (None,[None])) and not(self.channels_with_nucleus in (None,[None])):
                 # Function that removes masks that are not paired with a nucleus or cytosol
                 def remove_lonely_masks(masks_0, masks_1,is_nuc=None):
                     n_mask_0 = np.max(masks_0)
@@ -997,11 +997,11 @@ class CellSegmentation():
                 # Renaming 
                 masks_complete_cells = masks_cyto
             else:
-                if not (self.channels_with_cytosol is None):
+                if not (self.channels_with_cytosol in (None,[None])):
                     masks_complete_cells = masks_cyto
                     masks_nuclei = None 
                     masks_cytosol_no_nuclei = None
-                if not (self.channels_with_nucleus is None):
+                if not (self.channels_with_nucleus in (None, [None])):
                     masks_complete_cells = masks_nuclei
                     masks_cytosol_no_nuclei = None
             return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
@@ -1013,7 +1013,7 @@ class CellSegmentation():
             list_masks_complete_cells = []
             list_masks_nuclei = []
             list_masks_cytosol_no_nuclei = []
-            if not (self.channels_with_cytosol is None) or not(self.channels_with_nucleus is None):
+            if not (self.channels_with_cytosol in (None,[None])) or not(self.channels_with_nucleus in (None,[None])):
                 tested_thresholds = np.round(np.linspace(0, 5, self.NUMBER_OPTIMIZATION_VALUES), 0)
                 #list_sorting_number_paired_masks = []
                 array_number_paired_masks  = np.zeros( len(tested_thresholds))
@@ -1038,7 +1038,7 @@ class CellSegmentation():
             list_idx = np.round(np.linspace(0, self.number_z_slices-1, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
             # Optimization based on slice
-            if not (self.channels_with_cytosol is None) or not(self.channels_with_nucleus is None):
+            if not (self.channels_with_cytosol in (None,[None])) or not(self.channels_with_nucleus in (None,[None])):
                 #list_sorting_number_paired_masks = []
                 list_masks_complete_cells = []
                 list_masks_nuclei = []
@@ -1073,7 +1073,7 @@ class CellSegmentation():
             list_idx = np.round(np.linspace(num_slices_range, self.number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
             # Optimization based on slice
-            if not (self.channels_with_cytosol is None) or not(self.channels_with_nucleus is None):
+            if not (self.channels_with_cytosol in (None,[None])) or not(self.channels_with_nucleus in (None,[None])):
                 #list_sorting_number_paired_masks = []
                 list_masks_complete_cells = []
                 list_masks_nuclei = []
@@ -1114,7 +1114,7 @@ class CellSegmentation():
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
             list_sigmas = np.round(np.linspace(0.5, 4, self.NUMBER_OPTIMIZATION_VALUES), 1) 
             # Optimization based on slice
-            if not (self.channels_with_cytosol is None) or not(self.channels_with_nucleus is None):
+            if not (self.channels_with_cytosol in (None,[None])) or not(self.channels_with_nucleus in (None,[None])):
                 #list_sorting_number_paired_masks = []
                 list_masks_complete_cells = []
                 list_masks_nuclei = []
@@ -1186,7 +1186,7 @@ class BigFISH():
     threshold_for_spot_detection: scalar or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
         if len(image.shape)<4:
             image= np.expand_dims(image,axis =0)
         self.image = image
@@ -1222,7 +1222,7 @@ class BigFISH():
                         voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
                         object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), ndim=3)
         sigma = spot_radius_px
-        print('sigma_value (z,y,x) =', sigma)
+        #print('sigma_value (z,y,x) =', sigma)
         ## SPOT DETECTION
         if self.use_log_filter_for_spot_detection== True:
             try:
@@ -1238,7 +1238,7 @@ class BigFISH():
             threshold = self.threshold_for_spot_detection
         else:
             threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
-        print('Int threshold used for the detection of spots: ',threshold )
+        #print('Int threshold used for the detection of spots: ',threshold )
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
         try:
@@ -1251,7 +1251,7 @@ class BigFISH():
                                                                     gamma=5)     # gamma the filtering step to denoise the image
         except:
             spots_post_decomposition = spots
-            print('Error during step: detection.decompose_dense ')
+            #print('Error during step: detection.decompose_dense ')
         ### CLUSTER DETECTION
         spots_post_clustering, clusters = detection.detect_clusters(spots_post_decomposition, 
                                             voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
@@ -1263,16 +1263,14 @@ class BigFISH():
         try:
             if not(self.image_name is None):
                 path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
-            else:
-                path_output_elbow = None 
-            plot.plot_elbow(rna, 
-                            voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
-                            spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
-                            path_output = path_output_elbow, show=bool(self.show_plots) )
-            if self.show_plots ==True:
-                plt.show()
-            else:
-                plt.close()
+                plot.plot_elbow(rna, 
+                                voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
+                                spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
+                                path_output = path_output_elbow, show=bool(self.show_plots) )
+                if self.show_plots ==True:
+                    plt.show()
+                else:
+                    plt.close()
         except:
             print('not showing elbow plot')
         central_slice = rna.shape[0]//2
@@ -1304,22 +1302,23 @@ class BigFISH():
                 show_figure_in_cli = True
             else:
                 show_figure_in_cli = False                
-            plot.plot_detection(image_2D, 
-                            spots=[spots_to_plot, clusters_to_plot[:, :3]], 
-                            shape=["circle", "polygon"], 
-                            radius=[3, 6], 
-                            color=["orangered", "blue"],
-                            linewidth=[1, 1], 
-                            fill=[False, False], 
-                            framesize=(12, 7), 
-                            contrast=True,
-                            rescale=True,
-                            show=show_figure_in_cli,
-                            path_output = path_output)
-            if self.show_plots ==True:
-                plt.show()
-            else:
-                plt.close()
+            if not(self.image_name is None):
+                plot.plot_detection(image_2D, 
+                                spots=[spots_to_plot, clusters_to_plot[:, :3]], 
+                                shape=["circle", "polygon"], 
+                                radius=[3, 6], 
+                                color=["orangered", "blue"],
+                                linewidth=[1, 1], 
+                                fill=[False, False], 
+                                framesize=(12, 7), 
+                                contrast=True,
+                                rescale=True,
+                                show=show_figure_in_cli,
+                                path_output = path_output)
+                if self.show_plots ==True:
+                    plt.show()
+                else:
+                    plt.close()
             del spots_to_plot, clusters_to_plot
         
         return [spotDetectionCSV, clusterDetectionCSV], rna_filtered, threshold
@@ -1413,7 +1412,7 @@ class DataProcessing():
             # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus
             
-            if not (self.channels_with_nucleus is None):
+            if not (self.channels_with_nucleus in (None,[None]) ):
                 try:
                     spots_no_ts, _, ts = multistack.remove_transcription_site(spotDetectionCSV, clusterDetectionCSV, mask_nuc, ndim=3)
                 except:
@@ -1423,7 +1422,7 @@ class DataProcessing():
             #rna_out_ts      [Z,Y,X,idx_foci]         Coordinates of the detected RNAs with shape. One coordinate per dimension (zyx or yx coordinates) plus the index of the foci assigned to the RNA. If no foci was assigned, value is -1. RNAs from transcription sites are removed.
             #foci            [Z,Y,X,size, idx_foci]   One coordinate per dimension for the foci centroid (zyx or yx coordinates), the number of RNAs detected in the foci and its index.
             #ts              [Z,Y,X,size,idx_ts]      One coordinate per dimension for the transcription site centroid (zyx or yx coordinates), the number of RNAs detected in the transcription site and its index.
-            if not (self.channels_with_nucleus is None):
+            if not (self.channels_with_nucleus in (None,[None]) ):
                 try:
                     spots_nuc, _ = multistack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
                 except:
@@ -1431,12 +1430,12 @@ class DataProcessing():
             else:
                 spots_nuc = None
             # Detecting spots in the cytosol
-            if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+            if not (self.channels_with_cytosol in (None,[None]) ) and not (self.channels_with_nucleus in (None,[None]) ):
                 try:
                     spots_cytosol_only, _ = multistack.identify_objects_in_region(mask_cytosol_only, spotDetectionCSV[:,:3], ndim=3)
                 except:
                     spots_cytosol_only = None
-            elif not (self.channels_with_cytosol is None) and (self.channels_with_nucleus is None):
+            elif not (self.channels_with_cytosol in (None,[None]))  and (self.channels_with_nucleus in (None,[None]) ):
                 try:
                     spots_cytosol_only, _ = multistack.identify_objects_in_region(masks_complete_cells, spotDetectionCSV[:,:3], ndim=3)
                 except:
@@ -1485,7 +1484,7 @@ class DataProcessing():
             spot_idx = np.concatenate((spot_idx_ts,  spot_idx_nuc, spot_idx_cyt )).astype(int)
             
             # Populating arrays
-            if not (self.channels_with_nucleus is None):
+            if not (self.channels_with_nucleus in (None,[None]) ):
                 if detected_ts == True:
                     array_ts[:,10:13] = ts[:,:3]         # populating coord 
                     array_ts[:,13] = 1                  # is_nuc
@@ -1501,7 +1500,7 @@ class DataProcessing():
                     array_spots_nuc[:,16] =  spot_type          # spot_type
                     array_spots_nuc[:,17] =  is_cell_in_border  # is_cell_fragmented
             
-            if not (self.channels_with_cytosol is None) :
+            if not (self.channels_with_cytosol in (None,[None]) ) :
                 if detected_cyto == True:
                     array_spots_cytosol_only[:,10:13] = spots_cytosol_only[:,:3]    # populating coord 
                     array_spots_cytosol_only[:,13] = 0                             # is_nuc
@@ -1553,9 +1552,9 @@ class DataProcessing():
             
             # Populating array to add the average intensity in the cell
             for c in range (self.number_color_channels):
-                if not (self.channels_with_nucleus is None):
+                if not (self.channels_with_nucleus in (None,[None]) ):
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+c] = nuc_int[c] 
-                if not (self.channels_with_cytosol is None) :
+                if not (self.channels_with_cytosol in (None,[None]) ) :
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels+c] = cyto_int[c]      
             
             # This section calculates the intenisty fo each spot and cluster
@@ -1698,7 +1697,18 @@ class DataProcessing():
                                         cyto_int=cyto_int)
             counter_total_cells +=1
         return new_dataframe
+    
 
+class RemoveOutFocusPlanes():
+    def __init__(self,image, percentage_images_to_remove=0.3):
+        self.image= ReadImages
+        self.frames_to_keep = image.shape[0] - np.max((0, int(image.shape[0]*percentage_images_to_remove)))
+    def get_frames_in_focus(self):
+        focus = stack.compute_focus(self.image, neighborhood_size=31)
+        in_focus_image = stack.in_focus_selection(self.image, focus, proportion=self.frames_to_keep)
+        return in_focus_image
+    
+    #in_focus_image = RemoveOutFocusPlanes.get_frames_in_focus(image)
 
 class SpotDetection():
     '''
@@ -1804,7 +1814,7 @@ class SpotDetection():
         list_fish_images = []
         list_thresholds_spot_detection = []
         for i in range(0,len(self.list_FISH_channels)):
-            print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
+            #print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
             if (i ==0):
                 dataframe_FISH = self.dataframe 
                 reset_cell_counter = False
@@ -1860,7 +1870,7 @@ class Metadata():
     threshold_for_spot_detection : int
         Threshold value used to discriminate background noise from mRNA spots in the image.
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True,list_counter_image_id=[],threshold_for_spot_detection=[],number_of_images_to_process=None,remove_z_slices_borders=False,NUMBER_Z_SLICES_TO_TRIM=0,CLUSTER_RADIUS=0,list_thresholds_spot_detection=[None]):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True,list_counter_image_id=[],threshold_for_spot_detection=[],number_of_images_to_process=None,remove_z_slices_borders=False,NUMBER_Z_SLICES_TO_TRIM=0,CLUSTER_RADIUS=0,list_thresholds_spot_detection=[None],list_average_spots_per_cell=[None],list_number_detected_cells=[None],list_is_image_sharp=[None],list_metric_sharpeness_images=[None],remove_out_of_focus_images=False,sharpness_threshold=None):
         
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir,number_of_images_to_process).read()
         self.channels_with_cytosol = channels_with_cytosol
@@ -1889,6 +1899,12 @@ class Metadata():
         self.NUMBER_Z_SLICES_TO_TRIM=NUMBER_Z_SLICES_TO_TRIM
         self.CLUSTER_RADIUS=CLUSTER_RADIUS
         self.list_thresholds_spot_detection=list_thresholds_spot_detection
+        self.list_average_spots_per_cell=list_average_spots_per_cell
+        self.list_number_detected_cells=list_number_detected_cells
+        self.list_is_image_sharp=list_is_image_sharp
+        self.list_metric_sharpeness_images=list_metric_sharpeness_images
+        self.remove_out_of_focus_images=remove_out_of_focus_images
+        self.sharpness_threshold=sharpness_threshold
     def write_metadata(self):
         '''
         This method writes the metadata file.
@@ -1930,8 +1946,11 @@ class Metadata():
                         fd.write('\n        threshold_spot_detection: ' + 'automatic value using BIG-FISH' )
                 fd.write('\n    minimum_spots_cluster: ' + str(self.minimum_spots_cluster) )
                 fd.write('\n    remove_z_slices_borders: ' + str(self.remove_z_slices_borders) )
-                fd.write('\n    number of z-slices trimed at each border: ' + str(self.NUMBER_Z_SLICES_TO_TRIM) )
+                fd.write('\n    number of z-slices trimmed at each border: ' + str(self.NUMBER_Z_SLICES_TO_TRIM) )
                 fd.write('\n    cluster radius: ' + str(self.CLUSTER_RADIUS) )
+                fd.write('\n    remove_out_of_focus_images: ' + str(self.remove_out_of_focus_images))
+                if self.remove_out_of_focus_images == True:
+                    fd.write('\n    sharpness_threshold: ' + str(self.sharpness_threshold))
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign) ) 
                 fd.write('\nFILES AND DIRECTORIES USED ')
@@ -1941,21 +1960,35 @@ class Metadata():
                 fd.write('\n    Images in the directory :'  )
                 counter=0
                 for indx, img_name in enumerate (self.list_files_names):
-                    if self.list_segmentation_succesful[indx]== True:
-                        fd.write('\n        '+ img_name +  '   - Image Id :  ' + str(self.list_counter_image_id[counter]) )
+                    if (self.list_segmentation_succesful[indx]== True) and (self.list_is_image_sharp[indx]== True):
+                        fd.write('\n        '+ img_name + '      '+ 'Sharpness metric: '+ str(self.list_metric_sharpeness_images[indx]) +  '      - Image Id :  ' + str(self.list_counter_image_id[counter]) )
                         counter+=1
+                    elif self.list_is_image_sharp[indx]== False:
+                        fd.write('\n        '+ img_name + '      '+ 'Sharpness metric: '+ str(self.list_metric_sharpeness_images[indx])+ '      - error out of focus.')
                     else:
-                        fd.write('\n        '+ img_name + ' ===> image ignored for error during segmentation.')
+                        fd.write('\n        '+ img_name + '      '+ 'Sharpness metric: '+ str(self.list_metric_sharpeness_images[indx])+ '      - error segmentation.')
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign)) 
-                fd.write('\nCalculated spot detection thresholds')
+                fd.write('\nSUMMARY RESULTS')
                 # iterate for all processed images and printing the obtained threshold intensity value.
                 for k in range(len(self.channels_with_FISH)):
-                    fd.write('\n      For Channel ' + str(self.channels_with_FISH[k]) )
+                    fd.write('\n    For Channel ' + str(self.channels_with_FISH[k]) )
+                    fd.write('\n             Image Id    |    threshold    |    number cells    |    spots per cell    |' )
                     for i,image_id in enumerate(self.list_counter_image_id) :
-                        fd.write('\n        Image Id : ' + str(image_id) + '   threshold: '  + str(self.list_thresholds_spot_detection[i][k]))
+                        image_id_str = str(image_id)
+                        len_id = len(image_id_str)
+                        threshold_str = str(int(self.list_thresholds_spot_detection[i][k]))
+                        len_ts= len(threshold_str)
+                        number_cells_str = str(int(self.list_number_detected_cells[i]))
+                        len_nc = len(number_cells_str)
+                        average_spots_per_cells_str = str(int(self.list_average_spots_per_cell[i][k]))
+                        #len_sp = len(average_spots_per_cells_str)
+                        fd.write('\n                ' +'    '+image_id_str + ' '* np.max((1,(13-len_id))) +
+                                                '    '+threshold_str +  ' '* np.max((1,(14-len_ts))) +
+                                                '    '+number_cells_str + ' '* np.max((1,(17-len_nc))) +
+                                                '    '+average_spots_per_cells_str )
+                        #self.list_average_spots_per_cell, self.list_number_detected_cells
                 fd.write('\n') 
-                
                 fd.write('#' * (number_spaces_pound_sign)) 
                 fd.write('\nREPRODUCIBILITY ')
                 fd.write('\n    Platform: \n')
@@ -2122,7 +2155,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True):
+    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True,remove_out_of_focus_images = True,sharpness_threshold =1.12):
         list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
@@ -2135,7 +2168,7 @@ class PipelineFISH():
         num_z_silces = list_images[0].shape[0] 
         MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE = 10 # This constant is only used to remove the extre z-slices on the original image.
         if (remove_z_slices_borders == True) and  (list_selected_z_slices is None) and (num_z_silces>=MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE): 
-            NUMBER_Z_SLICES_TO_TRIM = 2 # This constant indicates the number of z_slices to remove from the border.
+            NUMBER_Z_SLICES_TO_TRIM = 1 # This constant indicates the number of z_slices to remove from the border.
             list_selected_z_slices = np.arange(NUMBER_Z_SLICES_TO_TRIM,num_z_silces-NUMBER_Z_SLICES_TO_TRIM,1)
             self.remove_z_slices_borders = True
         else:
@@ -2152,8 +2185,9 @@ class PipelineFISH():
         else:
             self.list_images = list_images
         self.list_z_slices_per_image = [ img.shape[0] for img in self.list_images] # number of z-slices in the figure
-        self.channels_with_cytosol = channels_with_cytosol
-        self.channels_with_nucleus = channels_with_nucleus
+        self.channels_with_cytosol = Utilities.make_it_a_list(channels_with_cytosol) #channels_with_cytosol
+        self.channels_with_nucleus = Utilities.make_it_a_list(channels_with_nucleus) #channels_with_nucleus
+        channels_with_FISH = Utilities.make_it_a_list(channels_with_FISH) #channels_with_FISH
         self.channels_with_FISH = channels_with_FISH
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
@@ -2169,7 +2203,8 @@ class PipelineFISH():
         self.list_psfs = list_psfs
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
-        self.CLUSTER_RADIUS = psf_yx*2
+        CLUSTER_RADIUS = psf_yx*2
+        self.CLUSTER_RADIUS = CLUSTER_RADIUS 
         self.data_folder_path = data_folder_path
         if not(file_name_str is None):
             self.name_for_files = file_name_str
@@ -2187,9 +2222,57 @@ class PipelineFISH():
         self.save_all_images = save_all_images                                  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
-        self.threshold_for_spot_detection = Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
         self.save_filtered_images= save_filtered_images
+        self.sharpness_threshold = sharpness_threshold
+        # Testing sharpness in images
+        self.remove_out_of_focus_images = remove_out_of_focus_images
+        if remove_out_of_focus_images == True:
+            list_metric_sharpeness_images, list_is_image_sharp,list_sharp_images = Utilities.calculate_sharpness(list_images, channels_with_FISH=channels_with_FISH,threshold=sharpness_threshold)
+        else:
+            list_sharp_images= list_images
+            list_is_image_sharp=np.ones(len(list_images))
+            list_is_image_sharp = [bool(x) for x in list_is_image_sharp]
+            list_metric_sharpeness_images= Utilities.calculate_sharpness(list_images, channels_with_FISH=channels_with_FISH,threshold=sharpness_threshold)[0]
+        self.list_is_image_sharp = list_is_image_sharp
+        self.list_metric_sharpeness_images =list_metric_sharpeness_images
+        
+        # Section that creates an automated intensity threshold for spot detection by using the average values obtained from processing all the directiory of images. 
+        MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 3
+        if (threshold_for_spot_detection == None) and (len(list_sharp_images)>MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD):
+            MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 20
+            number_images_to_test = np.min((MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD,len(list_sharp_images)))
+            sub_section_images_to_test =list_sharp_images[:number_images_to_test]
+            threshold_for_spot_detection =[]
+            for i in range(len(channels_with_FISH)):
+                list_thresholds=[]
+                voxel_size_z = list_voxels[i][0]
+                voxel_size_yx = list_voxels[i][1]
+                psf_z = list_psfs[i][0] 
+                psf_yx = list_psfs[i][1]
+                for _, image_selected in enumerate(sub_section_images_to_test):
+                    threshold = BigFISH(image_selected,
+                                        channels_with_FISH[i], 
+                                        voxel_size_z = voxel_size_z,
+                                        voxel_size_yx = voxel_size_yx, 
+                                        psf_z = psf_z, 
+                                        psf_yx = psf_yx, 
+                                        cluster_radius=CLUSTER_RADIUS,
+                                        minimum_spots_cluster=self.minimum_spots_cluster, 
+                                        use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,
+                                        threshold_for_spot_detection=None).detect()[2]
+                    list_thresholds.append(threshold)
+                # calculating the average threshold for all images removing min and max values.
+                array_threshold_spot_detection = np.array(list_thresholds)
+                min_val = np.min(array_threshold_spot_detection)
+                max_val = np.max(array_threshold_spot_detection)
+                mask_ts = (array_threshold_spot_detection != min_val) & (array_threshold_spot_detection != max_val)
+                average_threshold_spot_detection= int(np.mean(array_threshold_spot_detection[mask_ts]))
+                threshold_for_spot_detection.append(average_threshold_spot_detection)
+        else:
+            threshold_for_spot_detection = Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
+        self.threshold_for_spot_detection = threshold_for_spot_detection
+        
         
     def run(self):
         # Creating folder to store outputs.
@@ -2202,6 +2285,8 @@ class PipelineFISH():
         list_segmentation_succesful=[]
         list_counter_image_id=[]
         list_thresholds_spot_detection =[]
+        list_number_detected_cells = []
+        list_average_spots_per_cell =[]
         temp_folder_name = str('temp_results_'+ self.name_for_files)
         if not os.path.exists(temp_folder_name):
             os.makedirs(temp_folder_name)
@@ -2217,147 +2302,184 @@ class PipelineFISH():
         counter=0
         for i in range (0, self.number_images ):
             print('')
-            print( ' ############### ' )
-            print( '       IMAGE : '+ str(i) )
-            print( ' ############### ' )
+            print( ' ###################### ' )
+            print( '        IMAGE : '+ str(i) )
+            print( ' ###################### ' )
             if i ==0:
                 dataframe = None
-            print('ORIGINAL IMAGE')
-            print('Image Name: ', self.list_files_names[i])
+            #print('- ORIGINAL IMAGE')
+            print('    Image Name :  ', self.list_files_names[i])
             temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
             temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
             Plots.plot_images(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name, show_plots = self.show_plots)            
-            print('Image Shape: ', self.list_images[i].shape )
+            #print('    Image Shape :                            ', list(self.list_images[i].shape ))
+            img_shape = list(self.list_images[i].shape )
             if self.remove_z_slices_borders == True:
-                print('Trimed z_slices at each border :', self.NUMBER_Z_SLICES_TO_TRIM)
-            # Cell segmentation
-            temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
-            print('CELL SEGMENTATION')
-            if (self.masks_dir is None):
-                masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],
-                                                                                            self.channels_with_cytosol, 
-                                                                                            self.channels_with_nucleus, 
-                                                                                            diameter_cytosol=self.diameter_cytosol, 
-                                                                                            diameter_nucleus=self.diameter_nucleus, 
-                                                                                            show_plots=self.show_plots,
-                                                                                            optimization_segmentation_method=self.optimization_segmentation_method,
-                                                                                            image_name = temp_segmentation_img_name,
-                                                                                            NUMBER_OF_CORES=self.NUMBER_OF_CORES, 
-                                                                                            running_in_pipeline = True ).calculate_masks() 
-            # test if segmentation was succcesful
-                if (self.channels_with_cytosol  is None):
-                    detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
-                if (self.channels_with_nucleus  is None):
-                    detected_mask_pixels = np.count_nonzero([masks_complete_cells.flatten()])
-                if not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
-                    detected_mask_pixels =np.count_nonzero([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()])
-                if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
-                    segmentation_succesful = True
-                else:
-                    segmentation_succesful = False                
+                img_shape = list(self.list_images[i].shape )
+                img_shape[0]=img_shape[0]+2*(self.NUMBER_Z_SLICES_TO_TRIM)
+                print('    Orginal Image Shape :                    ', img_shape)
+                print('    Trimmed z_slices at each border :        ', self.NUMBER_Z_SLICES_TO_TRIM)
             else:
-                # Paths to masks
-                if not (self.channels_with_nucleus is None) :
-                    mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
-                    try:
-                        masks_nuclei = imread(str(mask_nuc_path)) 
+                print('    Original Image Shape :                   ', img_shape)
+            print('    Image sharpness metric :                 ',self.list_metric_sharpeness_images[i])
+            
+            if self.list_is_image_sharp[i] == False: 
+                print('    Image out of focus.')
+                list_segmentation_succesful.append(False)
+            else:
+                # Cell segmentation
+                temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
+                #print('- CELL SEGMENTATION')
+                if (self.masks_dir is None):
+                    masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = CellSegmentation(self.list_images[i],
+                                                                                                self.channels_with_cytosol, 
+                                                                                                self.channels_with_nucleus, 
+                                                                                                diameter_cytosol=self.diameter_cytosol, 
+                                                                                                diameter_nucleus=self.diameter_nucleus, 
+                                                                                                show_plots=self.show_plots,
+                                                                                                optimization_segmentation_method=self.optimization_segmentation_method,
+                                                                                                image_name = temp_segmentation_img_name,
+                                                                                                NUMBER_OF_CORES=self.NUMBER_OF_CORES, 
+                                                                                                running_in_pipeline = True ).calculate_masks() 
+                # test if segmentation was succcesful
+                    if Utilities.is_None(self.channels_with_cytosol) ==True: #(self.channels_with_cytosol is None):
+                        detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
+                    if Utilities.is_None(self.channels_with_nucleus) ==True: #(self.channels_with_nucleus  is None):
+                        detected_mask_pixels = np.count_nonzero([masks_complete_cells.flatten()])
+                    if (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False):#not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
+                        detected_mask_pixels =np.count_nonzero([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()])
+                    # Counting pixels
+                    if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
                         segmentation_succesful = True
-                    except:
-                        segmentation_succesful = False
-                if not (self.channels_with_cytosol is None):
-                    mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
-                    try:
-                        masks_complete_cells = imread(str( mask_cyto_path   )) 
-                        segmentation_succesful = True
-                    except:
-                        segmentation_succesful = False
-                if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) :
-                    mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
-                    try:
-                        masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
-                    except:
-                        segmentation_succesful = False
-                # test all masks exist, if not create the variable and set as None.
-                if not 'masks_nuclei' in locals():
-                    masks_nuclei=None
-                if not 'masks_complete_cells' in locals():
-                    masks_complete_cells=None
-                if not 'masks_cytosol_no_nuclei' in locals():
-                    masks_cytosol_no_nuclei=None
-            # saving masks
-            if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
-                if not (self.channels_with_nucleus is None):
-                    mask_nuc_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_nuclei_' + temp_file_name +'.tif' )
-                    tifffile.imwrite(mask_nuc_path, masks_nuclei)
-                if not (self.channels_with_cytosol is None):
-                    mask_cyto_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_' + temp_file_name +'.tif' )
-                    tifffile.imwrite(mask_cyto_path, masks_complete_cells)
-                if not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
-                    mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
-                    tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
-            print('SPOT DETECTION')
-            if segmentation_succesful==True:
-                temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
-                dataframe_FISH, list_fish_images,list_thresholds_spot_detection_in_image = SpotDetection(self.list_images[i],
-                                                                                        self.channels_with_FISH,
-                                                                                        self.channels_with_cytosol,
-                                                                                        self.channels_with_nucleus, 
-                                                                                        cluster_radius=self.CLUSTER_RADIUS,
-                                                                                        minimum_spots_cluster=self.minimum_spots_cluster,
-                                                                                        masks_complete_cells=masks_complete_cells,
-                                                                                        masks_nuclei=masks_nuclei, 
-                                                                                        masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, 
-                                                                                        dataframe=dataframe,
-                                                                                        image_counter=counter, 
-                                                                                        list_voxels=self.list_voxels,
-                                                                                        list_psfs=self.list_psfs, 
-                                                                                        show_plots=self.show_plots,
-                                                                                        image_name = temp_detection_img_name,
-                                                                                        save_all_images=self.save_all_images,
-                                                                                        display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,
-                                                                                        use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,
-                                                                                        threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
-                dataframe = dataframe_FISH
-                list_masks_complete_cells.append(masks_complete_cells)
-                list_masks_nuclei.append(masks_nuclei)
-                list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
-                list_counter_image_id.append(counter)
-                list_thresholds_spot_detection.append(list_thresholds_spot_detection_in_image)
-                # saving FISH images
-                if self.save_filtered_images == True:
-                    for j in range(len(self.channels_with_FISH)):
-                        filtered_image_path = pathlib.Path().absolute().joinpath( filtered_folder_name, 'filter_Ch_' + str(self.channels_with_FISH[j]) +'_'+ temp_file_name +'.tif' )
-                        tifffile.imwrite(filtered_image_path, list_fish_images[j])
-                # Create the image with labels.
-                df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == counter]
-                df_labels = df_subset.loc[ :, ['image_id','cell_id','nuc_loc_y','nuc_loc_x','cyto_loc_y','cyto_loc_x']].drop_duplicates()
-                # Plotting cells 
-                Plots.plotting_masks_and_original_image(image= self.list_images[i], 
-                                                        masks_complete_cells=masks_complete_cells, 
-                                                        masks_nuclei=masks_nuclei, 
-                                                        channels_with_cytosol=self.channels_with_cytosol, 
-                                                        channels_with_nucleus = self.channels_with_nucleus,
-                                                        image_name=temp_segmentation_img_name,
-                                                        show_plots=self.show_plots,
-                                                        df_labels=df_labels)
-                del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images,df_subset,df_labels
-                counter+=1
-            # appending cell segmentation flag
-            list_segmentation_succesful.append(segmentation_succesful)
+                    else:
+                        segmentation_succesful = False                
+                else:
+                    # Paths to masks
+                    if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus in (None,[None])) :
+                        mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
+                        try:
+                            masks_nuclei = imread(str(mask_nuc_path)) 
+                            segmentation_succesful = True
+                        except:
+                            segmentation_succesful = False
+                    if Utilities.is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
+                        mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
+                        try:
+                            masks_complete_cells = imread(str( mask_cyto_path   )) 
+                            segmentation_succesful = True
+                        except:
+                            segmentation_succesful = False
+                    if  (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False): # not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) :
+                        mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
+                        try:
+                            masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
+                        except:
+                            segmentation_succesful = False
+                    # test all masks exist, if not create the variable and set as None.
+                    if not 'masks_nuclei' in locals():
+                        masks_nuclei=None
+                    if not 'masks_complete_cells' in locals():
+                        masks_complete_cells=None
+                    if not 'masks_cytosol_no_nuclei' in locals():
+                        masks_cytosol_no_nuclei=None
+                # saving masks
+                if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
+                    number_detected_cells = np.max(masks_complete_cells)
+                    print('    Number of detected cells:                ', number_detected_cells)
+                    if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus is None):
+                        mask_nuc_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_nuclei_' + temp_file_name +'.tif' )
+                        tifffile.imwrite(mask_nuc_path, masks_nuclei)
+                    if Utilities.is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
+                        mask_cyto_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_' + temp_file_name +'.tif' )
+                        tifffile.imwrite(mask_cyto_path, masks_complete_cells)
+                    if (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False): #not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+                        mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
+                        tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
+                else:
+                    number_detected_cells = 0
+                list_number_detected_cells.append(number_detected_cells)
+                #print('- SPOT DETECTION')
+                if segmentation_succesful==True:
+                    temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
+                    dataframe_FISH, list_fish_images,list_thresholds_spot_detection_in_image = SpotDetection(self.list_images[i],
+                                                                                            self.channels_with_FISH,
+                                                                                            self.channels_with_cytosol,
+                                                                                            self.channels_with_nucleus, 
+                                                                                            cluster_radius=self.CLUSTER_RADIUS,
+                                                                                            minimum_spots_cluster=self.minimum_spots_cluster,
+                                                                                            masks_complete_cells=masks_complete_cells,
+                                                                                            masks_nuclei=masks_nuclei, 
+                                                                                            masks_cytosol_no_nuclei=masks_cytosol_no_nuclei, 
+                                                                                            dataframe=dataframe,
+                                                                                            image_counter=counter, 
+                                                                                            list_voxels=self.list_voxels,
+                                                                                            list_psfs=self.list_psfs, 
+                                                                                            show_plots=self.show_plots,
+                                                                                            image_name = temp_detection_img_name,
+                                                                                            save_all_images=self.save_all_images,
+                                                                                            display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,
+                                                                                            use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,
+                                                                                            threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
+                    dataframe = dataframe_FISH
+                    list_masks_complete_cells.append(masks_complete_cells)
+                    list_masks_nuclei.append(masks_nuclei)
+                    list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
+                    list_counter_image_id.append(counter)
+                    list_thresholds_spot_detection.append(list_thresholds_spot_detection_in_image)
+                    print('    Intensity threshold for spot detection : ', list_thresholds_spot_detection_in_image)
+                    # Create the image with labels.
+                    df_test = dataframe.loc[dataframe['image_id'] == counter]
+                    test_cells_ids = np.unique(df_test['cell_id'].values)
+                    # Saving the average number of spots per cell
+                    list_number_of_spots_per_cell_for_each_spot_type=[]
+                    list_max_number_of_spots_per_cell_for_each_spot_type=[]
+                    for sp in range(len(self.channels_with_FISH)):
+                        detected_spots = np.asarray([len( dataframe.loc[  (dataframe['cell_id']==cell_id_test)  & (dataframe['spot_type']==sp) & (dataframe['is_cell_fragmented']!=-1)].spot_id) for i,cell_id_test in enumerate(test_cells_ids)])
+                        average_number_of_spots_per_cell = int(np.mean(detected_spots))
+                        max_number_of_spots_per_cell = int(np.max(detected_spots))
+                        list_number_of_spots_per_cell_for_each_spot_type.append(average_number_of_spots_per_cell)
+                        list_max_number_of_spots_per_cell_for_each_spot_type.append(max_number_of_spots_per_cell)
+                    print('    Average detected spots per cell :        ', list_number_of_spots_per_cell_for_each_spot_type)
+                    print('    Maximum detected spots per cell :        ', list_max_number_of_spots_per_cell_for_each_spot_type)
+                    list_average_spots_per_cell.append(list_number_of_spots_per_cell_for_each_spot_type)
+                    # saving FISH images
+                    if self.save_filtered_images == True:
+                        for j in range(len(self.channels_with_FISH)):
+                            filtered_image_path = pathlib.Path().absolute().joinpath( filtered_folder_name, 'filter_Ch_' + str(self.channels_with_FISH[j]) +'_'+ temp_file_name +'.tif' )
+                            tifffile.imwrite(filtered_image_path, list_fish_images[j])
+                    # Create the image with labels.
+                    df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == counter]
+                    df_labels = df_subset.loc[ :, ['image_id','cell_id','nuc_loc_y','nuc_loc_x','cyto_loc_y','cyto_loc_x']].drop_duplicates()
+                    # Plotting cells 
+                    Plots.plotting_masks_and_original_image(image= self.list_images[i], 
+                                                            masks_complete_cells=masks_complete_cells, 
+                                                            masks_nuclei=masks_nuclei, 
+                                                            channels_with_cytosol=self.channels_with_cytosol, 
+                                                            channels_with_nucleus = self.channels_with_nucleus,
+                                                            image_name=temp_segmentation_img_name,
+                                                            show_plots=self.show_plots,
+                                                            df_labels=df_labels)
+                    del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images,df_subset,df_labels
+                    counter+=1
+                # appending cell segmentation flag
+                list_segmentation_succesful.append(segmentation_succesful)
+        
+        # Creating a list storing if segmenation and sharpness selection were sucesfull
+        list_processing_sucessful = [a and b for a, b in zip(list_segmentation_succesful, self.list_is_image_sharp)]
         
         # Saving all original images as a PDF
-        print('CREATING THE PLOT WITH ORIGINAL IMAGES')
+        #print('- CREATING THE PLOT WITH ORIGINAL IMAGES')
         image_name= 'original_images_' + self.name_for_files +'.pdf'
         Plots.plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
         # Creating an image with all segmentation results
         image_name= 'segmentation_images_' + self.name_for_files +'.pdf'
         Plots.plotting_segmentation_images(directory=pathlib.Path().absolute().joinpath(temp_folder_name),
                                            list_files_names=self.list_files_names,
-                                           list_segmentation_succesful=list_segmentation_succesful,
+                                           list_segmentation_succesful=list_processing_sucessful,
                                            image_name=image_name,
                                            show_plots=False)
         # Saving all cells in a single image file
-        print('CREATING THE PLOT WITH ALL CELL IMAGES') 
+        #print('- CREATING THE PLOT WITH ALL CELL IMAGES') 
         for k in range (len(self.channels_with_FISH)):
             Plots.plot_all_cells_and_spots(list_images=self.list_images, 
                                         complete_dataframe=dataframe, 
@@ -2365,18 +2487,18 @@ class PipelineFISH():
                                         list_masks_complete_cells = list_masks_complete_cells,
                                         list_masks_nuclei = list_masks_nuclei,
                                         spot_type=k,
-                                        list_segmentation_succesful=list_segmentation_succesful,
+                                        list_segmentation_succesful=list_processing_sucessful,
                                         image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
                                         show_plot= False)
         # Creating the dataframe       
-        if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_segmentation_succesful)>0:
+        if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_sucessful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
-        elif np.sum(list_segmentation_succesful)>0:
+        elif np.sum(list_processing_sucessful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')        
         # Creating the metadata
-        print('CREATING THE METADATA FILE')
+        #print('- CREATING THE METADATA FILE')
         Metadata(self.data_folder_path, 
                 self.channels_with_cytosol, 
                 self.channels_with_nucleus, 
@@ -2394,9 +2516,15 @@ class PipelineFISH():
                 remove_z_slices_borders=self.remove_z_slices_borders,
                 NUMBER_Z_SLICES_TO_TRIM=self.NUMBER_Z_SLICES_TO_TRIM,
                 CLUSTER_RADIUS=self.CLUSTER_RADIUS,
-                list_thresholds_spot_detection=list_thresholds_spot_detection).write_metadata()
+                list_thresholds_spot_detection=list_thresholds_spot_detection,
+                list_average_spots_per_cell=list_average_spots_per_cell,
+                list_number_detected_cells=list_number_detected_cells,
+                list_is_image_sharp=self.list_is_image_sharp,
+                list_metric_sharpeness_images=self.list_metric_sharpeness_images,
+                remove_out_of_focus_images=self.remove_out_of_focus_images,
+                sharpness_threshold=self.sharpness_threshold).write_metadata()
         # Creating a PDF report
-        print('CREATING THE PDF REPORT')
+        #print('CREATING THE PDF REPORT')
         filenames_for_pdf_report = [ f[:-4] for f in self.list_files_names]
         ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name), 
                 filenames_for_pdf_report=filenames_for_pdf_report, 
@@ -2404,7 +2532,7 @@ class PipelineFISH():
                 save_all_images=self.save_all_images, 
                 list_z_slices_per_image=self.list_z_slices_per_image,
                 threshold_for_spot_detection=self.threshold_for_spot_detection,
-                list_segmentation_succesful=list_segmentation_succesful ).create_report()
+                list_segmentation_succesful=list_processing_sucessful ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, output_identification_string
 
 
@@ -2579,7 +2707,40 @@ class Utilities():
     '''
     def __init__(self):
         pass
-
+    
+    def calculate_sharpness(list_images, channels_with_FISH, neighborhood_size=31, threshold=1.12):
+        list_mean_sharpeness_image = []
+        list_is_image_sharp=[]
+        list_sharp_images =[]
+        for _ , image in enumerate(list_images):
+            temp = image[:,:,:,channels_with_FISH[0]]
+            focus = stack.compute_focus(temp, neighborhood_size=neighborhood_size)
+            mean_sharpeness_image = np.round(np.mean(focus.mean(axis=(1, 2))),3)
+            if mean_sharpeness_image > threshold:
+                is_image_sharp = True
+                list_sharp_images.append(image)
+            else:
+                is_image_sharp = False
+            list_mean_sharpeness_image.append(mean_sharpeness_image)
+            list_is_image_sharp.append(is_image_sharp)
+        return list_mean_sharpeness_image, list_is_image_sharp,list_sharp_images
+    
+    
+    
+    def is_None(variable_to_test):
+        if variable_to_test in (None, 'None', 'none',['None'],['none'],[None]):
+            is_none = True
+        else:
+            is_none = False
+        return is_none
+    
+    def make_it_a_list(variable_to_test):
+        if not (type(variable_to_test) is list):
+            list_variable = [variable_to_test]
+        else:
+            list_variable = variable_to_test
+        return list_variable
+    
     # Function that reorder the index to make it continuos 
     def reorder_mask_image(mask_image_tested):
         number_masks = np.max(mask_image_tested)
@@ -2700,7 +2861,7 @@ class Utilities():
             output_identification_string = original_folder_name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts'
             for i in range (len(channels_with_FISH)):
                 output_identification_string+='_'+ str(list_threshold_for_spot_detection[i])
-                print ('Folder name: ' , output_identification_string)
+                print ('\n Output folder name : ' , output_identification_string)
         # Output folders
         analysis_folder_name = 'analysis_'+ output_identification_string
         # Removing directory if exist
@@ -2714,7 +2875,7 @@ class Utilities():
     def  create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection=None):
         # If more than one channel contain FISH spots. This section will create a list of thresholds for spot detection and for each channel. 
         if not(isinstance(channels_with_FISH, list)):
-            channels_with_FISH=[channels_with_FISH]
+            channels_with_FISH=Utilities.make_it_a_list(channels_with_FISH)
         list_threshold_for_spot_detection=[]
         if not isinstance(threshold_for_spot_detection, list):
             for i in range (len(channels_with_FISH)):
@@ -3224,16 +3385,24 @@ class Utilities():
         return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_cell, subsection_mask_nuc
     
     
-    def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= None):
+    def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= None,z_slice=None):
+        df_spots_all_z = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
+        number_spots = len (  df_spots_all_z  )
+        
         # Locating spots in the dataframe
-        df_spots = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
-        number_spots = len (  df_spots  )
-        if number_spots >0:
+        if (z_slice is None):
+            df_spots = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
+        else:
+            df_spots = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) & (df['z']==z_slice) ] 
+        number_spots_selected_z = len (  df_spots  )
+        
+        if number_spots_selected_z >0:
             y_spot_locations = df_spots['y'].values
             x_spot_locations = df_spots['x'].values
         else:
             y_spot_locations = None
             x_spot_locations = None
+        
         # locating the TS in  the dataframe 
         if not (min_ts_size is None):
             df_TS = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==1) & (df['cluster_size']>=min_ts_size) ] 
@@ -3247,7 +3416,7 @@ class Utilities():
         else:
             y_TS_locations = None
             x_TS_locations = None
-        return y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations,number_spots, number_TS
+        return y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations,number_spots, number_TS,number_spots_selected_z
     
     def spot_crops (image,df,number_crops_to_show,spot_size=5):
         number_crops_to_show = np.min((number_crops_to_show, len(df)/2))
@@ -3301,7 +3470,7 @@ class Plots():
                 axis_index = axes
             else:
                 axis_index = axes[i]
-            if (list_segmentation_succesful[i] == True) or (list_segmentation_succesful[0] is None):
+            if (list_segmentation_succesful[i] == True): # or (list_segmentation_succesful[i] is None):
                 temp_segmented_img_name = directory.joinpath('seg_' + list_files_names[i].split(".")[0] +'.png' )
                 temp_img =  imread(str( temp_segmented_img_name ))
                 axis_index.imshow( temp_img)
@@ -3413,7 +3582,7 @@ class Plots():
         # Plotting
         n_channels = np.min([3, max_image.shape[2]])
         im = Utilities.convert_to_int8(max_image[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
-        if np.max(masks_complete_cells) != 0 and not(channels_with_cytosol is None) and not(channels_with_nucleus is None):
+        if np.max(masks_complete_cells) != 0 and not(channels_with_cytosol in (None,[None])) and not(channels_with_nucleus in (None,[None])):
             _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
             masks_plot_cyto= masks_complete_cells 
             masks_plot_nuc = masks_nuclei              
@@ -3455,7 +3624,7 @@ class Plots():
                     X_cell_location = df_labels.loc[df_labels['cell_id'] == label, 'nuc_loc_x'].item()
                     axes[3].text(x=X_cell_location, y=Y_cell_location, s=cell_idx_string, fontsize=12, color='black')
         else:
-            if not(channels_with_cytosol is None) and (channels_with_nucleus is None):
+            if not(channels_with_cytosol in (None,[None])) and (channels_with_nucleus in (None,[None])):
                 masks_plot_cyto= masks_complete_cells 
                 n_channels = np.min([3, max_image.shape[2]])
                 _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (20, 10))
@@ -3488,7 +3657,7 @@ class Plots():
                         Y_cell_location = df_labels.loc[df_labels['cell_id'] == label, 'cyto_loc_y'].item()
                         X_cell_location = df_labels.loc[df_labels['cell_id'] == label, 'cyto_loc_x'].item()
                         axes[2].text(x=X_cell_location, y=Y_cell_location, s=cell_idx_string, fontsize=12, color='black')
-            if (channels_with_cytosol is None) and not(channels_with_nucleus is None):
+            if (channels_with_cytosol in (None,[None])) and not(channels_with_nucleus in (None,[None])):
                 masks_plot_nuc = masks_nuclei    
                 _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (20, 10))
                 axes[0].imshow(im)
@@ -4093,7 +4262,7 @@ class Plots():
         
     def plot_single_cell_all_channels(image, df, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None):
         # Extracting spot localization
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS,number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         number_color_channels = image.shape[3]
         # Plotting
         _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 7))
@@ -4129,7 +4298,7 @@ class Plots():
     
     def plot_single_cell(image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,):
         # Extracting spot localization
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # maximum and minimum values to plot
         max_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0),99.5)
         min_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0), 0)
@@ -4223,7 +4392,7 @@ class Plots():
     
     def plot_selected_cell_colors(image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True):
         # Extracting spot location
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # Applying Gaussian filter
         if use_gaussian_filter == True:
             filtered_image_with_selected_cell = GaussianFilter(video=image, sigma = 1).apply_filter()
@@ -4325,7 +4494,7 @@ class Plots():
         return None
     
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_succesful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_succesful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True,use_max_projection=True):
         # removing images where segmentation was not successful
         if not (list_segmentation_succesful is None):
             list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_succesful[i]]
@@ -4375,14 +4544,22 @@ class Plots():
             else:
                 axis_index = axes[r,c]
             image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
-            # Extracting spot localization
-            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
-            temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
-            image_width = temp_image.shape[1]
-            max_int = np.mean(temp_image).astype(int)
+            central_z_slice = int(image.shape[0]/2)
+            if use_max_projection ==True:
+                temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
+                #in_focus_image = RemoveOutFocusPlanes.get_frames_in_focus(image)
+                #temp_image = np.max(in_focus_image[:,: ,:,selected_channel],axis=0)
+                #z_slice =None
+            else:
+                temp_image = image[central_z_slice,: ,:,selected_channel]
+                #z_slice = central_z_slice
+            #image_width = temp_image.shape[1]
+            #max_int = np.mean(temp_image).astype(int)
             max_visualization_value = np.percentile(temp_image,99.5)
             min_visualization_value = np.percentile(temp_image, 0)
+            # Extracting spot localization
+            #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size,z_slice=z_slice)
             # Plotting
             # Visualizing image only
             axis_index.imshow( temp_image,cmap = 'Greys', vmin=min_visualization_value, vmax=max_visualization_value)
@@ -4416,11 +4593,19 @@ class Plots():
                 image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
                 image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
-            
             # Extracting spot localization
-            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
-            temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
+            central_z_slice = int(image.shape[0]/2)
+            if use_max_projection ==True:
+                #in_focus_image = RemoveOutFocusPlanes.get_frames_in_focus(image)
+                #temp_image = np.max(in_focus_image[:,: ,:,selected_channel],axis=0)
+                temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
+                z_slice =None
+            else:
+                temp_image = image[central_z_slice,: ,:,selected_channel]
+                z_slice =central_z_slice
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size,z_slice=z_slice)
             max_visualization_value = np.percentile(temp_image,99.5)
             min_visualization_value = np.percentile(temp_image, 0)
             # Plotting
@@ -4441,9 +4626,9 @@ class Plots():
                 downsampled_mask = signal.resample(contour, num = NUM_POINTS_MASK_EDGE_LINE)
                 axis_index.fill(downsampled_mask[:, 1], downsampled_mask[:, 0], facecolor = 'none', edgecolor = 'b', linewidth=1.5) 
             # Plotting spots on image
-            if number_spots >0:
-                for i in range (number_spots):
-                    if i < number_spots-1:
+            if number_spots_selected_z >0:
+                for i in range (number_spots_selected_z):
+                    if i < number_spots_selected_z-1:
                         circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'r', fill = False,lw=0.3)
                     else:
                         circle1=plt.Circle((x_spot_locations[i], y_spot_locations[i]), 2, color = 'r', fill = False,lw=0.3, label='Spots: '+str(number_spots))
@@ -4457,7 +4642,7 @@ class Plots():
                         circleTS=plt.Circle((x_TS_locations[i], y_TS_locations[i]), 6, color = 'cyan', fill = False,lw=2.5, label= 'TS: '+str(number_TS) )
                     axis_index.add_artist(circleTS )
             # showing label with number of spots and ts.
-            if (show_legend == True) and (number_spots>0): 
+            if (show_legend == True) and (number_spots_selected_z>0): 
                 legend = axis_index.legend(loc='upper right',facecolor= 'white',prop={'size': 9})
                 legend.get_frame().set_alpha(None)
             #Showing scale bar
