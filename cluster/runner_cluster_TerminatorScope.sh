@@ -62,8 +62,8 @@ remove_z_slices_borders=1        # Use this flag to remove 2 z-slices from the t
 remove_out_of_focus_images=1         # Flag to remove out of focus images
 # ######### Parameters to reformat images to standard format ########
 convert_to_standard_format=1
-number_color_channels=0
-number_of_fov=0
+number_color_channels=2
+number_of_fov=1
 # #####################################################################
 
 
