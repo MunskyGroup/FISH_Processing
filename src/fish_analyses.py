@@ -82,6 +82,8 @@ import seaborn as sns
 import scipy.stats as stats
 from  matplotlib.ticker import FuncFormatter
 from matplotlib_scalebar.scalebar import ScaleBar
+import joypy
+from matplotlib import cm
 
 class Banner():
     def __init__(self):
@@ -1241,21 +1243,26 @@ class BigFISH():
         #print('Int threshold used for the detection of spots: ',threshold )
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
-        try:
-            spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, 
-                                                                    spots=spots, 
-                                                                    voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-                                                                    spot_radius = (self.psf_z, self.psf_yx, self.psf_yx),
-                                                                    alpha=0.9,   # alpha impacts the number of spots per candidate region
-                                                                    beta=1,      # beta impacts the number of candidate regions to decompose
-                                                                    gamma=5)     # gamma the filtering step to denoise the image
-        except:
+        decompose_dense_regions = False
+        if decompose_dense_regions == True:
+            try:
+                spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, 
+                                                                        spots=spots, 
+                                                                        voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
+                                                                        spot_radius = (self.psf_z, self.psf_yx, self.psf_yx),
+                                                                        alpha=0.9,   # alpha impacts the number of spots per candidate region
+                                                                        beta=1,      # beta impacts the number of candidate regions to decompose
+                                                                        gamma=5)     # gamma the filtering step to denoise the image
+            except:
+                spots_post_decomposition = spots
+        else:
             spots_post_decomposition = spots
             #print('Error during step: detection.decompose_dense ')
         ### CLUSTER DETECTION
         spots_post_clustering, clusters = detection.detect_clusters(spots_post_decomposition, 
                                             voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
-                                            radius= self.cluster_radius, nb_min_spots = self.minimum_spots_cluster)
+                                            radius= self.cluster_radius,
+                                            nb_min_spots = self.minimum_spots_cluster)
         # Saving results with new variable names
         spotDetectionCSV = spots_post_clustering
         clusterDetectionCSV = clusters
@@ -1870,7 +1877,7 @@ class Metadata():
     threshold_for_spot_detection : int
         Threshold value used to discriminate background noise from mRNA spots in the image.
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_succesful=True,list_counter_image_id=[],threshold_for_spot_detection=[],number_of_images_to_process=None,remove_z_slices_borders=False,NUMBER_Z_SLICES_TO_TRIM=0,CLUSTER_RADIUS=0,list_thresholds_spot_detection=[None],list_average_spots_per_cell=[None],list_number_detected_cells=[None],list_is_image_sharp=[None],list_metric_sharpeness_images=[None],remove_out_of_focus_images=False,sharpness_threshold=None):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_successful=True,list_counter_image_id=[],threshold_for_spot_detection=[],number_of_images_to_process=None,remove_z_slices_borders=False,NUMBER_Z_SLICES_TO_TRIM=0,CLUSTER_RADIUS=0,list_thresholds_spot_detection=[None],list_average_spots_per_cell=[None],list_number_detected_cells=[None],list_is_image_sharp=[None],list_metric_sharpeness_images=[None],remove_out_of_focus_images=False,sharpness_threshold=None):
         
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir,number_of_images_to_process).read()
         self.channels_with_cytosol = channels_with_cytosol
@@ -1888,12 +1895,15 @@ class Metadata():
         self.threshold_for_spot_detection=threshold_for_spot_detection
         if  (not str(data_dir.name)[0:5] ==  'temp_') and (self.file_name_str is None):
             self.filename = 'metadata_'+ str(data_dir.name).replace(" ", "")  +'.txt'
+            self.filename_csv = 'images_report_'+ str(data_dir.name).replace(" ", "")+'.csv'
         elif not(self.file_name_str is None):
             self.filename = 'metadata_'+ str(file_name_str).replace(" ", "") +'.txt'
+            self.filename_csv = 'images_report_'+ str(file_name_str).replace(" ", "")+'.csv'
         else:
             self.filename = 'metadata_'+ str(data_dir.name[5:].replace(" ", "")) +'.txt'
+            self.filename_csv = 'images_report_'+ str(file_name_str).replace(" ", "")+'.csv'
         self.data_dir = data_dir
-        self.list_segmentation_succesful =list_segmentation_succesful
+        self.list_segmentation_successful =list_segmentation_successful
         self.list_counter_image_id=list_counter_image_id
         self.remove_z_slices_borders=remove_z_slices_borders
         self.NUMBER_Z_SLICES_TO_TRIM=NUMBER_Z_SLICES_TO_TRIM
@@ -1917,7 +1927,10 @@ class Metadata():
             elif sys.platform == 'win32':
                 os.system('echo , > ' + filename)
         number_spaces_pound_sign = 75
+        
         def write_data_in_file(filename):
+            list_processing_image=[]
+            list_image_id =[]
             with open(filename, 'w') as fd:
                 fd.write('#' * (number_spaces_pound_sign)) 
                 fd.write('\nAUTHOR INFORMATION  ')
@@ -1958,15 +1971,36 @@ class Metadata():
                 fd.write('\n    Folder name: ' + str(self.data_dir.name)  )
                 # for loop for all the images.
                 fd.write('\n    Images in the directory :'  )
+                # size of longest name string
+                
+                file_name_len =0
+                for _, img_name in enumerate (self.list_files_names):
+                    if len(img_name) > file_name_len:
+                        max_file_name_len = len(img_name)
+                
+                str_label_img = '| Image Name'
+                size_str_label_img = len(str_label_img)
+                space_for_image_name = np.min((size_str_label_img, (size_str_label_img-max_file_name_len)))+1
+                
+                fd.write('\n        '+ str_label_img+' '* space_for_image_name + '      '+ '| Sharpness metric' + '      ' +'| Image Id'  )
+
                 counter=0
                 for indx, img_name in enumerate (self.list_files_names):
-                    if (self.list_segmentation_succesful[indx]== True) and (self.list_is_image_sharp[indx]== True):
-                        fd.write('\n        '+ img_name + '      '+ 'Sharpness metric: '+ str(self.list_metric_sharpeness_images[indx]) +  '      - Image Id :  ' + str(self.list_counter_image_id[counter]) )
+                    if (self.list_segmentation_successful[indx]== True) and (self.list_is_image_sharp[indx]== True):
+                        file_name_len = len(img_name)
+                        difference_name_len = max_file_name_len-file_name_len
+                        fd.write('\n        '+ img_name + (' '*(difference_name_len+4))+ ' '*8+ str(self.list_metric_sharpeness_images[indx]) +  '        ' + str(self.list_counter_image_id[counter]) )
+                        list_image_id.append(self.list_counter_image_id[counter])
                         counter+=1
+                        list_processing_image.append('successful')
                     elif self.list_is_image_sharp[indx]== False:
-                        fd.write('\n        '+ img_name + '      '+ 'Sharpness metric: '+ str(self.list_metric_sharpeness_images[indx])+ '      - error out of focus.')
+                        fd.write('\n        '+ img_name + (' '*(difference_name_len+4)) + ' '*8 + str(self.list_metric_sharpeness_images[indx])+ '      - error out of focus.')
+                        list_processing_image.append('error out of focus')
+                        list_image_id.append(-1)
                     else:
-                        fd.write('\n        '+ img_name + '      '+ 'Sharpness metric: '+ str(self.list_metric_sharpeness_images[indx])+ '      - error segmentation.')
+                        fd.write('\n        '+ img_name + (' '*(difference_name_len+4))+ ' '*8 + str(self.list_metric_sharpeness_images[indx])+ '      - error segmentation.')
+                        list_processing_image.append('error segmentation')
+                        list_image_id.append(-1)
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign)) 
                 fd.write('\nSUMMARY RESULTS')
@@ -1987,6 +2021,14 @@ class Metadata():
                                                 '    '+threshold_str +  ' '* np.max((1,(14-len_ts))) +
                                                 '    '+number_cells_str + ' '* np.max((1,(17-len_nc))) +
                                                 '    '+average_spots_per_cells_str )
+                    
+                    total_average_number_cells = str(int(np.mean(self.list_number_detected_cells)))
+                    total_average = str(int(np.mean(self.list_average_spots_per_cell[:][k])))
+                    
+                    fd.write('\n             ' +'Average:' + ' '* np.max((1,(13-len_id))) +
+                                                '    '+' '*len_ts +  ' '* np.max((1,(14-len_ts))) +
+                                                '    '+ total_average_number_cells + ' '* np.max((1,(17-len_nc))) +
+                                                '    '+total_average )
                         #self.list_average_spots_per_cell, self.list_number_detected_cells
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign)) 
@@ -2000,8 +2042,14 @@ class Metadata():
                         fd.write('\n        '+ module_name)
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign) ) 
+            return list_processing_image,list_image_id
         create_data_file(self.filename)
-        write_data_in_file(self.filename)
+        list_processing_image, list_image_id = write_data_in_file(self.filename)
+        
+        data = {'Image_id': list_image_id, 'Image_name': self.list_files_names, 'Processing': list_processing_image}
+        df = pd.DataFrame(data)
+        df.to_csv(self.filename_csv)
+        
         return None
 
 
@@ -2025,7 +2073,7 @@ class ReportPDF():
     This PDF file is generated, and it contains the processing steps for each image in the folder.
     
     '''    
-    def __init__(self, directory,filenames_for_pdf_report, channels_with_FISH,save_all_images,list_z_slices_per_image,threshold_for_spot_detection,list_segmentation_succesful=True):
+    def __init__(self, directory,filenames_for_pdf_report, channels_with_FISH,save_all_images,list_z_slices_per_image,threshold_for_spot_detection,list_segmentation_successful=True):
         self.directory = directory
         if isinstance(channels_with_FISH, list): 
             self.channels_with_FISH = channels_with_FISH
@@ -2034,7 +2082,7 @@ class ReportPDF():
         self.save_all_images = save_all_images
         self.list_z_slices_per_image = list_z_slices_per_image
         self.threshold_for_spot_detection=threshold_for_spot_detection
-        self.list_segmentation_succesful =list_segmentation_succesful
+        self.list_segmentation_successful =list_segmentation_successful
         self.filenames_for_pdf_report=filenames_for_pdf_report
         
     def create_report(self):
@@ -2059,14 +2107,14 @@ class ReportPDF():
                 pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
             pdf.cell(w=0, h=10, txt='Cell segmentation: ' + temp_file_name,ln =1,align = 'L')
             # code that returns the path of the segmented image
-            if self.list_segmentation_succesful[i]==True:
+            if self.list_segmentation_successful[i]==True:
                 temp_segmented_img_name = pathlib.Path().absolute().joinpath( self.directory, 'seg_' + temp_file_name +'.png' )
                 pdf.image(str(temp_segmented_img_name), x=0, y=HEIGHT/2, w=WIDTH-30)
             else:
                 pdf.cell(w=0, h=20, txt='Segmentation was not possible for image: ' + temp_file_name,ln =1,align = 'L')
                 pdf.add_page()
             # Code that plots the detected spots.
-            if (self.save_all_images==True) and (self.list_segmentation_succesful[i]==True):
+            if (self.save_all_images==True) and (self.list_segmentation_successful[i]==True):
                 for id_channel, channel in enumerate(self.channels_with_FISH):
                     counter=1
                     pdf.add_page() # adding a page
@@ -2096,7 +2144,7 @@ class ReportPDF():
                     except:
                         pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')
                     pdf.add_page()
-            elif self.list_segmentation_succesful[i]==True:
+            elif self.list_segmentation_successful[i]==True:
                 pdf.add_page()
                 for id_channel, channel in enumerate(self.channels_with_FISH):
                     # Plotting the image with detected spots
@@ -2203,7 +2251,7 @@ class PipelineFISH():
         self.list_psfs = list_psfs
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
-        CLUSTER_RADIUS = psf_yx*2
+        CLUSTER_RADIUS = 1000 #int(psf_yx*1.5)
         self.CLUSTER_RADIUS = CLUSTER_RADIUS 
         self.data_folder_path = data_folder_path
         if not(file_name_str is None):
@@ -2240,7 +2288,7 @@ class PipelineFISH():
         # Section that creates an automated intensity threshold for spot detection by using the average values obtained from processing all the directiory of images. 
         MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 3
         if (threshold_for_spot_detection == None) and (len(list_sharp_images)>MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD):
-            MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 20
+            MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 30
             number_images_to_test = np.min((MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD,len(list_sharp_images)))
             sub_section_images_to_test =list_sharp_images[:number_images_to_test]
             threshold_for_spot_detection =[]
@@ -2282,7 +2330,7 @@ class PipelineFISH():
         list_masks_complete_cells=[]
         list_masks_nuclei=[]
         list_masks_cytosol_no_nuclei=[]
-        list_segmentation_succesful=[]
+        list_segmentation_successful=[]
         list_counter_image_id=[]
         list_thresholds_spot_detection =[]
         list_number_detected_cells = []
@@ -2325,7 +2373,7 @@ class PipelineFISH():
             
             if self.list_is_image_sharp[i] == False: 
                 print('    Image out of focus.')
-                list_segmentation_succesful.append(False)
+                list_segmentation_successful.append(False)
             else:
                 # Cell segmentation
                 temp_segmentation_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'seg_' + temp_file_name +'.png' )
@@ -2350,31 +2398,31 @@ class PipelineFISH():
                         detected_mask_pixels =np.count_nonzero([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()])
                     # Counting pixels
                     if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
-                        segmentation_succesful = True
+                        segmentation_successful = True
                     else:
-                        segmentation_succesful = False                
+                        segmentation_successful = False                
                 else:
                     # Paths to masks
                     if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus in (None,[None])) :
                         mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
                         try:
                             masks_nuclei = imread(str(mask_nuc_path)) 
-                            segmentation_succesful = True
+                            segmentation_successful = True
                         except:
-                            segmentation_succesful = False
+                            segmentation_successful = False
                     if Utilities.is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
                         mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
                         try:
                             masks_complete_cells = imread(str( mask_cyto_path   )) 
-                            segmentation_succesful = True
+                            segmentation_successful = True
                         except:
-                            segmentation_succesful = False
+                            segmentation_successful = False
                     if  (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False): # not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) :
                         mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                         try:
                             masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
                         except:
-                            segmentation_succesful = False
+                            segmentation_successful = False
                     # test all masks exist, if not create the variable and set as None.
                     if not 'masks_nuclei' in locals():
                         masks_nuclei=None
@@ -2383,7 +2431,7 @@ class PipelineFISH():
                     if not 'masks_cytosol_no_nuclei' in locals():
                         masks_cytosol_no_nuclei=None
                 # saving masks
-                if (self.save_masks_as_file ==True) and (segmentation_succesful==True) :
+                if (self.save_masks_as_file ==True) and (segmentation_successful==True) :
                     number_detected_cells = np.max(masks_complete_cells)
                     print('    Number of detected cells:                ', number_detected_cells)
                     if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus is None):
@@ -2399,7 +2447,7 @@ class PipelineFISH():
                     number_detected_cells = 0
                 list_number_detected_cells.append(number_detected_cells)
                 #print('- SPOT DETECTION')
-                if segmentation_succesful==True:
+                if segmentation_successful==True:
                     temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
                     dataframe_FISH, list_fish_images,list_thresholds_spot_detection_in_image = SpotDetection(self.list_images[i],
                                                                                             self.channels_with_FISH,
@@ -2462,10 +2510,10 @@ class PipelineFISH():
                     del masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, list_fish_images,df_subset,df_labels
                     counter+=1
                 # appending cell segmentation flag
-                list_segmentation_succesful.append(segmentation_succesful)
+                list_segmentation_successful.append(segmentation_successful)
         
-        # Creating a list storing if segmenation and sharpness selection were sucesfull
-        list_processing_sucessful = [a and b for a, b in zip(list_segmentation_succesful, self.list_is_image_sharp)]
+        # Creating a list storing if segmenation and sharpness selection were successful
+        list_processing_successful = [a and b for a, b in zip(list_segmentation_successful, self.list_is_image_sharp)]
         
         # Saving all original images as a PDF
         #print('- CREATING THE PLOT WITH ORIGINAL IMAGES')
@@ -2475,7 +2523,7 @@ class PipelineFISH():
         image_name= 'segmentation_images_' + self.name_for_files +'.pdf'
         Plots.plotting_segmentation_images(directory=pathlib.Path().absolute().joinpath(temp_folder_name),
                                            list_files_names=self.list_files_names,
-                                           list_segmentation_succesful=list_processing_sucessful,
+                                           list_segmentation_successful=list_processing_successful,
                                            image_name=image_name,
                                            show_plots=False)
         # Saving all cells in a single image file
@@ -2487,15 +2535,15 @@ class PipelineFISH():
                                         list_masks_complete_cells = list_masks_complete_cells,
                                         list_masks_nuclei = list_masks_nuclei,
                                         spot_type=k,
-                                        list_segmentation_succesful=list_processing_sucessful,
+                                        list_segmentation_successful=list_processing_successful,
                                         image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
                                         show_plot= False)
         # Creating the dataframe       
-        if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_sucessful)>0:
+        if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_successful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
-        elif np.sum(list_processing_sucessful)>0:
+        elif np.sum(list_processing_successful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')        
         # Creating the metadata
         #print('- CREATING THE METADATA FILE')
@@ -2509,7 +2557,7 @@ class PipelineFISH():
                 list_voxels=self.list_voxels, 
                 list_psfs=self.list_psfs,
                 file_name_str=self.name_for_files,
-                list_segmentation_succesful=list_segmentation_succesful,
+                list_segmentation_successful=list_segmentation_successful,
                 list_counter_image_id=list_counter_image_id,
                 threshold_for_spot_detection=self.threshold_for_spot_detection,
                 number_of_images_to_process=self.number_of_images_to_process,
@@ -2532,7 +2580,7 @@ class PipelineFISH():
                 save_all_images=self.save_all_images, 
                 list_z_slices_per_image=self.list_z_slices_per_image,
                 threshold_for_spot_detection=self.threshold_for_spot_detection,
-                list_segmentation_succesful=list_processing_sucessful ).create_report()
+                list_segmentation_successful=list_processing_successful ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, output_identification_string
 
 
@@ -3099,7 +3147,7 @@ class Utilities():
         elif extraction_type == 'all_values' :
             return np.asarray( [       df.loc[(df['cell_id']==i)][colum_to_extract].values          for i in range(0, number_cells)] )      
     
-    def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False,max_quantile=0.99) :
+    def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False,max_quantile=0.98) :
         # defining the dimensions for the array.
         max_number_cells = max(list_number_cells)
         number_conditions = len(list_number_cells)
@@ -3165,7 +3213,7 @@ class Utilities():
             local_data_dir = local_data_dir.joinpath('merged')
             list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()
         else:
-            list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()  # list_images, path_files, list_files_names, number_files
+            list_images, path_files, list_files_names, number_images = ReadImages(directory= local_data_dir).read()  # list_images, path_files, list_files_names, number_files        
         # Printing image properties
         if len(list_images[0].shape) < 4:
             number_color_channels = None
@@ -3206,6 +3254,7 @@ class Utilities():
             temp_plot_name = 'cells_channel_'+ str(channels_with_FISH[i])+'_'+ data_folder_path.name +'.pdf'
             pathlib.Path().absolute().joinpath(temp_plot_name).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),temp_plot_name))
         #metadata_path
+        pathlib.Path().absolute().joinpath('images_report_'+ data_folder_path.name +'.csv').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'images_report_'+ data_folder_path.name +'.csv'))
         pathlib.Path().absolute().joinpath('metadata_'+ data_folder_path.name +'.txt').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'metadata_'+ data_folder_path.name +'.txt'))
         #dataframe_path 
         pathlib.Path().absolute().joinpath('dataframe_' + data_folder_path.name +'.csv').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'dataframe_'+ data_folder_path.name +'.csv'))
@@ -3313,8 +3362,14 @@ class Utilities():
         # Extracting the dataframe
         dataframe_file_path = glob.glob( str(list_local_folders[0].joinpath('dataframe_*')) )[0]
         dataframe = pd.read_csv(dataframe_file_path)
+        # Extracting the dataframe with cell ids
+        dataframe_file_path_metadata = glob.glob( str(list_local_folders[0].joinpath('images_report_*')) )[0]        
+        try:
+            images_metadata = pd.read_csv(dataframe_file_path_metadata)
+        except:
+            images_metadata = None
         # Extracting Original images
-        local_data_dir, masks_dir, number_images, number_color_channels, list_files_names = Utilities.read_images_from_folder( path_to_config_file, data_folder_path = data_folder_path, path_to_masks_dir = path_to_masks_dir,  download_data_from_NAS = connect_to_NAS, substring_to_detect_in_file_name = '.*_C0.tif')
+        local_data_dir, masks_dir, number_images, number_color_channels, list_files_names,_ = Utilities.read_images_from_folder( path_to_config_file, data_folder_path = data_folder_path, path_to_masks_dir = path_to_masks_dir,  download_data_from_NAS = connect_to_NAS, substring_to_detect_in_file_name = '.*_C0.tif')        
         # Reading images from folders
         list_images, path_files, list_files_names, _ = ReadImages(directory= local_data_dir).read()
         if not (path_to_masks_dir is None):
@@ -3322,7 +3377,8 @@ class Utilities():
         else:
             list_masks = None
         # Converting the images to int8
-        return list_images, list_masks, dataframe, number_images, number_color_channels
+        return list_images, list_masks, dataframe, number_images, number_color_channels,list_local_folders, images_metadata
+    
     
     def image_cell_selection(cell_id, list_images, dataframe, mask_cell=None, mask_nuc=None, scaling_value_radius_cell=1.1):
         SCALING_RADIUS_NUCLEUS = scaling_value_radius_cell #1.1
@@ -3449,7 +3505,7 @@ class Plots():
     def __init__(self):
         pass
     
-    def plotting_segmentation_images(directory,list_files_names,list_segmentation_succesful=[None],image_name='temp.pdf',show_plots=True):
+    def plotting_segmentation_images(directory,list_files_names,list_segmentation_successful=[None],image_name='temp.pdf',show_plots=True):
         number_images = len(list_files_names)
         NUM_COLUMNS = 1
         NUM_ROWS = number_images
@@ -3470,7 +3526,7 @@ class Plots():
                 axis_index = axes
             else:
                 axis_index = axes[i]
-            if (list_segmentation_succesful[i] == True): # or (list_segmentation_succesful[i] is None):
+            if (list_segmentation_successful[i] == True): # or (list_segmentation_successful[i] is None):
                 temp_segmented_img_name = directory.joinpath('seg_' + list_files_names[i].split(".")[0] +'.png' )
                 temp_img =  imread(str( temp_segmented_img_name ))
                 axis_index.imshow( temp_img)
@@ -3695,6 +3751,8 @@ class Plots():
 
 
     def dist_plots(df, plot_title,destination_folder,y_lim_values=None ):
+        stacked_df = df.stack()
+        pct = stacked_df.quantile(q=0.99)
         #color_palete = 'colorblind'
         color_palete = 'CMRmap'
         #color_palete = 'OrRd'
@@ -3710,7 +3768,7 @@ class Plots():
         p_dist.set_xlabel("Spots")
         p_dist.set_ylabel("Kernel Density Estimator (KDE)")
         p_dist.set_title(plot_title)
-        p_dist.set(xlim=(0, max_x_val))
+        p_dist.set(xlim=(0, pct))
         name_plot = 'Dist_'+plot_title+'.pdf'
         plt.savefig(name_plot, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
         plt.show()
@@ -3725,13 +3783,13 @@ class Plots():
         p_dist.set_ylabel("Proportion")
         p_dist.set_title(plot_title)
         p_dist.set_ylim(0,1.05)
-        p_dist.set(xlim=(0, max_x_val))
+        p_dist.set(xlim=(0, pct))
         name_plot = 'ECDF_'+ plot_title+'.pdf'
         plt.savefig(name_plot, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
 
-        # Barplots
+        # Whisker Plots
         plt.figure(figsize=(7,9))
         sns.set(font_scale = 1.5)
         sns.set_style("white")
@@ -3745,18 +3803,28 @@ class Plots():
                     showcaps={'visible': False, 'color':'orangered', 'ls': 'solid', 'lw': 1}, # Q1-Q3 25-75%
                     ax=p,
                     showmeans=True,meanline=True,zorder=10,showfliers=False,showbox=True,linewidth=1,color='w')
-        p.set_xlabel("time_after_treatment")
+        p.set_xlabel("Time After Treatment")
         p.set_ylabel("Spot Count")
         p.set_title(plot_title)
         if not (y_lim_values is None):
             p.set(ylim=y_lim_values)
         sns.set(font_scale = 1.5)
-        name_plot = 'Bar_'+plot_title +'.pdf'  
+        name_plot = 'Whisker_'+plot_title +'.pdf'  
         plt.savefig(name_plot, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
         plt.show()
         pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
+        
+        # Joy plots
+        plt.figure(figsize=(7,5))
+        sns.set(font_scale = 1.5)
+        sns.set_style("white")
+        fig, axes = joypy.joyplot(df,x_range=[-5,pct],bins=25,hist=False, overlap=0.8, linewidth=1, figsize=(7,5), colormap=cm.CMRmap) #
+        name_plot = 'JoyPlot_'+ plot_title+'.pdf'
+        plt.savefig(name_plot, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+        plt.show()
+        pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,name_plot))
+        
         return None
-
 
     def plot_comparing_df(df_all,df_cyto,df_nuc,plot_title,destination_folder):
         #color_palete = 'CMRmap'
@@ -4209,7 +4277,7 @@ class Plots():
         return list_files_distributions #list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots
     
     def compare_intensities_spots_interpretation(merged_dataframe, list_dataframes, list_number_cells,  list_labels, plot_title_suffix, destination_folder, column_name, remove_extreme_values= True,max_quantile=0.97,color_palete='CMRmap'):
-        file_name = 'comparing_ch_int_vs_spots_'+plot_title_suffix+'__'+column_name+'.pdf'
+        file_name = 'ch_int_vs_spots_'+plot_title_suffix+'__'+column_name+'.pdf'
         sns.set(font_scale = 1.5)
         sns.set_style("white")
         # Detecting the number of columns in the dataset
@@ -4390,7 +4458,7 @@ class Plots():
         return None
     
     
-    def plot_selected_cell_colors(image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True):
+    def plot_selected_cell_colors(image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True,list_channel_order_to_plot=[0,1,2]):
         # Extracting spot location
         y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # Applying Gaussian filter
@@ -4400,7 +4468,7 @@ class Plots():
         else:
             max_subsection_image_with_selected_cell = np.max(image[:,: ,:,:],axis=0)
         # Converting to int8
-        subsection_image_with_selected_cell_int8 = Utilities.convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=1, max_percentile=99.9)
+        subsection_image_with_selected_cell_int8 = Utilities.convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=99.8)
         # Plot maximum projection
         if show_spots == True:
             number_columns = 2
@@ -4414,7 +4482,7 @@ class Plots():
         else:
             axis_index = axes
         # Plotting original image
-        axis_index.imshow( subsection_image_with_selected_cell_int8[:,:,[2,1,0]])
+        axis_index.imshow( subsection_image_with_selected_cell_int8[:,:,list_channel_order_to_plot])
         axis_index.grid(False)
         axis_index.set_xticks([])
         axis_index.set_yticks([])
@@ -4423,7 +4491,7 @@ class Plots():
             axis_index.add_artist(scalebar)
         if show_spots == True:
             # Plotting image with detected spots
-            axes[1].imshow( subsection_image_with_selected_cell_int8[:,:,[2,1,0]])
+            axes[1].imshow( subsection_image_with_selected_cell_int8[:,:,list_channel_order_to_plot])
             axes[1].grid(False)
             axes[1].set_xticks([])
             axes[1].set_yticks([])
@@ -4451,9 +4519,9 @@ class Plots():
                     legend.get_frame().set_alpha(None)
         # Saving the image
         if not (image_name is None):                
-            if image_name[-4:] != '.png':
-                image_name = image_name+'.png'
-            plt.savefig(image_name, transparent=False,dpi=360, bbox_inches = 'tight', format='png')
+            if image_name[-4:] != '.pdf':
+                image_name = image_name+'.pdf'
+            plt.savefig(image_name, transparent=False,dpi=1200, bbox_inches = 'tight', format='pdf')
         plt.show()
         return None
     
@@ -4494,10 +4562,10 @@ class Plots():
         return None
     
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_succesful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True,use_max_projection=True):
+    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_successful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True,use_max_projection=True):
         # removing images where segmentation was not successful
-        if not (list_segmentation_succesful is None):
-            list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_succesful[i]]
+        if not (list_segmentation_successful is None):
+            list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_successful[i]]
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 10
@@ -4669,10 +4737,10 @@ class Plots():
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,list_segmentation_succesful=None,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,list_segmentation_successful=None,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         # removing images where segmentation was not successful
-        if not (list_segmentation_succesful is None):
-            list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_succesful[i]]
+        if not (list_segmentation_successful is None):
+            list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_successful[i]]
         #Calculating number of subplots 
         number_cells = np.max(complete_dataframe['cell_id'].values)+1
         NUM_COLUMNS = 10
