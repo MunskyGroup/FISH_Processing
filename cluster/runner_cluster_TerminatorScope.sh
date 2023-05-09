@@ -15,7 +15,7 @@ start_time=$(date +%s)
 
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>
 
-list_Sawyer=(\
+list_Sawyer0=(\
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_0min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_10min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_20min_031123' \
@@ -28,6 +28,9 @@ list_Sawyer=(\
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_120min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_150min_031123' \
 'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230426_DUSP1_A549_DEX_180min_031123' )
+
+list_Sawyer=(\
+'smFISH_images/Sawyer_smFISH_images/A549/Terminator/20230425_DUSP1_A549_DEX_0min_031123' )
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -43,7 +46,7 @@ path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 
 # ###################  CODE PARAMETERS ############################
 diameter_nucleus=100                 # Approximate nucleus size in pixels
-diameter_cytosol=201                 # Approximate cytosol size in pixels
+diameter_cytosol=209                 # Approximate cytosol size in pixels
 psf_z=350                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.

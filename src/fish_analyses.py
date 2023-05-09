@@ -2251,7 +2251,7 @@ class PipelineFISH():
         self.list_psfs = list_psfs
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
-        CLUSTER_RADIUS = 1000 #int(psf_yx*1.5)
+        CLUSTER_RADIUS = 600 #int(psf_yx*1.5)
         self.CLUSTER_RADIUS = CLUSTER_RADIUS 
         self.data_folder_path = data_folder_path
         if not(file_name_str is None):
