@@ -59,7 +59,6 @@ import matplotlib.path as mpltPath
 import matplotlib as mpl
 mpl.rc('image', cmap='viridis')
 plt.style.use('ggplot')  # ggplot  #default
-from joblib import Parallel, delayed
 import multiprocessing
 from smb.SMBConnection import SMBConnection
 import socket
@@ -1243,7 +1242,7 @@ class BigFISH():
         #print('Int threshold used for the detection of spots: ',threshold )
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
-        decompose_dense_regions = False
+        decompose_dense_regions = True
         if decompose_dense_regions == True:
             try:
                 spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, 
@@ -2857,6 +2856,7 @@ class Utilities():
                     list_files_names.append(  list_files_names_all_fov[k].split(".")[0]+'_img_'+str(k)+'_fov_'+str(i) +'.tif' )
                     temp_image_fov = np.zeros((number_elements_on_fov,y_shape, x_shape))
                     temp_image_fov = image_with_all_fov[counter*number_elements_on_fov:number_elements_on_fov*(counter+1),:,:]
+                    print(number_z_slices,y_shape, x_shape,number_color_channels)
                     temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
                     for ch in range(number_color_channels):
                         temp_image[:,:,:,ch] = temp_image_fov[ch::number_color_channels,:,:] 
@@ -3377,7 +3377,7 @@ class Utilities():
         else:
             list_masks = None
         # Converting the images to int8
-        return list_images, list_masks, dataframe, number_images, number_color_channels,list_local_folders, images_metadata
+        return list_images, list_masks, dataframe, number_images, number_color_channels,list_local_folders,local_data_dir, images_metadata
     
     
     def image_cell_selection(cell_id, list_images, dataframe, mask_cell=None, mask_nuc=None, scaling_value_radius_cell=1.1):
