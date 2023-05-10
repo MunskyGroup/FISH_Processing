@@ -142,21 +142,21 @@ class GaussianFilter():
             Filtered video resulting from the bandpass process. Array with format [T, Y, X, C].
         '''
         video_bp_filtered_float = np.zeros_like(self.video, dtype = np.float64)
-        video_filtered = np.zeros_like(self.video, dtype = np.uint16)
+        #video_filtered = np.zeros_like(self.video, dtype = np.uint16)
         number_time_points, number_channels   = self.video.shape[0], self.video.shape[3]
         for index_channels in range(0, number_channels):
             for index_time in range(0, number_time_points):
-                video_bp_filtered_float[index_time, :, :, index_channels] = gaussian(self.video[index_time, :, :, index_channels], self.sigma)
+                if np.max(self.video[index_time, :, :, index_channels])>0:
+                    video_bp_filtered_float[index_time, :, :, index_channels] = gaussian(self.video[index_time, :, :, index_channels], self.sigma)
         # temporal function that converts floats to uint
-        def img_uint(image):
-            temp_vid = img_as_uint(image)
-            return temp_vid
-        # returning the image normalized as uint. Notice that difference_of_gaussians converts the image into float.
-        for index_channels in range(0, number_channels):
-            init_video = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(img_uint)(video_bp_filtered_float[i, :, :, index_channels]) for i in range(0, number_time_points))
-            video_filtered[:,:,:,index_channels] = np.asarray(init_video)
-        
-        return video_filtered
+        # def img_uint(image):
+        #     temp_vid = img_as_uint(image)
+        #     return temp_vid
+        # # returning the image normalized as uint. Notice that difference_of_gaussians converts the image into float.
+        # for index_channels in range(0, number_channels):
+        #     init_video = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(img_uint)(video_bp_filtered_float[i, :, :, index_channels]) for i in range(0, number_time_points))
+        #     video_filtered[:,:,:,index_channels] = np.asarray(init_video)
+        return video_bp_filtered_float # img_as_uint(video_bp_filtered_float)
 
 
 class NASConnection():
@@ -1204,6 +1204,7 @@ class BigFISH():
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
         self.threshold_for_spot_detection=threshold_for_spot_detection
+        self.decompose_dense_regions=True
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
@@ -1242,8 +1243,7 @@ class BigFISH():
         #print('Int threshold used for the detection of spots: ',threshold )
         spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold, remove_duplicate=True)
         # Decomposing dense regions
-        decompose_dense_regions = True
-        if decompose_dense_regions == True:
+        if self.decompose_dense_regions == True:
             try:
                 spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, 
                                                                         spots=spots, 
@@ -2202,7 +2202,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True,remove_out_of_focus_images = True,sharpness_threshold =1.12):
+    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True,remove_out_of_focus_images = True,sharpness_threshold =1.12,save_pdf_report=True):
         list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
@@ -2319,7 +2319,7 @@ class PipelineFISH():
         else:
             threshold_for_spot_detection = Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
         self.threshold_for_spot_detection = threshold_for_spot_detection
-        
+        self.save_pdf_report = save_pdf_report
         
     def run(self):
         # Creating folder to store outputs.
@@ -2572,14 +2572,15 @@ class PipelineFISH():
                 sharpness_threshold=self.sharpness_threshold).write_metadata()
         # Creating a PDF report
         #print('CREATING THE PDF REPORT')
-        filenames_for_pdf_report = [ f[:-4] for f in self.list_files_names]
-        ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name), 
-                filenames_for_pdf_report=filenames_for_pdf_report, 
-                channels_with_FISH=self.channels_with_FISH, 
-                save_all_images=self.save_all_images, 
-                list_z_slices_per_image=self.list_z_slices_per_image,
-                threshold_for_spot_detection=self.threshold_for_spot_detection,
-                list_segmentation_successful=list_processing_successful ).create_report()
+        if self.save_pdf_report ==True:
+            filenames_for_pdf_report = [ f[:-4] for f in self.list_files_names]
+            ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name), 
+                    filenames_for_pdf_report=filenames_for_pdf_report, 
+                    channels_with_FISH=self.channels_with_FISH, 
+                    save_all_images=self.save_all_images, 
+                    list_z_slices_per_image=self.list_z_slices_per_image,
+                    threshold_for_spot_detection=self.threshold_for_spot_detection,
+                    list_segmentation_successful=list_processing_successful ).create_report()
         return dataframe, list_masks_complete_cells, list_masks_nuclei, list_masks_cytosol_no_nuclei, output_identification_string
 
 
@@ -2843,7 +2844,7 @@ class Utilities():
                     number_z_slices = int(number_total_images_in_fov / (number_color_channels*number_of_fov))
                 else:
                     raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
-                if number_z_slices > 40:
+                if number_z_slices > 50:
                     raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
                 
                 number_elements_on_fov = number_color_channels*number_z_slices
@@ -2856,7 +2857,6 @@ class Utilities():
                     list_files_names.append(  list_files_names_all_fov[k].split(".")[0]+'_img_'+str(k)+'_fov_'+str(i) +'.tif' )
                     temp_image_fov = np.zeros((number_elements_on_fov,y_shape, x_shape))
                     temp_image_fov = image_with_all_fov[counter*number_elements_on_fov:number_elements_on_fov*(counter+1),:,:]
-                    print(number_z_slices,y_shape, x_shape,number_color_channels)
                     temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
                     for ch in range(number_color_channels):
                         temp_image[:,:,:,ch] = temp_image_fov[ch::number_color_channels,:,:] 
@@ -2876,7 +2876,7 @@ class Utilities():
             for i in range(number_images):
                 temp_image_fov = list_images_all_fov[i]
                 number_z_slices = temp_image_fov.shape[0]//2
-                if number_z_slices > 40:
+                if number_z_slices > 50:
                     raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
                 y_shape, x_shape = temp_image_fov.shape[1], temp_image_fov.shape[2]
                 list_files_names.append(  list_files_names_all_fov[i].split(".")[0]+'_fov_'+str(i) +'.tif' )
@@ -2999,12 +2999,14 @@ class Utilities():
         if rescale == True:
             im_zeros = np.zeros_like(image)
             for ch in range( image.shape[2]):
-                im_zeros[:,:,ch] = RemoveExtrema(image[:,:,ch],min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
+                if np.max(image[:,:,ch]) >0:
+                    im_zeros[:,:,ch] = RemoveExtrema(image[:,:,ch],min_percentile=min_percentile, max_percentile=max_percentile).remove_outliers() 
             image = im_zeros
         image_new= np.zeros_like(image)
         for i in range(0, image.shape[2]):  # iterate for each channel
-            temp = image[:,:,i].copy()
-            image_new[:,:,i]= ( (temp-np.min(temp))/(np.max(temp)-np.min(temp)) ) * 255
+            if np.max(image[:,:,ch]) >0:
+                temp = image[:,:,i].copy()
+                image_new[:,:,i]= ( (temp-np.min(temp))/(np.max(temp)-np.min(temp)) ) * 255
             image_new = np.uint8(image_new)
         # padding with zeros the channel dimension.
         while image_new.shape[2]<3:
@@ -3227,7 +3229,8 @@ class Utilities():
     def save_output_to_folder (output_identification_string, data_folder_path,
                                 list_files_distributions=None,
                                 file_plots_bleed_thru = None,
-                                channels_with_FISH=None):
+                                channels_with_FISH=None,
+                                save_pdf_report=True):
         #  Moving figures to the final folder 
         if not (list_files_distributions is None) and (type(list_files_distributions) is list):
             file_plots_distributions = list_files_distributions[0]
@@ -3259,7 +3262,8 @@ class Utilities():
         #dataframe_path 
         pathlib.Path().absolute().joinpath('dataframe_' + data_folder_path.name +'.csv').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),'dataframe_'+ data_folder_path.name +'.csv'))
         #pdf_path 
-        pathlib.Path().absolute().joinpath('pdf_report_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'pdf_report_'+ data_folder_path.name +'.pdf'))
+        if save_pdf_report == True:
+            pathlib.Path().absolute().joinpath('pdf_report_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'pdf_report_'+ data_folder_path.name +'.pdf'))
         #pdf_path segmentation 
         pathlib.Path().absolute().joinpath('segmentation_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'segmentation_images_'+ data_folder_path.name +'.pdf'))
 
@@ -4330,7 +4334,7 @@ class Plots():
         
     def plot_single_cell_all_channels(image, df, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None):
         # Extracting spot localization
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS,number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         number_color_channels = image.shape[3]
         # Plotting
         _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 7))
@@ -4469,6 +4473,10 @@ class Plots():
             max_subsection_image_with_selected_cell = np.max(image[:,: ,:,:],axis=0)
         # Converting to int8
         subsection_image_with_selected_cell_int8 = Utilities.convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=99.8)
+        # padding with zeros the channel dimension.
+        while subsection_image_with_selected_cell_int8.shape[2]<3:
+            zeros_plane = np.zeros_like(subsection_image_with_selected_cell_int8[:,:,0])
+            subsection_image_with_selected_cell_int8 = np.concatenate((subsection_image_with_selected_cell_int8,zeros_plane[:,:,np.newaxis]),axis=2)
         # Plot maximum projection
         if show_spots == True:
             number_columns = 2
@@ -4794,7 +4802,7 @@ class Plots():
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
                 image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
             # Extracting spot localization
-            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z   = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
             temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
             max_visualization_value = np.percentile(temp_image,99.5)

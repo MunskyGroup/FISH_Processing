@@ -95,12 +95,13 @@ NUMBER_OF_CORES=int(sys.argv[19])
 save_filtered_images = int(sys.argv[20])
 remove_z_slices_borders = int(sys.argv[21])
 remove_out_of_focus_images= int(sys.argv[22])
+save_pdf_report= int(sys.argv[23])
 
 ####################################################################
 ########## Parameters to reformat images to standard format ########
-convert_to_standard_format = int(sys.argv[23])
-number_color_channels = int(sys.argv[24])
-number_of_fov = int(sys.argv[25])
+convert_to_standard_format = int(sys.argv[24])
+number_color_channels = int(sys.argv[25])
+number_of_fov = int(sys.argv[26])
 ######################################
 ######################################
 ####################################################################
@@ -150,7 +151,8 @@ dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_d
                                                                     NUMBER_OF_CORES = NUMBER_OF_CORES,
                                                                     save_filtered_images = save_filtered_images,
                                                                     number_of_images_to_process = number_of_images_to_process,
-                                                                    remove_z_slices_borders=remove_z_slices_borders).run()
+                                                                    remove_z_slices_borders=remove_z_slices_borders,
+                                                                    save_pdf_report=save_pdf_report).run()
 ######################################
 ######################################
 
@@ -164,7 +166,7 @@ file_plots_bleed_thru = fa.Plots.plot_scatter_bleed_thru(dataframe_FISH, channel
 ######################################
 ######################################
 # Saving data and plots, and sending data to NAS
-fa.Utilities.save_output_to_folder(output_identification_string, data_folder_path, list_files_distributions=list_files_distributions, file_plots_bleed_thru=file_plots_bleed_thru,channels_with_FISH=channels_with_FISH)
+fa.Utilities.save_output_to_folder(output_identification_string, data_folder_path, list_files_distributions=list_files_distributions, file_plots_bleed_thru=file_plots_bleed_thru,channels_with_FISH=channels_with_FISH,save_pdf_report=save_pdf_report)
 # sending data to NAS
 analysis_folder_name, mask_dir_complete_name = fa.Utilities.sending_data_to_NAS(output_identification_string, data_folder_path, path_to_config_file, path_to_masks_dir, diameter_nucleus, diameter_cytosol, send_data_to_NAS, masks_dir)
 # Moving the complete analysis folder to final analyses folder 
