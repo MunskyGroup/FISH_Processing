@@ -1990,7 +1990,7 @@ class Metadata():
                         list_image_id.append(self.list_counter_image_id[counter])
                         counter+=1
                         list_processing_image.append('successful')
-                    elif (self.list_is_image_sharp[indx]== False) and (self.list_segmentation_successful[indx]== True):
+                    elif self.list_is_image_sharp[indx]== False:
                         fd.write('\n        '+ img_name + (' '*(difference_name_len+4)) + ' '*8 + str(self.list_metric_sharpeness_images[indx])+ '      - error out of focus.')
                         list_processing_image.append('error out of focus')
                         list_image_id.append(-1)
