@@ -60,7 +60,7 @@ path_to_config_file="$HOME/FISH_Processing/config.yml"
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 
 # ###################  CODE PARAMETERS ############################
-diameter_nucleus=100                 # Approximate nucleus size in pixels
+diameter_nucleus=101                 # Approximate nucleus size in pixels
 diameter_cytosol=210                 # Approximate cytosol size in pixels
 psf_z=500                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
@@ -73,7 +73,7 @@ send_data_to_NAS=1                   # If data sent back to NAS use 1.
 download_data_from_NAS=1             # Download data from NAS
 path_to_masks_dir='None'             # 'Test/test_dir/masks_test_dir___nuc_120__cyto_220.zip'
 save_all_images=0                    # If true, it shows a all planes for the FISH plot detection.
-threshold_for_spot_detection=700  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
+threshold_for_spot_detection='None'  # Thresholds for spot detection. Use an integer for a defined value, or 'None' for automatic detection.
 save_filtered_images=0               #         
 optimization_segmentation_method='default' # optimization_segmentation_method = 'default' 'intensity_segmentation' 'z_slice_segmentation_marker', 'gaussian_filter_segmentation' , None
 remove_z_slices_borders=1        # Use this flag to remove 2 z-slices from the top and bottom of the stack. This is needed to remove z-slices that are out of focus.

@@ -692,7 +692,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 6, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimum_flow_threshold = 0.1
@@ -704,7 +704,7 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_flow_threshold, self.maximum_flow_threshold, self.num_iterations), 2) )
-        self.MINIMUM_CELL_AREA = 2000
+        self.MINIMUM_CELL_AREA = 5000
         self.BATCH_SIZE = 80
         
     def calculate_masks(self):
@@ -830,7 +830,7 @@ class CellSegmentation():
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
         self.number_z_slices = image.shape[0]
-        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,10))
+        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,4))
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'default', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
@@ -1980,19 +1980,17 @@ class Metadata():
                 str_label_img = '| Image Name'
                 size_str_label_img = len(str_label_img)
                 space_for_image_name = np.min((size_str_label_img, (size_str_label_img-max_file_name_len)))+1
-                
                 fd.write('\n        '+ str_label_img+' '* space_for_image_name + '      '+ '| Sharpness metric' + '      ' +'| Image Id'  )
-
                 counter=0
                 for indx, img_name in enumerate (self.list_files_names):
+                    file_name_len = len(img_name)
+                    difference_name_len = max_file_name_len-file_name_len
                     if (self.list_segmentation_successful[indx]== True) and (self.list_is_image_sharp[indx]== True):
-                        file_name_len = len(img_name)
-                        difference_name_len = max_file_name_len-file_name_len
                         fd.write('\n        '+ img_name + (' '*(difference_name_len+4))+ ' '*8+ str(self.list_metric_sharpeness_images[indx]) +  '        ' + str(self.list_counter_image_id[counter]) )
                         list_image_id.append(self.list_counter_image_id[counter])
                         counter+=1
                         list_processing_image.append('successful')
-                    elif self.list_is_image_sharp[indx]== False:
+                    elif (self.list_is_image_sharp[indx]== False) and (self.list_segmentation_successful[indx]== True):
                         fd.write('\n        '+ img_name + (' '*(difference_name_len+4)) + ' '*8 + str(self.list_metric_sharpeness_images[indx])+ '      - error out of focus.')
                         list_processing_image.append('error out of focus')
                         list_image_id.append(-1)
