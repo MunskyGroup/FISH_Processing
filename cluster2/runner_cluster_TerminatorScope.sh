@@ -60,8 +60,8 @@ path_to_config_file="$HOME/FISH_Processing/config.yml"
 path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
 
 # ###################  CODE PARAMETERS ############################
-diameter_nucleus=101                 # Approximate nucleus size in pixels
-diameter_cytosol=210                 # Approximate cytosol size in pixels
+diameter_nucleus=102                 # Approximate nucleus size in pixels
+diameter_cytosol=211                 # Approximate cytosol size in pixels
 psf_z=500                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
 psf_yx=120                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
 voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
