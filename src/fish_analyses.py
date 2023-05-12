@@ -1934,7 +1934,7 @@ class Metadata():
                 fd.write('#' * (number_spaces_pound_sign)) 
                 fd.write('\nAUTHOR INFORMATION  ')
                 fd.write('\n    Author: ' + getpass.getuser())
-                fd.write('\n    Created at: ' + datetime.datetime.today().strftime('%d %b %Y'))
+                fd.write('\n    Created: ' + datetime.datetime.today().strftime('%d %b %Y'))
                 fd.write('\n    Time: ' + str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute) )
                 fd.write('\n    Operative System: ' + sys.platform )
                 fd.write('\n    Hostname: ' + socket.gethostname() + '\n')
@@ -2285,7 +2285,7 @@ class PipelineFISH():
         # Section that creates an automated intensity threshold for spot detection by using the average values obtained from processing all the directiory of images. 
         MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 3
         if (threshold_for_spot_detection == None) and (len(list_sharp_images)>MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD):
-            MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 30
+            MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = 50
             number_images_to_test = np.min((MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD,len(list_sharp_images)))
             sub_section_images_to_test =list_sharp_images[:number_images_to_test]
             threshold_for_spot_detection =[]
@@ -2536,7 +2536,7 @@ class PipelineFISH():
                                         image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
-                                        show_plot= False)
+                                        show_plot= True)
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_successful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
@@ -3365,8 +3365,8 @@ class Utilities():
         dataframe_file_path = glob.glob( str(list_local_folders[0].joinpath('dataframe_*')) )[0]
         dataframe = pd.read_csv(dataframe_file_path)
         # Extracting the dataframe with cell ids
-        dataframe_file_path_metadata = glob.glob( str(list_local_folders[0].joinpath('images_report_*')) )[0]        
         try:
+            dataframe_file_path_metadata = glob.glob( str(list_local_folders[0].joinpath('images_report_*')) )[0]     
             images_metadata = pd.read_csv(dataframe_file_path_metadata)
         except:
             images_metadata = None
