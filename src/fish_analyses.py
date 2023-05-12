@@ -2004,7 +2004,7 @@ class Metadata():
                 # iterate for all processed images and printing the obtained threshold intensity value.
                 for k in range(len(self.channels_with_FISH)):
                     fd.write('\n    For Channel ' + str(self.channels_with_FISH[k]) )
-                    fd.write('\n             Image Id    |    threshold    |    number cells    |    spots per cell    |' )
+                    fd.write('\n             Image Id    |    threshold    |    number cells    |  mean spots per cell |' )
                     for i,image_id in enumerate(self.list_counter_image_id) :
                         image_id_str = str(image_id)
                         len_id = len(image_id_str)
@@ -2536,7 +2536,7 @@ class PipelineFISH():
                                         image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
                                         microns_per_pixel=None,
                                         show_legend = True,
-                                        show_plot= True)
+                                        show_plot= False)
         # Creating the dataframe       
         if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_successful)>0:
             dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
