@@ -704,7 +704,7 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_flow_threshold, self.maximum_flow_threshold, self.num_iterations), 2) )
-        self.MINIMUM_CELL_AREA = 5000
+        self.MINIMUM_CELL_AREA = (diameter/2.5)**2 #1000
         self.BATCH_SIZE = 80
         
     def calculate_masks(self):
@@ -830,7 +830,7 @@ class CellSegmentation():
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
         self.number_z_slices = image.shape[0]
-        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,4))
+        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,6))
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'default', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
@@ -858,7 +858,7 @@ class CellSegmentation():
             min_size =np.min( (size_mask_n,size_mask_c) )
             mask_combined =  mask_n + mask_c
             sum_mask = np.count_nonzero(mask_combined[mask_combined==2])
-            if (sum_mask> min_size*0.8) and (min_size>2500): # the element is inside if the two masks overlap over the 80% of the smaller mask.
+            if (sum_mask> min_size*0.8) and (min_size>1000): # the element is inside if the two masks overlap over the 80% of the smaller mask.
                 return 1
             else:
                 return 0
@@ -2200,7 +2200,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True,remove_out_of_focus_images = True,sharpness_threshold =1.12,save_pdf_report=True):
+    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=True):
         list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
@@ -2322,7 +2322,7 @@ class PipelineFISH():
     def run(self):
         # Creating folder to store outputs.
         output_identification_string = Utilities.create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
-        MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 10000
+        MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 1000
         # Prealocating arrays
         list_masks_complete_cells=[]
         list_masks_nuclei=[]
@@ -2397,7 +2397,7 @@ class PipelineFISH():
                     if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
                         segmentation_successful = True
                     else:
-                        segmentation_successful = False                
+                        segmentation_successful = False   
                 else:
                     # Paths to masks
                     if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus in (None,[None])) :
@@ -2774,6 +2774,8 @@ class Utilities():
     
     
     def is_None(variable_to_test):
+        if (type(variable_to_test) is list):
+            variable_to_test = variable_to_test[0]
         if variable_to_test in (None, 'None', 'none',['None'],['none'],[None]):
             is_none = True
         else:
