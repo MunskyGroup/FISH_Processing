@@ -692,7 +692,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 4, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 6, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
         self.image = image
         self.num_iterations = num_iterations
         self.minimum_flow_threshold = 0.1
@@ -704,7 +704,7 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_flow_threshold, self.maximum_flow_threshold, self.num_iterations), 2) )
-        self.MINIMUM_CELL_AREA = (diameter/2.5)**2 #1000
+        self.MINIMUM_CELL_AREA =  np.pi*(diameter/4)**2 #1000  # using half of the diameter to calculate area.
         self.BATCH_SIZE = 80
         
     def calculate_masks(self):
@@ -830,7 +830,7 @@ class CellSegmentation():
         self.remove_fragmented_cells = remove_fragmented_cells
         self.image_name = image_name
         self.number_z_slices = image.shape[0]
-        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,6))
+        self.NUMBER_OPTIMIZATION_VALUES= np.min((self.number_z_slices,8))
         self.optimization_segmentation_method = optimization_segmentation_method  # optimization_segmentation_method = 'intensity_segmentation' 'default', 'gaussian_filter_segmentation' , None
         if self.optimization_segmentation_method == 'z_slice_segmentation_marker':
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
@@ -858,7 +858,7 @@ class CellSegmentation():
             min_size =np.min( (size_mask_n,size_mask_c) )
             mask_combined =  mask_n + mask_c
             sum_mask = np.count_nonzero(mask_combined[mask_combined==2])
-            if (sum_mask> min_size*0.8) and (min_size>1000): # the element is inside if the two masks overlap over the 80% of the smaller mask.
+            if (sum_mask> min_size*0.8) and (min_size>200): # the element is inside if the two masks overlap over the 80% of the smaller mask.
                 return 1
             else:
                 return 0
@@ -1705,16 +1705,16 @@ class DataProcessing():
         return new_dataframe
     
 
-class RemoveOutFocusPlanes():
-    def __init__(self,image, percentage_images_to_remove=0.3):
-        self.image= ReadImages
-        self.frames_to_keep = image.shape[0] - np.max((0, int(image.shape[0]*percentage_images_to_remove)))
-    def get_frames_in_focus(self):
-        focus = stack.compute_focus(self.image, neighborhood_size=31)
-        in_focus_image = stack.in_focus_selection(self.image, focus, proportion=self.frames_to_keep)
-        return in_focus_image
+# class RemoveOutFocusPlanes():
+#     def __init__(self,image, percentage_images_to_remove=0.3):
+#         self.image= ReadImages
+#         self.frames_to_keep = image.shape[0] - np.max((0, int(image.shape[0]*percentage_images_to_remove)))
+#     def get_frames_in_focus(self):
+#         focus = stack.compute_focus(self.image, neighborhood_size=31)
+#         in_focus_image = stack.in_focus_selection(self.image, focus, proportion=self.frames_to_keep)
+#         return in_focus_image
     
-    #in_focus_image = RemoveOutFocusPlanes.get_frames_in_focus(image)
+#     #in_focus_image = RemoveOutFocusPlanes.get_frames_in_focus(image)
 
 class SpotDetection():
     '''
@@ -2846,7 +2846,6 @@ class Utilities():
                     raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
                 if number_z_slices > 50:
                     raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
-                
                 number_elements_on_fov = number_color_channels*number_z_slices
                 list_files_names = []
                 y_shape, x_shape = image_with_all_fov.shape[1], image_with_all_fov.shape[2]                
@@ -4332,9 +4331,10 @@ class Plots():
         plt.show()
         pathlib.Path().absolute().joinpath(file_name).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         
-    def plot_single_cell_all_channels(image, df, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None):
+    def plot_single_cell_all_channels(image, df=None, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None):
         # Extracting spot localization
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        if not (df is None):
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         number_color_channels = image.shape[3]
         # Plotting
         _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 7))
@@ -4347,7 +4347,7 @@ class Plots():
             axes[i].set_xticks([])
             axes[i].set_yticks([])
             axes[i].set_title(r'$_{max}$z (channel '+str(i)+')')
-            if show_spots == True:
+            if (show_spots == True) and (not(df is None)):
             # Plotting spots on image
                 for sp in range (number_spots):
                     circle1=plt.Circle((x_spot_locations[sp], y_spot_locations[sp]), 2, color = 'k', fill = False,lw=1)

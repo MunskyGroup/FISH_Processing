@@ -10,7 +10,7 @@ config.yml
 merged
 ms2_cy5_20210518
 GAPDH_Exon_Cy5
-dataBases/
+# dataBases/
 config
 **/[C]onfig*
 dataframe.csv
@@ -30,3 +30,4 @@ results/
 test*/
 filtered_images_*/
 kk*
+test_simulation/
