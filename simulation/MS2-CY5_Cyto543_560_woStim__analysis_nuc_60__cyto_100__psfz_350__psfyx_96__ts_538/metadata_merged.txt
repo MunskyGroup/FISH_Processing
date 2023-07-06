@@ -1,0 +1,101 @@
+###########################################################################
+AUTHOR INFORMATION  
+    Author: luisub
+    Created: 19 May 2023
+    Time: 15:32
+    Operative System: linux
+    Hostname: ens13487
+###########################################################################
+PARAMETERS USED  
+    channels_with_cytosol: [2, 1]
+    channels_with_nucleus: [0]
+    channels_with_FISH: [3]
+    diameter_nucleus: 60
+    diameter_cytosol: 100
+    FISH parameters
+      For Channel 3
+        voxel_size_z: 500
+        voxel_size_yx: 96
+        psf_z: 350
+        psf_yx: 96
+        threshold_spot_detection: 538
+    minimum_spots_cluster: 4
+    remove_z_slices_borders: True
+    number of z-slices trimmed at each border: 1
+    cluster radius: 600
+    remove_out_of_focus_images: False
+###########################################################################
+FILES AND DIRECTORIES USED 
+    Directory path: /home/luisub/Desktop/FISH_Processing/simulation/merged
+    Folder name: merged
+    Images in the directory :
+        | Image Name      | Sharpness metric      | Image Id
+        ROI001_XY1657814108_Z00_T0_merged.tif            1.189        0
+        ROI002_XY1657815441_Z00_T0_merged.tif            1.193        1
+        ROI003_XY1657814110_Z00_T0_merged.tif            1.185        2
+        ROI004_XY1657814111_Z00_T0_merged.tif            1.186        3
+        ROI005_XY1657814112_Z00_T0_merged.tif            1.189        4
+        ROI006_XY1657814113_Z00_T0_merged.tif            1.187        5
+        ROI007_XY1657814114_Z00_T0_merged.tif            1.188        6
+        ROI008_XY1657814115_Z00_T0_merged.tif            1.193        7
+        ROI009_XY1657814116_Z00_T0_merged.tif            1.188        8
+        ROI010_XY1657814117_Z00_T0_merged.tif            1.187        9
+        ROI011_XY1657814118_Z00_T0_merged.tif            1.185        10
+        ROI012_XY1657814119_Z00_T0_merged.tif            1.189        11
+###########################################################################
+SUMMARY RESULTS
+    For Channel 3
+             Image Id    |    threshold    |    number cells    |  mean spots per cell |
+                    0                538               11                   176
+                    1                538               18                   156
+                    2                538               6                    193
+                    3                538               11                   101
+                    4                538               17                   112
+                    5                538               13                   61
+                    6                538               8                    182
+                    7                538               18                   158
+                    8                538               8                    171
+                    9                538               12                   77
+                    10               538               12                   94
+                    11               538               16                   141
+             Average:                                 12                   176
+###########################################################################
+REPRODUCIBILITY 
+    Platform: 
+        Python: 3.8.12
+    Dependencies: 
+        tqdm==4.62.3
+        torch==1.10.2
+        tifffile==2022.2.9
+        setuptools==58.0.4
+        scipy==1.8.0
+        scikit-learn==1.0.2
+        scikit-image==0.19.1
+        PyYAML==6.0
+        python-dateutil==2.8.2
+        pysmb==1.2.7
+        pyfiglet==0.8.post1
+        Pillow==9.0.1
+        pandocfilters==1.5.0
+        pandas==1.4.1
+        opencv-python-headless==4.5.5.62
+        numpy==1.21.5
+        numba==0.55.1
+        natsort==8.1.0
+        matplotlib==3.5.1
+        matplotlib-scalebar==0.8.1
+        matplotlib-inline==0.1.3
+        llvmlite==0.38.0
+        jupyterlab-widgets==1.1.0
+        jupyterlab-pygments==0.2.2
+        jupyter-core==4.9.1
+        jupyter-client==7.1.2
+        joblib==1.1.0
+        ipython==8.0.1
+        ipython-genutils==0.2.0
+        ipykernel==6.9.0
+        imagesize==1.3.0
+        imageio==2.16.0
+        cellpose==1.0.0
+        big-fish==0.6.1
+###########################################################################
