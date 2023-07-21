@@ -1680,8 +1680,6 @@ class DataProcessing():
             # determining if the cell is in the border of the image. If true the cell is in the border.
             is_cell_in_border =  np.any( np.concatenate( ( tested_mask_for_border[:,0],tested_mask_for_border[:,-1],tested_mask_for_border[0,:],tested_mask_for_border[-1,:] ) ) )  
             # Data extraction
-            #try:
-            #if self.spotDetectionCSV.shape[0] >1:
             new_dataframe = data_to_df( new_dataframe, 
                                         self.spotDetectionCSV, 
                                         self.clusterDetectionCSV, 
@@ -4331,7 +4329,7 @@ class Plots():
         plt.show()
         pathlib.Path().absolute().joinpath(file_name).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         
-    def plot_single_cell_all_channels(image, df=None, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None):
+    def plot_single_cell_all_channels(image, df=None, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None,max_percentile=99.8):
         # Extracting spot localization
         if not (df is None):
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
@@ -4340,7 +4338,7 @@ class Plots():
         _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 7))
         for i in range(0, number_color_channels):
             temp_image = np.max(image[:,: ,:,i],axis=0)
-            max_visualization_value = np.percentile(temp_image,99.8)
+            max_visualization_value = np.percentile(temp_image,max_percentile)
             min_visualization_value = np.percentile(temp_image, 0)
             axes[i].imshow( temp_image,cmap = 'plasma', vmin=min_visualization_value,vmax=max_visualization_value)
             axes[i].grid(False)
@@ -4368,11 +4366,11 @@ class Plots():
         plt.show()
         return None
     
-    def plot_single_cell(image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,):
+    def plot_single_cell(image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,max_percentile=99.5,selected_colormap = 'plasma'):
         # Extracting spot localization
         y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # maximum and minimum values to plot
-        max_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0),99.5)
+        max_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0),max_percentile)
         min_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0), 0)
         # Section that detects the number of subplots to show
         if show_spots == True:
@@ -4388,7 +4386,7 @@ class Plots():
         else:
             axis_index = axes
         # Visualizing image only
-        axis_index.imshow( np.max(image[:,: ,:,selected_channel],axis=0),cmap = 'plasma',
+        axis_index.imshow( np.max(image[:,: ,:,selected_channel],axis=0),cmap = selected_colormap,
                     vmin=min_visualization_value, vmax=max_visualization_value)
         axis_index.grid(False)
         axis_index.set_xticks([])
@@ -4399,7 +4397,7 @@ class Plots():
             axis_index.add_artist(scalebar)
         # Visualization image with detected spots
         if show_spots == True:
-            axes[1].imshow( np.max(image[:,: ,:,selected_channel],axis=0),cmap = 'plasma',
+            axes[1].imshow( np.max(image[:,: ,:,selected_channel],axis=0),cmap = selected_colormap,
                             vmin=min_visualization_value, vmax=max_visualization_value)
             axes[1].grid(False)
             axes[1].set_xticks([])
