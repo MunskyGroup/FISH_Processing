@@ -2750,6 +2750,24 @@ class MicroscopeSimulation():
     def __init__(self):
         pass
     
+    def initialize ():
+        def read_files(directory):
+            list_files_names_complete = sorted([f for f in listdir(directory) if isfile(join(directory, f)) and ('cell_') in f], key=str.lower)  # reading all files in the folder with prefix 'cell_'
+            list_files_names_complete.sort(key=lambda f: int(re.sub('\D', '', f)))  # sorting the index in numerical order
+            path_files_complete = [ str(directory.joinpath(f).resolve()) for f in list_files_names_complete ] # creating the complete path for each file
+            list_library_cells =  [ np.load(f) for f in path_files_complete ]
+            return list_library_cells
+        current_dir = pathlib.Path().absolute()
+        # Path to data
+        cell_library_folder_path = current_dir.joinpath('cell_library')
+        background_library_path = cell_library_folder_path.joinpath('background_pixels_library.npy')
+        dataframe_library_path = cell_library_folder_path.joinpath('dataframe_library.csv')
+        # extracting library data
+        background_pixels_library = np.load(background_library_path)   # Reading the background library [C, Number_pixels]
+        dataframe_cell_library = pd.read_csv(dataframe_library_path)   # Returns a dataframe with the following columns [cell_id, size, number_of_spots,ts_size] and each row represents a cell.
+        list_library_cells = read_files(cell_library_folder_path)      # Returns a list of cells where each cell has the shape [Z,Y,X,C]
+        return list_library_cells,dataframe_cell_library,background_pixels_library
+    
     def generate_simulated_positions (image_size_Y_X,number_of_cells_in_simulation,list_library_cells,dataframe_cell_library,generate_cells_close_to_each_other=True):
         initial_dictionary_for_df = {
             'start_y_position': [],
@@ -2880,8 +2898,6 @@ class MicroscopeSimulation():
         # Re-centering z_position index
         length_z_indices = complete_image_size_Z_Y_X[0]
         z_array = np.arange(0,length_z_indices,1)
-        
-        
         #alpha_0 = 0 # constant
         #alpha_1 = 0 # constant
         #alpha_2 = 0 # constant
@@ -2889,13 +2905,8 @@ class MicroscopeSimulation():
         #Y = position
         #Z = position
         # z_new = alpha_0 + alpha_1 * X + alpha_2 * Y + Z
-        
         z_position_center_as_zero = complete_image_size_Z_Y_X[0]//2
-        
         z_position_original = z_position_center_as_zero + z_position
-        
-        
-        
         z_array = [int(i - z_position_center_as_zero) if i < z_position_center_as_zero else int(i - z_position_center_as_zero) for i in range(length_z_indices)] 
         list_mean_background_pixels_library=[]
         #list_std_background_pixels_library=[]
@@ -2961,7 +2972,6 @@ class MicroscopeSimulation():
         volume_simulated_image = np.zeros ((extended_y_pixels,extended_x_pixels,number_color_channels ),dtype=int)
         # Repetitive calculation performed over library of cells. Including cell shapes, cell_indexes, simulated volumes
         list_volume_tested_cell=[]    
-        #print(z_position, z_array)
         for i in range (number_cells_in_library):
             # creating the image if z_position is inside z_array
             if np.isin(z_position, z_array):
