@@ -2750,7 +2750,7 @@ class MicroscopeSimulation():
     def __init__(self):
         pass
     
-    def initialize (cell_library_folder_path):
+    def initialize (self,cell_library_folder_path):
         def read_files(directory):
             list_files_names_complete = sorted([f for f in listdir(directory) if isfile(join(directory, f)) and ('cell_') in f], key=str.lower)  # reading all files in the folder with prefix 'cell_'
             list_files_names_complete.sort(key=lambda f: int(re.sub('\D', '', f)))  # sorting the index in numerical order
@@ -2768,7 +2768,7 @@ class MicroscopeSimulation():
         list_library_cells = read_files(cell_library_folder_path)      # Returns a list of cells where each cell has the shape [Z,Y,X,C]
         return list_library_cells,dataframe_cell_library,background_pixels_library
     
-    def generate_simulated_positions (image_size_Y_X,number_of_cells_in_simulation,list_library_cells,dataframe_cell_library,generate_cells_close_to_each_other=True):
+    def generate_simulated_positions (self,image_size_Y_X,number_of_cells_in_simulation,list_library_cells,dataframe_cell_library,generate_cells_close_to_each_other=True):
         initial_dictionary_for_df = {
             'start_y_position': [],
             'start_x_position': [],
@@ -2893,7 +2893,7 @@ class MicroscopeSimulation():
         complete_image_size_Z_Y_X= [size_Z]+image_size_Y_X
         return simulation_dataframe,complete_image_size_Z_Y_X
     
-    def make_simulated_image(z_position, y_position, x_position, x_size, y_size, complete_image_size_Z_Y_X, simulation_dataframe, list_library_cells, background_pixels_library = None,remove_elements_low_intensity=False):
+    def make_simulated_image(self,z_position, y_position, x_position, x_size, y_size, complete_image_size_Z_Y_X, simulation_dataframe, list_library_cells, background_pixels_library = None,remove_elements_low_intensity=False):
         number_color_channels = list_library_cells[0].shape[3]
         # Re-centering z_position index
         length_z_indices = complete_image_size_Z_Y_X[0]
@@ -2930,7 +2930,7 @@ class MicroscopeSimulation():
                 new_range = edge_values
             else:
                 new_range = tested_value
-            moved_pixels =abs(new_range-original_edge)
+            moved_pixels =abs(new_range-original_edge-1)
             return new_range,moved_pixels
         # extending the image range to consider cell on the image border
         additional_range = 200
