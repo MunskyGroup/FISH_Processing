@@ -2750,16 +2750,16 @@ class MicroscopeSimulation():
     def __init__(self):
         pass
     
-    def initialize ():
+    def initialize (cell_library_folder_path):
         def read_files(directory):
             list_files_names_complete = sorted([f for f in listdir(directory) if isfile(join(directory, f)) and ('cell_') in f], key=str.lower)  # reading all files in the folder with prefix 'cell_'
             list_files_names_complete.sort(key=lambda f: int(re.sub('\D', '', f)))  # sorting the index in numerical order
             path_files_complete = [ str(directory.joinpath(f).resolve()) for f in list_files_names_complete ] # creating the complete path for each file
             list_library_cells =  [ np.load(f) for f in path_files_complete ]
             return list_library_cells
-        current_dir = pathlib.Path().absolute()
+        #current_dir = pathlib.Path().absolute()
         # Path to data
-        cell_library_folder_path = current_dir.joinpath('cell_library')
+        #cell_library_folder_path = current_dir.joinpath('cell_library')
         background_library_path = cell_library_folder_path.joinpath('background_pixels_library.npy')
         dataframe_library_path = cell_library_folder_path.joinpath('dataframe_library.csv')
         # extracting library data
