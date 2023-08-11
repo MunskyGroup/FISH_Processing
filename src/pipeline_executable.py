@@ -90,7 +90,7 @@ if sys.argv[18] in tuple_none:
     threshold_for_spot_detection = None
 else:
     threshold_for_spot_detection = json.loads(sys.argv[18])  
-#list_threshold_for_spot_detection = fa.Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
+#list_threshold_for_spot_detection = fa.Utilities().create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
 NUMBER_OF_CORES=int(sys.argv[19])
 save_filtered_images = int(sys.argv[20])
 remove_z_slices_borders = int(sys.argv[21])
@@ -120,12 +120,12 @@ show_plots=False
 ######################################
 # Download data from NAS
 if convert_to_standard_format == False:
-    local_data_dir, masks_dir, _, _, _, _ = fa.Utilities.read_images_from_folder( path_to_config_file, 
+    local_data_dir, masks_dir, _, _, _, _ = fa.Utilities().read_images_from_folder( path_to_config_file, 
                                                                                     data_folder_path, 
                                                                                     path_to_masks_dir,  
                                                                                     download_data_from_NAS)
 else:
-    local_data_dir,masks_dir, _, _, _= fa.Utilities.convert_to_standard_format(data_folder_path=data_folder_path, 
+    local_data_dir,masks_dir, _, _, _= fa.Utilities().convert_to_standard_format(data_folder_path=data_folder_path, 
                                                                                     path_to_config_file=path_to_config_file, 
                                                                                     download_data_from_NAS = download_data_from_NAS,
                                                                                     number_color_channels=number_color_channels,
@@ -160,17 +160,32 @@ dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_d
 ######################################
 ######################################
 
-list_files_distributions = fa.Plots.plot_all_distributions (dataframe_FISH,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string )
-file_plots_bleed_thru = fa.Plots.plot_scatter_bleed_thru(dataframe_FISH, channels_with_cytosol, channels_with_nucleus,output_identification_string)
+list_files_distributions = fa.Plots().plot_all_distributions (dataframe_FISH,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string )
+file_plots_bleed_thru = fa.Plots().plot_scatter_bleed_thru(dataframe_FISH, channels_with_cytosol, channels_with_nucleus,output_identification_string)
+
+# plots 
+if not fa.Utilities().is_None(channels_with_cytosol):
+    file_plots_int_ratio = fa.Plots().plot_nuc_cyto_int_ratio_distributions(dataframe_FISH,output_identification_string=None,plot_for_pseudo_cytosol=False)
+else:
+    file_plots_int_ratio = None
+file_plots_int_pseudo_ratio = fa.Plots().plot_nuc_cyto_int_ratio_distributions(dataframe_FISH,output_identification_string=None,plot_for_pseudo_cytosol=True)
 
 ######################################
 ######################################
 # Saving data and plots, and sending data to NAS
-fa.Utilities.save_output_to_folder(output_identification_string, data_folder_path, list_files_distributions=list_files_distributions, file_plots_bleed_thru=file_plots_bleed_thru,channels_with_FISH=channels_with_FISH,save_pdf_report=save_pdf_report)
+fa.Utilities().save_output_to_folder(output_identification_string, 
+                                   data_folder_path, 
+                                   list_files_distributions=list_files_distributions,
+                                   file_plots_bleed_thru=file_plots_bleed_thru,
+                                   file_plots_int_ratio=file_plots_int_ratio,
+                                   file_plots_int_pseudo_ratio=file_plots_int_pseudo_ratio,
+                                   channels_with_FISH=channels_with_FISH,
+                                   save_pdf_report=save_pdf_report)
+
 # sending data to NAS
-analysis_folder_name, mask_dir_complete_name = fa.Utilities.sending_data_to_NAS(output_identification_string, data_folder_path, path_to_config_file, path_to_masks_dir, diameter_nucleus, diameter_cytosol, send_data_to_NAS, masks_dir)
+analysis_folder_name, mask_dir_complete_name = fa.Utilities().sending_data_to_NAS(output_identification_string, data_folder_path, path_to_config_file, path_to_masks_dir, diameter_nucleus, diameter_cytosol, send_data_to_NAS, masks_dir)
 # Moving the complete analysis folder to final analyses folder 
-fa.Utilities.move_results_to_analyses_folder( output_identification_string, data_folder_path, mask_dir_complete_name, path_to_masks_dir, save_filtered_images, download_data_from_NAS )
+fa.Utilities().move_results_to_analyses_folder( output_identification_string, data_folder_path, mask_dir_complete_name, path_to_masks_dir, save_filtered_images, download_data_from_NAS )
 ######################################
 ######################################
 

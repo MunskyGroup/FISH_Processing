@@ -84,6 +84,7 @@ from  matplotlib.ticker import FuncFormatter
 from matplotlib_scalebar.scalebar import ScaleBar
 import joypy
 from matplotlib import cm
+from scipy.ndimage import binary_dilation
 
 class Banner():
     def __init__(self):
@@ -726,7 +727,7 @@ class Cellpose():
             try:
                 masks= model.eval(self.image, batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
                 # removing artifacts.
-                masks=Utilities.remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+                masks=Utilities().remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
             except:
                 masks = 0
             n_masks = np.max(masks)
@@ -744,7 +745,7 @@ class Cellpose():
             try:
                 masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter, diameter =self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
                 # removing artifacts.
-                masks=Utilities.remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+                masks=Utilities().remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
             except:
                 masks =0
             return np.max(masks)
@@ -753,7 +754,7 @@ class Cellpose():
             try:
                 masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = optimization_parameter,diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
                 # removing artifacts.
-                masks=Utilities.remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+                masks=Utilities().remove_artifacts_from_mask_image(masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
             except:
                 masks = 0
             number_masks = np.max(masks)
@@ -783,7 +784,7 @@ class Cellpose():
         if not (self.selection_method is None) and (np.max(evaluated_metric_for_masks) >0) :
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
             selected_masks = model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = selected_conditions , diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
-            selected_masks=Utilities.remove_artifacts_from_mask_image(selected_masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+            selected_masks=Utilities().remove_artifacts_from_mask_image(selected_masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
         else:
             if len(self.image.shape) >= 3:
                 selected_masks = np.zeros_like(self.image[:,:,0])
@@ -792,7 +793,7 @@ class Cellpose():
         # If no GPU is available, the segmentation is performed with a single threshold. 
         if self.selection_method == None:
             selected_masks= model.eval(self.image,  batch_size=self.BATCH_SIZE, normalize = True, flow_threshold = self.default_flow_threshold, diameter = self.diameter, min_size = self.MINIMUM_CELL_AREA, channels = self.channels, progress = None)[0]
-            selected_masks=Utilities.remove_artifacts_from_mask_image(selected_masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+            selected_masks=Utilities().remove_artifacts_from_mask_image(selected_masks,minimal_mask_area_size=self.MINIMUM_CELL_AREA)
         return selected_masks
     
     
@@ -890,7 +891,7 @@ class CellSegmentation():
                 masks_radii= np.prod (array_radii)
             return masks_radii
     
-        def metric_pared_masks(masks_complete_cells,masks_nuclei):
+        def metric_paried_masks(masks_complete_cells,masks_nuclei):
             median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
             median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
             return  median_radii_nuclei * median_radii_complete_cells_complete_cells
@@ -1087,7 +1088,7 @@ class CellSegmentation():
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
                 list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)           
-                metric = metric_max_cells_and_area(masks_complete_cells)  #metric_pared_masks(masks_complete_cells,masks_nuclei)
+                metric = metric_max_cells_and_area(masks_complete_cells)  #metric_paried_masks(masks_complete_cells,masks_nuclei)
                 array_number_paired_masks[0] = metric
                 # performing segmentation for a subsection of z-slices
                 for idx, idx_value in enumerate(list_idx):
@@ -1096,7 +1097,7 @@ class CellSegmentation():
                     list_masks_complete_cells.append(masks_complete_cells)
                     list_masks_nuclei.append(masks_nuclei)
                     list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
-                    metric = metric_max_cells_and_area(masks_complete_cells) #metric_pared_masks(masks_complete_cells,masks_nuclei)
+                    metric = metric_max_cells_and_area(masks_complete_cells) #metric_paried_masks(masks_complete_cells,masks_nuclei)
                     array_number_paired_masks[idx+1] = metric
                 selected_index = np.argmax(array_number_paired_masks)
                 masks_complete_cells = list_masks_complete_cells[selected_index]
@@ -1141,13 +1142,15 @@ class CellSegmentation():
             # no optimization is applied if a 2D image is passed
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(max_image)
         if self.running_in_pipeline == False :
-            Plots.plotting_masks_and_original_image(image = max_image, 
+            Plots().plotting_masks_and_original_image(image = max_image, 
                                                     masks_complete_cells = masks_complete_cells, 
                                                     masks_nuclei = masks_nuclei, 
                                                     channels_with_cytosol = self.channels_with_cytosol, 
                                                     channels_with_nucleus = self.channels_with_nucleus,
                                                     image_name = self.image_name,
                                                     show_plots = self.show_plots)
+            
+        
         return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei 
 
 
@@ -1378,17 +1381,17 @@ class DataProcessing():
         if isinstance(masks_complete_cells, list) or (masks_complete_cells is None):
             self.masks_complete_cells=masks_complete_cells
         else:
-            self.masks_complete_cells=Utilities.separate_masks(masks_complete_cells)
+            self.masks_complete_cells=Utilities().separate_masks(masks_complete_cells)
             
         if isinstance(masks_nuclei, list) or (masks_nuclei is None):
             self.masks_nuclei=masks_nuclei
         else:
-            self.masks_nuclei=Utilities.separate_masks(masks_nuclei)  
+            self.masks_nuclei=Utilities().separate_masks(masks_nuclei)  
 
         if isinstance(masks_cytosol_no_nuclei, list) or (masks_cytosol_no_nuclei is None):
             self.masks_cytosol_no_nuclei=masks_cytosol_no_nuclei
         else:
-            self.masks_cytosol_no_nuclei= Utilities.separate_masks(masks_cytosol_no_nuclei)
+            self.masks_cytosol_no_nuclei= Utilities().separate_masks(masks_cytosol_no_nuclei)
         self.dataframe=dataframe
         self.spot_type = spot_type
         self.reset_cell_counter = reset_cell_counter
@@ -1412,15 +1415,23 @@ class DataProcessing():
             else:
                 centroid_y,centroid_x = 0,0
             return  mask_area, centroid_y, centroid_x
+        def replace_border_px_with_zeros(mask,number_of_pixels_to_replace_in_border=3):
+            mask[:number_of_pixels_to_replace_in_border, :] = 0
+            mask[-number_of_pixels_to_replace_in_border:, :] = 0
+            mask[:, :number_of_pixels_to_replace_in_border] = 0
+            mask[:, -number_of_pixels_to_replace_in_border:] = 0
+            return mask
+        
         def data_to_df(df, spotDetectionCSV, clusterDetectionCSV, mask_nuc = None, mask_cytosol_only=None,masks_complete_cells=None, nuc_area = 0, cyto_area =0, cell_area=0,
                         nuc_centroid_y=0, nuc_centroid_x=0, cyto_centroid_y=0, cyto_centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0,
-                        nuc_int=None, cyto_int = None):
+                        nuc_int=None, cyto_int = None,pseudo_cyto_int=None,nucleus_cytosol_intensity_ratio=None,nucleus_pseudo_cytosol_intensity_ratio=None):
             # spotDetectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus
-            
             if not (self.channels_with_nucleus in (None,[None]) ):
                 try:
+                    # removing borders in mask
+                    mask_nuc = replace_border_px_with_zeros(mask_nuc)
                     spots_no_ts, _, ts = multistack.remove_transcription_site(spotDetectionCSV, clusterDetectionCSV, mask_nuc, ndim=3)
                 except:
                     spots_no_ts, ts = spotDetectionCSV, None
@@ -1431,6 +1442,8 @@ class DataProcessing():
             #ts              [Z,Y,X,size,idx_ts]      One coordinate per dimension for the transcription site centroid (zyx or yx coordinates), the number of RNAs detected in the transcription site and its index.
             if not (self.channels_with_nucleus in (None,[None]) ):
                 try:
+                    # removing borders in mask
+                    mask_nuc = replace_border_px_with_zeros(mask_nuc)
                     spots_nuc, _ = multistack.identify_objects_in_region(mask_nuc, spots_no_ts, ndim=3)
                 except:
                     spots_nuc = None
@@ -1439,11 +1452,15 @@ class DataProcessing():
             # Detecting spots in the cytosol
             if not (self.channels_with_cytosol in (None,[None]) ) and not (self.channels_with_nucleus in (None,[None]) ):
                 try:
+                    # removing borders in mask 
+                    mask_cytosol_only = replace_border_px_with_zeros(mask_cytosol_only)
                     spots_cytosol_only, _ = multistack.identify_objects_in_region(mask_cytosol_only, spotDetectionCSV[:,:3], ndim=3)
                 except:
                     spots_cytosol_only = None
             elif not (self.channels_with_cytosol in (None,[None]))  and (self.channels_with_nucleus in (None,[None]) ):
                 try:
+                    # removing borders in mask
+                    masks_complete_cells = replace_border_px_with_zeros(masks_complete_cells)
                     spots_cytosol_only, _ = multistack.identify_objects_in_region(masks_complete_cells, spotDetectionCSV[:,:3], ndim=3)
                 except:
                     spots_cytosol_only = None
@@ -1562,7 +1579,16 @@ class DataProcessing():
                 if not (self.channels_with_nucleus in (None,[None]) ):
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+c] = nuc_int[c] 
                 if not (self.channels_with_cytosol in (None,[None]) ) :
-                    array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels+c] = cyto_int[c]      
+                    array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels+c] = cyto_int[c]    
+                # populating with pseudo_cyto_int
+                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*2+c] = pseudo_cyto_int[c]  
+                # populating with nucleus_cytosol_intensity_ratio
+                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*3+c] = nucleus_cytosol_intensity_ratio[c]  
+                # populating with nucleus_pseudo_cytosol_intensity_ratio
+                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*4+c] = nucleus_pseudo_cytosol_intensity_ratio[c]  
+
+                
+                    
             
             # This section calculates the intenisty fo each spot and cluster
             # ts                     n x [Z,Y,X,size,idx_ts]
@@ -1575,6 +1601,7 @@ class DataProcessing():
                 intensity_spots_nuc = Intensity(original_image=self.image, spot_size=self.yx_spot_size_in_px, array_spot_location_z_y_x=spots_nuc[:,0:3],  method = 'disk_donut').calculate_intensity()[0]
             if num_cyto >0 :
                 intensity_spots_cyto = Intensity(original_image=self.image, spot_size=self.yx_spot_size_in_px, array_spot_location_z_y_x=spots_cytosol_only[:,0:3],  method = 'disk_donut').calculate_intensity()[0]
+            
             
             # Cancatenating the final array
             if (detected_ts == True) and (detected_nuc == True) and (detected_cyto == True):
@@ -1593,7 +1620,7 @@ class DataProcessing():
                 array_spot_int = np.zeros( ( 1,self.number_color_channels )  )
             
             # Populating the columns wth the spots intensity for each channel.
-            number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+2*self.number_color_channels                        
+            number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+5*self.number_color_channels                        
             array_complete[:, number_columns_after_adding_intensity_in_cell: number_columns_after_adding_intensity_in_cell+self.number_color_channels] = array_spot_int
             
             # Creating the dataframe  
@@ -1622,30 +1649,45 @@ class DataProcessing():
             list_columns_intensity_cyto = []
             list_intensity_spots = []
             list_intensity_clusters = []
+            list_nucleus_cytosol_intensity_ratio =[]
+            list_columns_intensity_pseudo_cyto=[]
+            list_nucleus_pseudo_cytosol_intensity_ratio=[]
             for c in range(self.number_color_channels):
                 list_columns_intensity_nuc.append( 'nuc_int_ch_' + str(c) )
                 list_columns_intensity_cyto.append( 'cyto_int_ch_' + str(c) )
                 list_intensity_spots.append( 'spot_int_ch_' + str(c) )
+                list_nucleus_cytosol_intensity_ratio.append('nuc_cyto_int_ratio_ch_' + str(c) )
+                list_columns_intensity_pseudo_cyto.append('pseudo_cyto_int_ch_' + str(c) )
+                list_nucleus_pseudo_cytosol_intensity_ratio.append('nuc_pseudo_cyto_int_ratio_ch_' + str(c) )
             # creating the main dataframe with column names
-            new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_intensity_spots+list_intensity_clusters )
+            new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_columns_intensity_pseudo_cyto + list_nucleus_cytosol_intensity_ratio+list_nucleus_pseudo_cytosol_intensity_ratio +list_intensity_spots+list_intensity_clusters )
             counter_total_cells = 0
         # loop for each cell in image
+        
+        num_pixels_to_dilate = 3
+        structuring_element = np.ones((num_pixels_to_dilate, num_pixels_to_dilate), dtype=np.uint16)
         for id_cell in range (0,n_masks): # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
             # calculating nuclear area and center of mass
             if not (self.channels_with_nucleus in  (None, [None])):
                 nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
                 selected_mask_nuc = self.masks_nuclei[id_cell]
+                dilated_image_mask = binary_dilation(selected_mask_nuc, structure=structuring_element, iterations=num_pixels_to_dilate)
+                psedudo_cytosol_mask = np.subtract(dilated_image_mask, selected_mask_nuc)
+                pseudo_cyto_int = np.zeros( (self.number_color_channels ))
                 tested_mask_for_border =  self.masks_nuclei[id_cell]
                 nuc_int = np.zeros( (self.number_color_channels ))
                 for k in range(self.number_color_channels ):
                     temp_img = np.max (self.image[:,:,:,k ],axis=0)
                     temp_masked_img = temp_img * self.masks_nuclei[id_cell]
-                    nuc_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 4)
-                    del temp_img, temp_masked_img
+                    temp_masked_img_with_psedudo_cytosol_mask = temp_img * psedudo_cytosol_mask
+                    nuc_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5)
+                    pseudo_cyto_int[k] =  np.round( temp_masked_img_with_psedudo_cytosol_mask[np.nonzero(temp_masked_img_with_psedudo_cytosol_mask)].mean() , 5)
+                    del temp_img, temp_masked_img,temp_masked_img_with_psedudo_cytosol_mask
             else:
                 nuc_area, nuc_centroid_y, nuc_centroid_x = 0,0,0
                 selected_mask_nuc = None
                 nuc_int = None
+                pseudo_cyto_int = np.zeros( (self.number_color_channels )) 
             # calculating cytosol area and center of mass
             if not (self.channels_with_cytosol in (None, [None])):
                 cell_area, cyto_centroid_y, cyto_centroid_x  = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=True)
@@ -1654,11 +1696,30 @@ class DataProcessing():
                 for k in range(self.number_color_channels ):
                     temp_img = np.max (self.image[:,:,:,k ],axis=0)
                     temp_masked_img = temp_img * self.masks_complete_cells[id_cell]
-                    cyto_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 4) 
+                    cyto_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5) 
                     del temp_img, temp_masked_img
             else:
                 cyto_int = None
                 cell_area, cyto_centroid_y, cyto_centroid_x  = 0,0,0
+            
+            # Calculating ratio between nucleus and cytosol intensity
+            nucleus_cytosol_intensity_ratio = np.zeros( (self.number_color_channels ))
+            nucleus_pseudo_cytosol_intensity_ratio = np.zeros( (self.number_color_channels ))
+            # case where nucleus and cyto are passed 
+            if not (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
+                for k in range(self.number_color_channels ):
+                    nucleus_cytosol_intensity_ratio[k] = nuc_int[k]/ cyto_int[k]
+                    nucleus_pseudo_cytosol_intensity_ratio[k] = nuc_int[k]/ pseudo_cyto_int[k]
+            # case where nucleus is  passed but not cyto
+            elif (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
+                for k in range(self.number_color_channels ):
+                    #nucleus_cytosol_intensity_ratio[k] = 0
+                    nucleus_pseudo_cytosol_intensity_ratio[k] = nuc_int[k]/ pseudo_cyto_int[k]
+            #else:
+            #    nucleus_cytosol_intensity_ratio  = np.zeros( (self.number_color_channels )) 
+            #    nucleus_pseudo_cytosol_intensity_ratio = np.zeros( (self.number_color_channels )) 
+            
+            
             # case where nucleus and cyto are passed 
             if not (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
                 slected_masks_cytosol_no_nuclei = self.masks_cytosol_no_nuclei[id_cell]
@@ -1699,10 +1760,13 @@ class DataProcessing():
                                         spot_type = self.spot_type ,
                                         cell_counter =counter_total_cells,
                                         nuc_int=nuc_int,
-                                        cyto_int=cyto_int)
+                                        cyto_int=cyto_int,
+                                        pseudo_cyto_int=pseudo_cyto_int,
+                                        nucleus_cytosol_intensity_ratio=nucleus_cytosol_intensity_ratio,
+                                        nucleus_pseudo_cytosol_intensity_ratio=nucleus_pseudo_cytosol_intensity_ratio)
             counter_total_cells +=1
         return new_dataframe
-    
+
 
 # class RemoveOutFocusPlanes():
 #     def __init__(self,image, percentage_images_to_remove=0.3):
@@ -1776,16 +1840,16 @@ class SpotDetection():
         self.channels_with_cytosol=channels_with_cytosol
         self.channels_with_nucleus=channels_with_nucleus
         if not (masks_complete_cells is None):
-            self.list_masks_complete_cells = Utilities.separate_masks(masks_complete_cells)
+            self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
         elif (masks_complete_cells is None) and not(masks_nuclei is None):
-            self.list_masks_complete_cells = Utilities.separate_masks(masks_nuclei)            
+            self.list_masks_complete_cells = Utilities().separate_masks(masks_nuclei)            
         if not (masks_nuclei is None):    
-            self.list_masks_nuclei = Utilities.separate_masks(masks_nuclei)
+            self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
         else:
             self.list_masks_nuclei = None
         
         if not (masks_complete_cells is None) and not (masks_nuclei is None):
-            self.list_masks_cytosol_no_nuclei = Utilities.separate_masks(masks_cytosol_no_nuclei)
+            self.list_masks_cytosol_no_nuclei = Utilities().separate_masks(masks_cytosol_no_nuclei)
         else:
             self.list_masks_cytosol_no_nuclei = None
         self.FISH_channels = FISH_channels
@@ -2229,9 +2293,9 @@ class PipelineFISH():
         else:
             self.list_images = list_images
         self.list_z_slices_per_image = [ img.shape[0] for img in self.list_images] # number of z-slices in the figure
-        self.channels_with_cytosol = Utilities.make_it_a_list(channels_with_cytosol) #channels_with_cytosol
-        self.channels_with_nucleus = Utilities.make_it_a_list(channels_with_nucleus) #channels_with_nucleus
-        channels_with_FISH = Utilities.make_it_a_list(channels_with_FISH) #channels_with_FISH
+        self.channels_with_cytosol = Utilities().make_it_a_list(channels_with_cytosol) #channels_with_cytosol
+        self.channels_with_nucleus = Utilities().make_it_a_list(channels_with_nucleus) #channels_with_nucleus
+        channels_with_FISH = Utilities().make_it_a_list(channels_with_FISH) #channels_with_FISH
         self.channels_with_FISH = channels_with_FISH
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
@@ -2272,12 +2336,12 @@ class PipelineFISH():
         # Testing sharpness in images
         self.remove_out_of_focus_images = remove_out_of_focus_images
         if remove_out_of_focus_images == True:
-            list_metric_sharpeness_images, list_is_image_sharp,list_sharp_images = Utilities.calculate_sharpness(list_images, channels_with_FISH=channels_with_FISH,threshold=sharpness_threshold)
+            list_metric_sharpeness_images, list_is_image_sharp,list_sharp_images = Utilities().calculate_sharpness(list_images, channels_with_FISH=channels_with_FISH,threshold=sharpness_threshold)
         else:
             list_sharp_images= list_images
             list_is_image_sharp=np.ones(len(list_images))
             list_is_image_sharp = [bool(x) for x in list_is_image_sharp]
-            list_metric_sharpeness_images= Utilities.calculate_sharpness(list_images, channels_with_FISH=channels_with_FISH,threshold=sharpness_threshold)[0]
+            list_metric_sharpeness_images= Utilities().calculate_sharpness(list_images, channels_with_FISH=channels_with_FISH,threshold=sharpness_threshold)[0]
         self.list_is_image_sharp = list_is_image_sharp
         self.list_metric_sharpeness_images =list_metric_sharpeness_images
         
@@ -2314,13 +2378,13 @@ class PipelineFISH():
                 average_threshold_spot_detection= int(np.mean(array_threshold_spot_detection[mask_ts]))
                 threshold_for_spot_detection.append(average_threshold_spot_detection)
         else:
-            threshold_for_spot_detection = Utilities.create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
+            threshold_for_spot_detection = Utilities().create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
         self.threshold_for_spot_detection = threshold_for_spot_detection
         self.save_pdf_report = save_pdf_report
         
     def run(self):
         # Creating folder to store outputs.
-        output_identification_string = Utilities.create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
+        output_identification_string = Utilities().create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 1000
         # Prealocating arrays
         list_masks_complete_cells=[]
@@ -2355,7 +2419,7 @@ class PipelineFISH():
             print('    Image Name :  ', self.list_files_names[i])
             temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
             temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
-            Plots.plot_images(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name, show_plots = self.show_plots)            
+            Plots().plot_images(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name, show_plots = self.show_plots)            
             #print('    Image Shape :                            ', list(self.list_images[i].shape ))
             img_shape = list(self.list_images[i].shape )
             if self.remove_z_slices_borders == True:
@@ -2386,11 +2450,11 @@ class PipelineFISH():
                                                                                                 NUMBER_OF_CORES=self.NUMBER_OF_CORES, 
                                                                                                 running_in_pipeline = True ).calculate_masks() 
                 # test if segmentation was succcesful
-                    if Utilities.is_None(self.channels_with_cytosol) ==True: #(self.channels_with_cytosol is None):
+                    if Utilities().is_None(self.channels_with_cytosol) ==True: #(self.channels_with_cytosol is None):
                         detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
-                    if Utilities.is_None(self.channels_with_nucleus) ==True: #(self.channels_with_nucleus  is None):
+                    if Utilities().is_None(self.channels_with_nucleus) ==True: #(self.channels_with_nucleus  is None):
                         detected_mask_pixels = np.count_nonzero([masks_complete_cells.flatten()])
-                    if (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False):#not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
+                    if (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(self.channels_with_cytosol) ==False):#not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
                         detected_mask_pixels =np.count_nonzero([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()])
                     # Counting pixels
                     if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
@@ -2399,21 +2463,21 @@ class PipelineFISH():
                         segmentation_successful = False   
                 else:
                     # Paths to masks
-                    if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus in (None,[None])) :
+                    if Utilities().is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus in (None,[None])) :
                         mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + temp_file_name +'.tif' )
                         try:
                             masks_nuclei = imread(str(mask_nuc_path)) 
                             segmentation_successful = True
                         except:
                             segmentation_successful = False
-                    if Utilities.is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
+                    if Utilities().is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
                         mask_cyto_path = self.masks_dir.absolute().joinpath( 'masks_cyto_' + temp_file_name +'.tif' )
                         try:
                             masks_complete_cells = imread(str( mask_cyto_path   )) 
                             segmentation_successful = True
                         except:
                             segmentation_successful = False
-                    if  (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False): # not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) :
+                    if  (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(self.channels_with_cytosol) ==False): # not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) :
                         mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath('masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                         try:
                             masks_cytosol_no_nuclei = imread(str(mask_cyto_no_nuclei_path  ))
@@ -2430,13 +2494,13 @@ class PipelineFISH():
                 if (self.save_masks_as_file ==True) and (segmentation_successful==True) :
                     number_detected_cells = np.max(masks_complete_cells)
                     print('    Number of detected cells:                ', number_detected_cells)
-                    if Utilities.is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus is None):
+                    if Utilities().is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus is None):
                         mask_nuc_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_nuclei_' + temp_file_name +'.tif' )
                         tifffile.imwrite(mask_nuc_path, masks_nuclei)
-                    if Utilities.is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
+                    if Utilities().is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
                         mask_cyto_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_' + temp_file_name +'.tif' )
                         tifffile.imwrite(mask_cyto_path, masks_complete_cells)
-                    if (Utilities.is_None(self.channels_with_nucleus) == False) and (Utilities.is_None(self.channels_with_cytosol) ==False): #not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+                    if (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(self.channels_with_cytosol) ==False): #not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
                         mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                         tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
                 else:
@@ -2495,7 +2559,7 @@ class PipelineFISH():
                     df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == counter]
                     df_labels = df_subset.loc[ :, ['image_id','cell_id','nuc_loc_y','nuc_loc_x','cyto_loc_y','cyto_loc_x']].drop_duplicates()
                     # Plotting cells 
-                    Plots.plotting_masks_and_original_image(image= self.list_images[i], 
+                    Plots().plotting_masks_and_original_image(image= self.list_images[i], 
                                                             masks_complete_cells=masks_complete_cells, 
                                                             masks_nuclei=masks_nuclei, 
                                                             channels_with_cytosol=self.channels_with_cytosol, 
@@ -2514,10 +2578,10 @@ class PipelineFISH():
         # Saving all original images as a PDF
         #print('- CREATING THE PLOT WITH ORIGINAL IMAGES')
         image_name= 'original_images_' + self.name_for_files +'.pdf'
-        Plots.plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
+        Plots().plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
         # Creating an image with all segmentation results
         image_name= 'segmentation_images_' + self.name_for_files +'.pdf'
-        Plots.plotting_segmentation_images(directory=pathlib.Path().absolute().joinpath(temp_folder_name),
+        Plots().plotting_segmentation_images(directory=pathlib.Path().absolute().joinpath(temp_folder_name),
                                            list_files_names=self.list_files_names,
                                            list_segmentation_successful=list_processing_successful,
                                            image_name=image_name,
@@ -2525,7 +2589,7 @@ class PipelineFISH():
         # Saving all cells in a single image file
         #print('- CREATING THE PLOT WITH ALL CELL IMAGES') 
         for k in range (len(self.channels_with_FISH)):
-            Plots.plot_all_cells_and_spots(list_images=self.list_images, 
+            Plots().plot_all_cells_and_spots(list_images=self.list_images, 
                                         complete_dataframe=dataframe, 
                                         selected_channel=self.channels_with_FISH[k], 
                                         list_masks_complete_cells = list_masks_complete_cells,
@@ -2980,7 +3044,10 @@ class MicroscopeSimulation():
                 # iterating for each color channel 
                 temp_image = np.zeros_like(list_library_cells[i][0,:,:,:],dtype=np.uint16)
                 for ch in range(number_color_channels):
-                    temp_image[:,:,ch] = np.max(list_library_cells[i][:,:,:,ch],axis=0)
+                    # using mmaximum projection
+                    #temp_image[:,:,ch] = np.max(list_library_cells[i][:,:,:,ch],axis=0)
+                    # using the center slice
+                    temp_image[:,:,ch] = list_library_cells[i][z_position_center_as_zero,:,:,ch]
                 list_volume_tested_cell.append(temp_image)
                 del temp_image
         # Lambda function to calculate edges in simulation
@@ -3022,7 +3089,7 @@ class MicroscopeSimulation():
                 temp_simulated_image[zero_indices] = random_elements
                 simulated_image[:,:,i] = temp_simulated_image
         else:
-            simulated_image =volume_simulated_image
+            simulated_image =volume_simulated_image        
         # add a filter to the image if z is out of bounds
         if not np.isin(z_position, z_array):
             z_distance_from_edge = np.abs(z_position)-np.max(z_array)
@@ -3052,7 +3119,7 @@ class Utilities():
     def __init__(self):
         pass
     
-    def calculate_sharpness(list_images, channels_with_FISH, neighborhood_size=31, threshold=1.12):
+    def calculate_sharpness(self,list_images, channels_with_FISH, neighborhood_size=31, threshold=1.12):
         list_mean_sharpeness_image = []
         list_is_image_sharp=[]
         list_sharp_images =[]
@@ -3069,9 +3136,18 @@ class Utilities():
             list_is_image_sharp.append(is_image_sharp)
         return list_mean_sharpeness_image, list_is_image_sharp,list_sharp_images
     
+    def remove_outliers(self, array,min_percentile=1,max_percentile=98):
+        max_val = np.percentile(array, max_percentile)
+        if np.isnan(max_val) == True:
+            max_val = np.percentile(array, max_percentile+0.1)
+        min_val = np.percentile(array, min_percentile)
+        if np.isnan(min_val) == True:
+            min_val = np.percentile(array, min_percentile+0.1)
+        array = array [array > min_val]
+        array = array [array < max_val]
+        return array 
     
-    
-    def is_None(variable_to_test):
+    def is_None(self,variable_to_test):
         if (type(variable_to_test) is list):
             variable_to_test = variable_to_test[0]
         if variable_to_test in (None, 'None', 'none',['None'],['none'],[None]):
@@ -3080,7 +3156,7 @@ class Utilities():
             is_none = False
         return is_none
     
-    def make_it_a_list(variable_to_test):
+    def make_it_a_list(self,variable_to_test):
         if not (type(variable_to_test) is list):
             list_variable = [variable_to_test]
         else:
@@ -3088,7 +3164,7 @@ class Utilities():
         return list_variable
     
     # Function that reorder the index to make it continuos 
-    def reorder_mask_image(mask_image_tested):
+    def reorder_mask_image(self,mask_image_tested):
         number_masks = np.max(mask_image_tested)
         mask_new =np.zeros_like(mask_image_tested)
         if number_masks>0:
@@ -3106,19 +3182,19 @@ class Utilities():
         return reordered_mask  
     
     # Function that reorder the index to make it continuos 
-    def remove_artifacts_from_mask_image(mask_image_tested, minimal_mask_area_size = 5000):
+    def remove_artifacts_from_mask_image(self,mask_image_tested, minimal_mask_area_size = 5000):
         number_masks = np.max(mask_image_tested)
         if number_masks>0:
             for index_mask in range(1,number_masks+1):
                 mask_size = np.sum(mask_image_tested == index_mask)
                 if mask_size <= minimal_mask_area_size:
                     mask_image_tested = np.where(mask_image_tested == index_mask, mask_image_tested, 0)
-            reordered_mask = Utilities.reorder_mask_image(mask_image_tested)
+            reordered_mask = Utilities().reorder_mask_image(mask_image_tested)
         else:
             reordered_mask=mask_image_tested
         return reordered_mask  
     
-    def convert_to_standard_format(data_folder_path,path_to_config_file, number_color_channels=2,number_of_fov=1, download_data_from_NAS = True):
+    def convert_to_standard_format(self,data_folder_path,path_to_config_file, number_color_channels=2,number_of_fov=1, download_data_from_NAS = True):
         path_to_masks_dir = None
         # Creating a folder to store all plots
         destination_folder = pathlib.Path().absolute().joinpath('temp_'+data_folder_path.name+'_sf')
@@ -3131,7 +3207,7 @@ class Utilities():
         if number_of_fov >1:
             # This option sections a single tif file containing multiple fov.
             # The format of the original FOV is [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities.read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
             number_images_all_fov = len(list_files_names_all_fov)
             number_images = 0
             for k in range(number_images_all_fov):
@@ -3165,7 +3241,7 @@ class Utilities():
                     del temp_image, temp_image_fov
         else:
             # This option takes multiple tif files containing multiple images with format [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities.read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
             number_images = len(list_files_names_all_fov)
             # Re-arranging the image
             list_images_standard_format= []
@@ -3190,7 +3266,7 @@ class Utilities():
         masks_dir = None
         return destination_folder,masks_dir, list_files_names, list_images_all_fov, list_images_standard_format
     
-    def create_output_folders(data_folder_path,diameter_nucleus,diameter_cytosol,psf_z,psf_yx,threshold_for_spot_detection,channels_with_FISH,list_threshold_for_spot_detection):
+    def create_output_folders(self,data_folder_path,diameter_nucleus,diameter_cytosol,psf_z,psf_yx,threshold_for_spot_detection,channels_with_FISH,list_threshold_for_spot_detection):
         # testing if the images were merged.
         if data_folder_path.name == 'merged':
             data_folder_path = data_folder_path.parents[0]
@@ -3217,10 +3293,10 @@ class Utilities():
         return output_identification_string
     
     
-    def  create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection=None):
+    def  create_list_thresholds_FISH(self,channels_with_FISH,threshold_for_spot_detection=None):
         # If more than one channel contain FISH spots. This section will create a list of thresholds for spot detection and for each channel. 
         if not(isinstance(channels_with_FISH, list)):
-            channels_with_FISH=Utilities.make_it_a_list(channels_with_FISH)
+            channels_with_FISH=Utilities().make_it_a_list(channels_with_FISH)
         list_threshold_for_spot_detection=[]
         if not isinstance(threshold_for_spot_detection, list):
             for i in range (len(channels_with_FISH)):
@@ -3234,7 +3310,7 @@ class Utilities():
         return list_threshold_for_spot_detection
     
     # This function is intended to merge masks in a single image
-    def merge_masks (list_masks):
+    def merge_masks (self,list_masks):
         '''
         This method is intended to merge a list of images into a single image (Numpy array) where each cell is represented by an integer value.
         
@@ -3258,7 +3334,7 @@ class Utilities():
         masks = base_image.astype(np.uint8)
         return masks
     
-    def separate_masks (masks):
+    def separate_masks (self,masks):
         '''
         This method is intended to separate an image (Numpy array) with multiple masks into a list of Numpy arrays where each cell is represented individually in a new NumPy array.
         
@@ -3281,7 +3357,7 @@ class Utilities():
             list_masks.append(masks)
         return list_masks
     
-    def convert_to_int8(image,rescale=True,min_percentile=1, max_percentile=98):
+    def convert_to_int8(self,image,rescale=True,min_percentile=1, max_percentile=98):
         '''
         This method converts images from int16 to uint8. Optionally, the image can be rescaled and stretched.
         
@@ -3311,7 +3387,7 @@ class Utilities():
             image_new = np.concatenate((image_new,zeros_plane[:,:,np.newaxis]),axis=2)
         return image_new
 
-    def read_zipfiles_from_NAS(list_dirs,path_to_config_file,share_name,mandatory_substring,local_folder_path):
+    def read_zipfiles_from_NAS(self,list_dirs,path_to_config_file,share_name,mandatory_substring,local_folder_path):
         # This function iterates over all zip files in a remote directory and download them to a local directory
         list_remote_files=[]
         list_local_files =[]
@@ -3329,7 +3405,7 @@ class Utilities():
                     NASConnection(path_to_config_file,share_name = share_name).download_file(zip_file_path, local_folder_path,timeout=200)
         return list_local_files
     
-    def unzip_local_folders(list_local_files,local_folder_path):
+    def unzip_local_folders(self,list_local_files,local_folder_path):
         list_local_folders =[]
         for zip_folder in list_local_files:
             # Reads from a list of zip files
@@ -3349,7 +3425,7 @@ class Utilities():
             list_local_folders.append(temp_folder_name)
         return list_local_folders
     
-    def dataframe_extract_data(dataframe,spot_type, minimum_spots_cluster=2):
+    def dataframe_extract_data(self,dataframe,spot_type, minimum_spots_cluster=2):
         ''' This function is intended to read a dataframe and returns 
             number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size
         '''
@@ -3383,7 +3459,7 @@ class Utilities():
         ts_size.clip(0)
         return number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size,cell_size, number_cells, nuc_size, cyto_size
     
-    def extracting_data_for_each_df_in_directory(list_local_folders, current_dir,spot_type=0, minimum_spots_cluster=2):
+    def extracting_data_for_each_df_in_directory(self,list_local_folders, current_dir,spot_type=0, minimum_spots_cluster=2):
         '''
         This method is intended to extract data from the dataframe
         '''
@@ -3402,7 +3478,7 @@ class Utilities():
             dataframe_file = glob.glob( str(dataframe_dir.joinpath('dataframe_*')) )[0]
             dataframe = pd.read_csv(dataframe_file)
             # Extracting values from dataframe
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities.dataframe_extract_data(dataframe,spot_type,minimum_spots_cluster=minimum_spots_cluster)            
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities().dataframe_extract_data(dataframe,spot_type,minimum_spots_cluster=minimum_spots_cluster)            
             # Appending each condition to a list
             list_spots_total.append(number_of_spots_per_cell)  # This list includes spots and TS in the nucleus
             list_spots_nuc.append(number_of_spots_per_cell_nucleus)   #
@@ -3417,23 +3493,23 @@ class Utilities():
             del number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells,nuc_size
         return list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites,list_cell_size,list_dataframes,list_nuc_size,list_cyto_size
     
-    def extract_data_interpretation(list_dirs, path_to_config_file, current_dir, mandatory_substring, local_folder_path, list_labels, share_name='share',minimum_spots_cluster=2, connect_to_NAS=0, spot_type=0, remove_extreme_values=False):
+    def extract_data_interpretation(self,list_dirs, path_to_config_file, current_dir, mandatory_substring, local_folder_path, list_labels, share_name='share',minimum_spots_cluster=2, connect_to_NAS=0, spot_type=0, remove_extreme_values=False):
         if connect_to_NAS == True:
             # Reading the data from NAS, unziping files, organizing data as single dataframe for comparison. 
-            list_local_files = Utilities.read_zipfiles_from_NAS(list_dirs,path_to_config_file,share_name, mandatory_substring, local_folder_path)
-            list_local_folders = Utilities.unzip_local_folders(list_local_files,local_folder_path)
+            list_local_files = Utilities().read_zipfiles_from_NAS(list_dirs,path_to_config_file,share_name, mandatory_substring, local_folder_path)
+            list_local_folders = Utilities().unzip_local_folders(list_local_files,local_folder_path)
         else: 
             list_local_folders = list_dirs # Use this line to process files from a local repository
         # Extracting data from each repository
-        list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size = Utilities.extracting_data_for_each_df_in_directory(  list_local_folders=list_local_folders,current_dir=current_dir,spot_type=spot_type,minimum_spots_cluster=minimum_spots_cluster)
+        list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size = Utilities().extracting_data_for_each_df_in_directory(  list_local_folders=list_local_folders,current_dir=current_dir,spot_type=spot_type,minimum_spots_cluster=minimum_spots_cluster)
         # Final dataframes for nuc, cyto and total spots
-        df_all = Utilities.convert_list_to_df (list_number_cells, list_spots_total, list_labels, remove_extreme_values= remove_extreme_values)
-        df_cyto = Utilities.convert_list_to_df (list_number_cells, list_spots_cytosol, list_labels, remove_extreme_values= remove_extreme_values)
-        df_nuc = Utilities.convert_list_to_df (list_number_cells, list_spots_nuc, list_labels, remove_extreme_values= remove_extreme_values)
-        df_transcription_sites = Utilities.convert_list_to_df (list_number_cells, list_transcription_sites, list_labels, remove_extreme_values= remove_extreme_values)
+        df_all = Utilities().convert_list_to_df (list_number_cells, list_spots_total, list_labels, remove_extreme_values= remove_extreme_values)
+        df_cyto = Utilities().convert_list_to_df (list_number_cells, list_spots_cytosol, list_labels, remove_extreme_values= remove_extreme_values)
+        df_nuc = Utilities().convert_list_to_df (list_number_cells, list_spots_nuc, list_labels, remove_extreme_values= remove_extreme_values)
+        df_transcription_sites = Utilities().convert_list_to_df (list_number_cells, list_transcription_sites, list_labels, remove_extreme_values= remove_extreme_values)
         return df_all, df_cyto, df_nuc, df_transcription_sites, list_spots_total, list_spots_nuc, list_spots_cytosol, list_number_cells, list_transcription_sites, list_cell_size, list_dataframes, list_nuc_size, list_cyto_size 
     
-    def function_get_df_columns_as_array(df, colum_to_extract, extraction_type='all_values'):
+    def function_get_df_columns_as_array(self,df, colum_to_extract, extraction_type='all_values'):
         '''This method is intended to extract a column from a dataframe and convert its values to an array format.
             The argument <<<extraction_type>>> accepts two possible values. 
                 values_per_cell: this returns an unique value that represents a cell parameter and is intended to be used with the following columns 
@@ -3446,7 +3522,7 @@ class Utilities():
         elif extraction_type == 'all_values' :
             return np.asarray( [       df.loc[(df['cell_id']==i)][colum_to_extract].values          for i in range(0, number_cells)] )      
     
-    def convert_list_to_df (list_number_cells, list_spots, list_labels, remove_extreme_values= False,max_quantile=0.98) :
+    def convert_list_to_df (self,list_number_cells, list_spots, list_labels, remove_extreme_values= False,max_quantile=0.98) :
         # defining the dimensions for the array.
         max_number_cells = max(list_number_cells)
         number_conditions = len(list_number_cells)
@@ -3465,7 +3541,7 @@ class Utilities():
                 df[col] = np.where(df[col] >= max_data_value, np.nan, df[col])
         return df
 
-    def download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
+    def download_data_NAS(self,path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200):
         '''
         This method is inteded to download data from a NAS. to a local directory.
         path_to_config_file
@@ -3497,11 +3573,11 @@ class Utilities():
             masks_dir = None
         return local_data_dir, masks_dir
     
-    def read_images_from_folder( path_to_config_file, data_folder_path, path_to_masks_dir=None, download_data_from_NAS=False, substring_to_detect_in_file_name = '.*_C0.tif'):
+    def read_images_from_folder(self, path_to_config_file, data_folder_path, path_to_masks_dir=None, download_data_from_NAS=False, substring_to_detect_in_file_name = '.*_C0.tif'):
         # Download data from NAS
         if download_data_from_NAS == True:
             share_name = 'share'
-            local_data_dir, masks_dir = Utilities.download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200)
+            local_data_dir, masks_dir = Utilities().download_data_NAS(path_to_config_file,data_folder_path, path_to_masks_dir,share_name,timeout=200)
         else:
             local_data_dir = data_folder_path 
             masks_dir = path_to_masks_dir 
@@ -3523,9 +3599,11 @@ class Utilities():
         print('Local directory with images: ', local_data_dir, '\n')
         return local_data_dir, masks_dir, number_images, number_color_channels, list_files_names,list_images
         
-    def save_output_to_folder (output_identification_string, data_folder_path,
+    def save_output_to_folder (self, output_identification_string, data_folder_path,
                                 list_files_distributions=None,
                                 file_plots_bleed_thru = None,
+                                file_plots_int_ratio=None,
+                                file_plots_int_pseudo_ratio=None,
                                 channels_with_FISH=None,
                                 save_pdf_report=True):
         #  Moving figures to the final folder 
@@ -3546,7 +3624,11 @@ class Utilities():
             
         if not (file_plots_bleed_thru is None):
             pathlib.Path().absolute().joinpath(file_plots_bleed_thru).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_bleed_thru))
-
+        if not (file_plots_int_ratio is None):
+            pathlib.Path().absolute().joinpath(file_plots_int_ratio).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_int_ratio))
+        if not (file_plots_int_pseudo_ratio is None):
+            pathlib.Path().absolute().joinpath(file_plots_int_pseudo_ratio).rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string),file_plots_int_pseudo_ratio))
+        
         # all original images
         pathlib.Path().absolute().joinpath('original_images_' + data_folder_path.name +'.pdf').rename(pathlib.Path().absolute().joinpath(str('analysis_'+ output_identification_string    ),'original_images_'+ data_folder_path.name +'.pdf'))
         # all cell images
@@ -3566,7 +3648,7 @@ class Utilities():
 
         return None
 
-    def sending_data_to_NAS(output_identification_string, data_folder_path, path_to_config_file, path_to_masks_dir, diameter_nucleus, diameter_cytosol, send_data_to_NAS = False, masks_dir = None, share_name = 'share'):
+    def sending_data_to_NAS(self,output_identification_string, data_folder_path, path_to_config_file, path_to_masks_dir, diameter_nucleus, diameter_cytosol, send_data_to_NAS = False, masks_dir = None, share_name = 'share'):
         # Writing analyses data to NAS
         analysis_folder_name = 'analysis_'+ output_identification_string
         if send_data_to_NAS == True:
@@ -3591,7 +3673,7 @@ class Utilities():
             os.remove(pathlib.Path().absolute().joinpath(mask_dir_complete_name+'.zip'))
         return analysis_folder_name, mask_dir_complete_name
     
-    def move_results_to_analyses_folder( output_identification_string,  data_folder_path,mask_dir_complete_name,path_to_masks_dir, save_filtered_images = False, download_data_from_NAS = False):
+    def move_results_to_analyses_folder(self, output_identification_string,  data_folder_path,mask_dir_complete_name,path_to_masks_dir, save_filtered_images = False, download_data_from_NAS = False):
         # Moving all results to "analyses" folder
         if not os.path.exists(str('analyses')):
             os.makedirs(str('analyses'))
@@ -3627,7 +3709,7 @@ class Utilities():
             shutil.rmtree('temp_'+data_folder_path.name)
         return None
     
-    def export_data_to_CSV(list_spots_total, list_spots_nuc, list_spots_cytosol, destination_folder, plot_title_suffix=''):
+    def export_data_to_CSV(self,list_spots_total, list_spots_nuc, list_spots_cytosol, destination_folder, plot_title_suffix=''):
         # Exporting data to CSV. 
         # ColumnA = time, 
         # ColumnB= #RNA in nucleus, 
@@ -3652,12 +3734,12 @@ class Utilities():
         # Save to csv
         df_for_model.to_csv(pathlib.Path().absolute().joinpath(destination_folder,plot_title_suffix+'.csv'))
         return df_for_model
-    def extract_images_masks_dataframe( data_folder_path, mandatory_substring, path_to_config_file,connect_to_NAS,path_to_masks_dir=None, rescale=False,max_percentile=99.5):
+    def extract_images_masks_dataframe( self,data_folder_path, mandatory_substring, path_to_config_file,connect_to_NAS,path_to_masks_dir=None, rescale=False,max_percentile=99.5):
         local_folder_path = pathlib.Path().absolute().joinpath('temp_local__'+data_folder_path.name)
         # This section downloads results including the dataframe
         if connect_to_NAS == True:
-            list_local_files = Utilities.read_zipfiles_from_NAS(list_dirs=data_folder_path,path_to_config_file=path_to_config_file,share_name='share', mandatory_substring=mandatory_substring, local_folder_path=local_folder_path)
-            list_local_folders = Utilities.unzip_local_folders(list_local_files,local_folder_path)
+            list_local_files = Utilities().read_zipfiles_from_NAS(list_dirs=data_folder_path,path_to_config_file=path_to_config_file,share_name='share', mandatory_substring=mandatory_substring, local_folder_path=local_folder_path)
+            list_local_folders = Utilities().unzip_local_folders(list_local_files,local_folder_path)
         else: 
             list_local_folders = data_folder_path # Use this line to process files from a local repository
         # Extracting the dataframe
@@ -3670,7 +3752,7 @@ class Utilities():
         except:
             images_metadata = None
         # Extracting Original images
-        local_data_dir, masks_dir, number_images, number_color_channels, list_files_names,_ = Utilities.read_images_from_folder( path_to_config_file, data_folder_path = data_folder_path, path_to_masks_dir = path_to_masks_dir,  download_data_from_NAS = connect_to_NAS, substring_to_detect_in_file_name = '.*_C0.tif')        
+        local_data_dir, masks_dir, number_images, number_color_channels, list_files_names,_ = Utilities().read_images_from_folder( path_to_config_file, data_folder_path = data_folder_path, path_to_masks_dir = path_to_masks_dir,  download_data_from_NAS = connect_to_NAS, substring_to_detect_in_file_name = '.*_C0.tif')        
         # Reading images from folders
         list_images, path_files, list_files_names, _ = ReadImages(directory= local_data_dir).read()
         if not (path_to_masks_dir is None):
@@ -3681,7 +3763,7 @@ class Utilities():
         return list_images, list_masks, dataframe, number_images, number_color_channels,list_local_folders,local_data_dir, images_metadata
     
     
-    def image_cell_selection(cell_id, list_images, dataframe, mask_cell=None, mask_nuc=None, scaling_value_radius_cell=1.1):
+    def image_cell_selection(self,cell_id, list_images, dataframe, mask_cell=None, mask_nuc=None, scaling_value_radius_cell=1.1):
         SCALING_RADIUS_NUCLEUS = scaling_value_radius_cell #1.1
         SCALING_RADIUS_CYTOSOL = scaling_value_radius_cell
         # selecting only the dataframe containing the values for the selected field
@@ -3742,7 +3824,7 @@ class Utilities():
         return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_cell, subsection_mask_nuc
     
     
-    def extract_spot_location_from_cell(df, spot_type=0, min_ts_size= None,z_slice=None):
+    def extract_spot_location_from_cell(self,df, spot_type=0, min_ts_size= None,z_slice=None):
         df_spots_all_z = df.loc[ (df['spot_type']==spot_type)  & (df['is_cluster']==0) ] 
         number_spots = len (  df_spots_all_z  )
         
@@ -3775,7 +3857,7 @@ class Utilities():
             x_TS_locations = None
         return y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations,number_spots, number_TS,number_spots_selected_z
     
-    def spot_crops (image,df,number_crops_to_show,spot_size=5):
+    def spot_crops (self,image,df,number_crops_to_show,spot_size=5):
         number_crops_to_show = np.min((number_crops_to_show, len(df)/2))
         def return_crop(image, x, y,spot_size):
             spot_range = np.linspace(-(spot_size - 1) / 2, (spot_size - 1) / 2, spot_size,dtype=int)
@@ -3806,7 +3888,7 @@ class Plots():
     def __init__(self):
         pass
     
-    def plotting_segmentation_images(directory,list_files_names,list_segmentation_successful=[None],image_name='temp.pdf',show_plots=True):
+    def plotting_segmentation_images(self,directory,list_files_names,list_segmentation_successful=[None],image_name='temp.pdf',show_plots=True):
         number_images = len(list_files_names)
         NUM_COLUMNS = 1
         NUM_ROWS = number_images
@@ -3844,7 +3926,7 @@ class Plots():
         plt.show()
         
         
-    def plotting_all_original_images(list_images,list_files_names,image_name,show_plots=True):
+    def plotting_all_original_images(self,list_images,list_files_names,image_name,show_plots=True):
         number_images = len(list_images)
         NUM_COLUMNS = 5
         NUM_ROWS = math.ceil(number_images/ NUM_COLUMNS)
@@ -3873,7 +3955,7 @@ class Plots():
             max_image = np.max (temp_img,axis =0)
             max_nun_channels = np.min([3, max_image.shape[2]])
             img_title= list_files_names[i]
-            image_int8 = Utilities.convert_to_int8(max_image[ :, :, 0:max_nun_channels], rescale=True, min_percentile=1, max_percentile=95)  
+            image_int8 = Utilities().convert_to_int8(max_image[ :, :, 0:max_nun_channels], rescale=True, min_percentile=1, max_percentile=95)  
             axis_index.imshow( image_int8)
             axis_index.grid(False)
             axis_index.set_xticks([])
@@ -3894,7 +3976,7 @@ class Plots():
         
         
     
-    def plot_images(image,figsize=(8.5, 5),image_name='temp',show_plots=True):
+    def plot_images(self,image,figsize=(8.5, 5),image_name='temp',show_plots=True):
         '''
         This method is intended to plot all the channels from an image with format  [Z, Y, X, C].
         
@@ -3922,7 +4004,7 @@ class Plots():
         return None
 
     
-    def plotting_masks_and_original_image(image, masks_complete_cells, masks_nuclei, channels_with_cytosol, channels_with_nucleus,image_name,show_plots,df_labels=None):
+    def plotting_masks_and_original_image(self,image, masks_complete_cells, masks_nuclei, channels_with_cytosol, channels_with_nucleus,image_name,show_plots,df_labels=None):
     # This functions makes zeros the border of the mask, it is used only for plotting.
         NUM_POINTS_MASK_EDGE_LINE = 50
         def erode_mask(img,px_to_remove = 1):
@@ -3938,7 +4020,7 @@ class Plots():
             max_image = image # [YXC] 
         # Plotting
         n_channels = np.min([3, max_image.shape[2]])
-        im = Utilities.convert_to_int8(max_image[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
+        im = Utilities().convert_to_int8(max_image[ :, :, 0:n_channels], rescale=True, min_percentile=1, max_percentile=95)  
         if np.max(masks_complete_cells) != 0 and not(channels_with_cytosol in (None,[None])) and not(channels_with_nucleus in (None,[None])):
             _, axes = plt.subplots(nrows = 1, ncols = 4, figsize = (15, 10))
             masks_plot_cyto= masks_complete_cells 
@@ -4051,7 +4133,7 @@ class Plots():
             plt.close()
 
 
-    def dist_plots(df, plot_title,destination_folder,y_lim_values=None ):
+    def dist_plots(self, df, plot_title,destination_folder,y_lim_values=None ):
         stacked_df = df.stack()
         pct = stacked_df.quantile(q=0.99)
         #color_palete = 'colorblind'
@@ -4127,7 +4209,7 @@ class Plots():
         
         return None
 
-    def plot_comparing_df(df_all,df_cyto,df_nuc,plot_title,destination_folder):
+    def plot_comparing_df(self, df_all,df_cyto,df_nuc,plot_title,destination_folder):
         #color_palete = 'CMRmap'
         color_palete = 'Dark2'
         sns.set(font_scale = 1.5)
@@ -4157,7 +4239,7 @@ class Plots():
         return None
 
 
-    def plot_TS(df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False):
+    def plot_TS(self, df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False):
         color_palete = 'CMRmap'
         #color_palete = 'Accent'
         sns.set(font_scale = 1.5)
@@ -4180,7 +4262,7 @@ class Plots():
         return None
 
 
-    def plot_TS_bar_stacked(df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False,normalize=True):
+    def plot_TS_bar_stacked(self, df_original,plot_title,destination_folder,minimum_spots_cluster,remove_zeros=False,normalize=True):
         if (normalize == True) and (remove_zeros == True):
             warnings.warn("Warining: notice that normalization is only possible if zeros are not removed. To normalize the output use the options as follows: remove_zeros=False, normalize=True ")
         df= df_original.copy()
@@ -4236,7 +4318,7 @@ class Plots():
         return None
 
 
-    def plotting_results_as_distributions(number_of_spots_per_cell,number_of_spots_per_cell_cytosol,number_of_spots_per_cell_nucleus,ts_size,number_of_TS_per_cell,minimum_spots_cluster,numBins=20,output_identification_string=None, spot_type=0):
+    def plotting_results_as_distributions(self, number_of_spots_per_cell,number_of_spots_per_cell_cytosol,number_of_spots_per_cell_nucleus,ts_size,number_of_TS_per_cell,minimum_spots_cluster,numBins=20,output_identification_string=None, spot_type=0):
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -4290,7 +4372,7 @@ class Plots():
 
 
 
-    def plot_scatter_and_distributions(x,y, plot_title,  x_label_scatter='cell_size', y_lable_scatter = 'number_of_spots_per_cell', destination_folder=None, selected_color = '#1C00FE',save_plot=False,temporal_figure=False):
+    def plot_scatter_and_distributions(self, x,y, plot_title,  x_label_scatter='cell_size', y_lable_scatter = 'number_of_spots_per_cell', destination_folder=None, selected_color = '#1C00FE',save_plot=False,temporal_figure=False):
         r, p = stats.pearsonr(x, y)
         df_join_distribution = pd.DataFrame({x_label_scatter:x,y_lable_scatter:y})
         sns.set(font_scale = 1.3)
@@ -4320,7 +4402,7 @@ class Plots():
             pathlib.Path().absolute().joinpath(name_plot).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         return b.fig, file_name
 
-    def plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=None,spot_type=0):  
+    def plot_cell_size_spots(self, channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=None,spot_type=0):  
         '''
         This function is intended to plot the spot count as a function of the cell size. 
         
@@ -4348,19 +4430,19 @@ class Plots():
         if (cyto_exists == True) and (nuc_exists == True):
             x = cell_size
             y = number_of_spots_per_cell
-            _,fig1_temp_name = Plots.plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='cell_size', y_lable_scatter = 'number_of_spots_per_cell',temporal_figure=True)
+            _,fig1_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='cell_size', y_lable_scatter = 'number_of_spots_per_cell',temporal_figure=True)
         # Cytosol
         if cyto_exists == True:
             x = cyto_size
             y = number_of_spots_per_cell_cytosol
             title_plot='cytosol'
-            _,fig2_temp_name = Plots.plot_scatter_and_distributions(x,y,title_plot ,x_label_scatter='cyto_size', y_lable_scatter = 'number_of_spots_per_cyto',temporal_figure=True)
+            _,fig2_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot ,x_label_scatter='cyto_size', y_lable_scatter = 'number_of_spots_per_cyto',temporal_figure=True)
         # Nucleus
         if nuc_exists == True:
             x = nuc_size
             y = number_of_spots_per_cell_nucleus
             title_plot='nucleus'
-            _,fig3_temp_name = Plots.plot_scatter_and_distributions(x,y,title_plot ,x_label_scatter='nuc_size', y_lable_scatter = 'number_of_spots_per_nuc',temporal_figure=True)
+            _,fig3_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot ,x_label_scatter='nuc_size', y_lable_scatter = 'number_of_spots_per_nuc',temporal_figure=True)
         # Plotting
         _, axes = plt.subplots(nrows = 1, ncols = 3, figsize = (20, 10))
         counter = 0
@@ -4388,7 +4470,7 @@ class Plots():
         plt.show()
         return file_name
 
-    def plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus = None, number_of_spots_per_cell_cytosol = None,output_identification_string=None,spot_type=0):  
+    def plot_cell_intensity_spots(self, dataframe, number_of_spots_per_cell_nucleus = None, number_of_spots_per_cell_cytosol = None,output_identification_string=None,spot_type=0):  
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -4426,14 +4508,14 @@ class Plots():
                 if (nucleus_exists==True) and (counter ==0):
                     column_with_intensity = 'nuc_int_ch_'+str(i)
                     title_plot='nucleus'
-                    x = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract=column_with_intensity, extraction_type='values_per_cell') 
+                    x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract=column_with_intensity, extraction_type='values_per_cell') 
                     y = number_of_spots_per_cell_nucleus
                 if ((cyto_exists==True) and (counter ==1)) or ((cyto_exists==True) and (counter ==0) and (number_rows==1)):
                     column_with_intensity = 'cyto_int_ch_'+str(i)
                     title_plot='cytosol'
-                    x = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract=column_with_intensity, extraction_type='values_per_cell') 
+                    x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract=column_with_intensity, extraction_type='values_per_cell') 
                     y = number_of_spots_per_cell_cytosol
-                _,fig_temp_name = Plots.plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='Intensity_Ch_'+str(i), y_lable_scatter = 'number_of_spots',temporal_figure=True)
+                _,fig_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='Intensity_Ch_'+str(i), y_lable_scatter = 'number_of_spots',temporal_figure=True)
                 if number_rows ==1:
                     axes[i].imshow(plt.imread(fig_temp_name))
                     axes[i].grid(False)
@@ -4451,7 +4533,7 @@ class Plots():
         plt.show()
         return file_name
 
-    def plot_scatter_bleed_thru (dataframe,channels_with_cytosol, channels_with_nucleus,output_identification_string=None):
+    def plot_scatter_bleed_thru (self, dataframe,channels_with_cytosol, channels_with_nucleus,output_identification_string=None):
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -4478,12 +4560,12 @@ class Plots():
             title_plot=title_string
             file_name  = 'bleed_thru_'+title_string+'.pdf'
             if not channels_with_cytosol in (None, 'None', 'none',['None'],['none'],[None]):
-                x = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
-                y = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
+                x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
+                y = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
             if not channels_with_nucleus in (None, 'None', 'none',['None'],['none'],[None]):
-                x = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
-                y = Utilities.function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
-            _,fig_temp_name = Plots.plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='intensity_Ch_'+str(combinations_channels[i][0]), y_lable_scatter = 'intensity_Ch_'+str(combinations_channels[i][1]),temporal_figure=True)
+                x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
+                y = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
+            _,fig_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='intensity_Ch_'+str(combinations_channels[i][0]), y_lable_scatter = 'intensity_Ch_'+str(combinations_channels[i][1]),temporal_figure=True)
             axis_index.imshow(plt.imread(fig_temp_name))
             axis_index.grid(False)
             axis_index.set_xticks([])
@@ -4494,22 +4576,23 @@ class Plots():
         plt.show()
         return file_name
     
-    def plot_interpretation_distributions (df_all, df_cyto, df_nuc, destination_folder, plot_title_suffix='',y_lim_values_all_spots=None, y_lim_values_cyto=None,y_lim_values_nuc=None):
+    def plot_interpretation_distributions (self, df_all, df_cyto, df_nuc, destination_folder, plot_title_suffix='',y_lim_values_all_spots=None, y_lim_values_cyto=None,y_lim_values_nuc=None):
         if (df_cyto.dropna().any().any() == True) and (df_nuc.dropna().any().any() == True):  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
             plot_title_complete = 'all_spots__'+plot_title_suffix
-            Plots.dist_plots(df_all, plot_title_complete, destination_folder,y_lim_values_all_spots)
+            Plots().dist_plots(df_all, plot_title_complete, destination_folder,y_lim_values_all_spots)
         
         if df_cyto.dropna().any().any() == True:  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
             # Plotting for all Cytosol only
             plot_title_cyto = 'cyto__'+plot_title_suffix
-            Plots.dist_plots(df_cyto, plot_title_cyto, destination_folder,y_lim_values_cyto)
+            Plots().dist_plots(df_cyto, plot_title_cyto, destination_folder,y_lim_values_cyto)
         
         if df_nuc.dropna().any().any() == True:  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
             # Plotting for all nucleus
             plot_title_nuc = 'nuc__'+plot_title_suffix
-            Plots.dist_plots(df_nuc, plot_title_nuc, destination_folder,y_lim_values_nuc)
+            Plots().dist_plots(df_nuc, plot_title_nuc, destination_folder,y_lim_values_nuc)
 
-    def plot_spot_intensity_distributions(dataframe,output_identification_string=None,remove_outliers=True, spot_type=0):
+
+    def plot_spot_intensity_distributions(self, dataframe,output_identification_string=None,remove_outliers=True, spot_type=0):
         # Creating a name for the plot
         if not (output_identification_string is None):
             index_string = output_identification_string.index('__')
@@ -4517,6 +4600,8 @@ class Plots():
                 title_string = output_identification_string[0:index_string]
             else :
                 title_string = ''
+        else:
+            title_string=''
         # Counting the number of color channels in the dataframe
         pattern = r'^spot_int_ch_\d'
         string_list = dataframe.columns
@@ -4527,7 +4612,7 @@ class Plots():
                 number_color_channels += 1
         # Plotting
         _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 5))
-        max_percentile = 98
+        max_percentile = 99
         min_percentile = 0.5
         title_plot  = 'spot_intensities'
         file_name = title_plot +'_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
@@ -4537,14 +4622,16 @@ class Plots():
             df_spot_intensity = dataframe.loc[   (dataframe['is_cluster']==False) & (dataframe['spot_type']==spot_type)]
             spot_intensity = df_spot_intensity[column_name].values
             if remove_outliers ==True:
-                max_val = np.percentile(spot_intensity, max_percentile)
-                if np.isnan(max_val) == True:
-                    max_val = np.percentile(spot_intensity, max_percentile+0.1)
-                min_val = np.percentile(spot_intensity, min_percentile)
-                if np.isnan(min_val) == True:
-                    min_val = np.percentile(spot_intensity, min_percentile+0.1)
-                spot_intensity = spot_intensity [spot_intensity > min_val]
-                spot_intensity = spot_intensity [spot_intensity < max_val]
+                spot_intensity =Utilities().remove_outliers( spot_intensity,min_percentile=1,max_percentile=99)
+                
+                #max_val = np.percentile(spot_intensity, max_percentile)
+                #if np.isnan(max_val) == True:
+                #    max_val = np.percentile(spot_intensity, max_percentile+0.1)
+                #min_val = np.percentile(spot_intensity, min_percentile)
+                #if np.isnan(min_val) == True:
+                #    min_val = np.percentile(spot_intensity, min_percentile+0.1)
+                #spot_intensity = spot_intensity [spot_intensity > min_val]
+                #spot_intensity = spot_intensity [spot_intensity < max_val]
             ax[i].hist(x=spot_intensity, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
@@ -4552,7 +4639,54 @@ class Plots():
         plt.show()
         return file_name
     
-    def plot_all_distributions (dataframe,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string ):
+    
+    def plot_nuc_cyto_int_ratio_distributions(self, dataframe,output_identification_string=None, plot_for_pseudo_cytosol=False,remove_outliers=True):
+        # Creating a name for the plot
+        if not (output_identification_string is None):
+            index_string = output_identification_string.index('__')
+            if index_string >=0:
+                title_string = output_identification_string[0:index_string]
+            else :
+                title_string = ''
+        else:
+            title_string=''
+            
+        # Counting the number of color channels in the dataframe
+        if plot_for_pseudo_cytosol == True:
+            pattern = r'nuc_pseudo_cyto_int_ratio_ch_\d'
+            title_plot  = 'nuc_pseudo_cyto_ratio'
+            prefix_column_to_extract = 'nuc_pseudo_cyto_int_ratio_ch_'
+            prefix_x_label = 'nuc_pseudo_cyto_int_ratio_'
+        else:
+            pattern = r'^nuc_cyto_int_ratio_ch_\d'
+            title_plot  = 'nuc_cyto_ratio'
+            prefix_column_to_extract = 'nuc_cyto_int_ratio_ch_'
+            prefix_x_label = 'nuc_cyto_int_ratio_'
+        
+        string_list = dataframe.columns
+        number_color_channels = 0
+        for string in string_list:
+            match = re.match(pattern, string)
+            if match:
+                number_color_channels += 1
+        # Plotting
+        _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 5))
+        file_name = title_plot +'_'+title_string+'.pdf'
+        colors = ['r','g','b','m']
+        number_cells = dataframe['cell_id'].nunique()
+        for i in range (0,number_color_channels ):
+            colum_to_extract = prefix_column_to_extract+str(i)
+            int_ratio = np.asarray( [  dataframe.loc[(dataframe['cell_id']==i)][colum_to_extract].values[0]  for i in range(0, number_cells)] )
+            if remove_outliers ==True:
+                int_ratio =Utilities().remove_outliers( int_ratio,min_percentile=1,max_percentile=99)
+            ax[i].hist(x=int_ratio, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
+            ax[i].set_xlabel(prefix_x_label+str(i) )
+            ax[i].set_ylabel('probability' )
+        plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+        plt.show()
+        return file_name
+        
+    def plot_all_distributions (self, dataframe,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string ):
         if isinstance(channels_with_FISH, list):
             number_fish_channels = (len(channels_with_FISH))
         else:
@@ -4563,11 +4697,11 @@ class Plots():
         list_file_plots_cell_intensity_vs_num_spots =[]
         # extracting data for each spot type
         for i in range (number_fish_channels):
-            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities.dataframe_extract_data(dataframe,spot_type=i,minimum_spots_cluster=minimum_spots_cluster)
-            file_plots_cell_intensity_vs_num_spots = Plots.plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus, number_of_spots_per_cell_cytosol,output_identification_string,spot_type=i)
-            file_plots_spot_intensity_distributions = Plots.plot_spot_intensity_distributions(dataframe,output_identification_string,spot_type=i)
-            file_plots_distributions = Plots.plotting_results_as_distributions(number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, ts_size, number_of_TS_per_cell, minimum_spots_cluster, output_identification_string=output_identification_string,spot_type=i)
-            file_plots_cell_size_vs_num_spots = Plots.plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=output_identification_string,spot_type=i)
+            number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities().dataframe_extract_data(dataframe,spot_type=i,minimum_spots_cluster=minimum_spots_cluster)
+            file_plots_cell_intensity_vs_num_spots = Plots().plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus, number_of_spots_per_cell_cytosol,output_identification_string,spot_type=i)
+            file_plots_spot_intensity_distributions = Plots().plot_spot_intensity_distributions(dataframe,output_identification_string,spot_type=i)
+            file_plots_distributions = Plots().plotting_results_as_distributions(number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, ts_size, number_of_TS_per_cell, minimum_spots_cluster, output_identification_string=output_identification_string,spot_type=i)
+            file_plots_cell_size_vs_num_spots = Plots().plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=output_identification_string,spot_type=i)
             # Appending list of files
             list_file_plots_spot_intensity_distributions.append(file_plots_spot_intensity_distributions)
             list_file_plots_distributions.append(file_plots_distributions)
@@ -4577,7 +4711,7 @@ class Plots():
             list_files_distributions = [list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots]
         return list_files_distributions #list_file_plots_spot_intensity_distributions,list_file_plots_distributions,list_file_plots_cell_size_vs_num_spots,list_file_plots_cell_intensity_vs_num_spots
     
-    def compare_intensities_spots_interpretation(merged_dataframe, list_dataframes, list_number_cells,  list_labels, plot_title_suffix, destination_folder, column_name, remove_extreme_values= True,max_quantile=0.97,color_palete='CMRmap'):
+    def compare_intensities_spots_interpretation(self, merged_dataframe, list_dataframes, list_number_cells,  list_labels, plot_title_suffix, destination_folder, column_name, remove_extreme_values= True,max_quantile=0.97,color_palete='CMRmap'):
         file_name = 'ch_int_vs_spots_'+plot_title_suffix+'__'+column_name+'.pdf'
         sns.set(font_scale = 1.5)
         sns.set_style("white")
@@ -4596,8 +4730,8 @@ class Plots():
             #column_with_intensity = column_name +str(i)
             list_cell_int = []
             for j in range (len(list_dataframes)):
-                list_cell_int.append( Utilities.function_get_df_columns_as_array(df=list_dataframes[j], colum_to_extract=column_with_intensity, extraction_type='values_per_cell')  )
-            df_cell_int = Utilities.convert_list_to_df (list_number_cells, list_cell_int, list_labels, remove_extreme_values= remove_extreme_values,max_quantile=max_quantile)
+                list_cell_int.append( Utilities().function_get_df_columns_as_array(df=list_dataframes[j], colum_to_extract=column_with_intensity, extraction_type='values_per_cell')  )
+            df_cell_int = Utilities().convert_list_to_df (list_number_cells, list_cell_int, list_labels, remove_extreme_values= remove_extreme_values,max_quantile=max_quantile)
             # This code creates a single column for all conditions and adds a 'location' column.
             df_all_melt = merged_dataframe.melt()
             df_all_melt.rename(columns={'value' : y_value_label}, inplace=True)
@@ -4629,10 +4763,10 @@ class Plots():
         plt.show()
         pathlib.Path().absolute().joinpath(file_name).rename(pathlib.Path().absolute().joinpath(destination_folder,file_name))
         
-    def plot_single_cell_all_channels(image, df=None, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None,max_percentile=99.8):
+    def plot_single_cell_all_channels(self, image, df=None, spot_type=0,min_ts_size=4,show_spots=False,image_name=None,microns_per_pixel=None,max_percentile=99.8):
         # Extracting spot localization
         if not (df is None):
-            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         number_color_channels = image.shape[3]
         # Plotting
         _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 7))
@@ -4666,9 +4800,9 @@ class Plots():
         plt.show()
         return None
     
-    def plot_single_cell(image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,max_percentile=99.5,selected_colormap = 'plasma'):
+    def plot_single_cell(self, image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,max_percentile=99.5,selected_colormap = 'plasma'):
         # Extracting spot localization
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # maximum and minimum values to plot
         max_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0),max_percentile)
         min_visualization_value = np.percentile(np.max(image[:,: ,:,selected_channel],axis=0), 0)
@@ -4734,7 +4868,7 @@ class Plots():
         plt.show()
         return None
     
-    def plot_cell_all_z_planes(image, image_name=None ):
+    def plot_cell_all_z_planes(self, image, image_name=None ):
         number_color_channels = image.shape[3]
         number_z_slices = image.shape[0]
         _, axes = plt.subplots(nrows = number_color_channels , ncols = number_z_slices, figsize = ( number_z_slices*2, 10 ))
@@ -4760,9 +4894,9 @@ class Plots():
         return None
     
     
-    def plot_selected_cell_colors(image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True,list_channel_order_to_plot=[0,1,2]):
+    def plot_selected_cell_colors(self, image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True,list_channel_order_to_plot=[0,1,2]):
         # Extracting spot location
-        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+        y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # Applying Gaussian filter
         if use_gaussian_filter == True:
             filtered_image_with_selected_cell = GaussianFilter(video=image, sigma = 1).apply_filter()
@@ -4770,7 +4904,7 @@ class Plots():
         else:
             max_subsection_image_with_selected_cell = np.max(image[:,: ,:,:],axis=0)
         # Converting to int8
-        subsection_image_with_selected_cell_int8 = Utilities.convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=99.8)
+        subsection_image_with_selected_cell_int8 = Utilities().convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=99.8)
         # padding with zeros the channel dimension.
         while subsection_image_with_selected_cell_int8.shape[2]<3:
             zeros_plane = np.zeros_like(subsection_image_with_selected_cell_int8[:,:,0])
@@ -4832,14 +4966,14 @@ class Plots():
         return None
     
     
-    def plot_complete_fov(list_images, df, number_of_selected_image, use_GaussianFilter=True,microns_per_pixel = None,image_name=None,show_cell_ids=True):
+    def plot_complete_fov(self, list_images, df, number_of_selected_image, use_GaussianFilter=True,microns_per_pixel = None,image_name=None,show_cell_ids=True):
         df_selected_cell = df.loc[   (df['image_id']==number_of_selected_image)]
         if use_GaussianFilter == True:
             video_filtered = GaussianFilter(video=list_images[number_of_selected_image], sigma = 1).apply_filter()
             max_complete_image = np.max(video_filtered,axis=0)
         else:
             max_complete_image = np.max(list_images[number_of_selected_image],axis=0)
-        max_complete_image_int8 = Utilities.convert_to_int8(max_complete_image, rescale=True, min_percentile=10, max_percentile=99.5)    
+        max_complete_image_int8 = Utilities().convert_to_int8(max_complete_image, rescale=True, min_percentile=10, max_percentile=99.5)    
         # Plot maximum projection
         _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 15))
         axes.imshow( max_complete_image_int8[:,:,[2,1,0]])
@@ -4868,7 +5002,7 @@ class Plots():
         return None
     
     
-    def plot_all_cells_and_spots(list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_successful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True,use_max_projection=True):
+    def plot_all_cells_and_spots(self, list_images, complete_dataframe, selected_channel, list_masks_complete_cells= [None], list_masks_nuclei=[None], spot_type=0,list_segmentation_successful=None,min_ts_size=4,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True,use_max_projection=True):
         # removing images where segmentation was not successful
         if not (list_segmentation_successful is None):
             list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_successful[i]]
@@ -4917,7 +5051,7 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # maximum and minimum values to plot
             central_z_slice = int(image.shape[0]/2)
             if use_max_projection ==True:
@@ -4933,7 +5067,7 @@ class Plots():
             max_visualization_value = np.percentile(temp_image,99.5)
             min_visualization_value = np.percentile(temp_image, 0)
             # Extracting spot localization
-            #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size,z_slice=z_slice)
+            #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size,z_slice=z_slice)
             # Plotting
             # Visualizing image only
             axis_index.imshow( temp_image,cmap = 'Greys', vmin=min_visualization_value, vmax=max_visualization_value)
@@ -4960,15 +5094,15 @@ class Plots():
             else:
                 axis_index = axes[r,c]
             if not(list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
             if not(list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
             # Extracting spot localization
-            #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
             central_z_slice = int(image.shape[0]/2)
             if use_max_projection ==True:
@@ -4979,7 +5113,7 @@ class Plots():
             else:
                 temp_image = image[central_z_slice,: ,:,selected_channel]
                 z_slice =central_z_slice
-            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size,z_slice=z_slice)
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size,z_slice=z_slice)
             max_visualization_value = np.percentile(temp_image,99.5)
             min_visualization_value = np.percentile(temp_image, 0)
             # Plotting
@@ -5043,7 +5177,7 @@ class Plots():
         return None
     
     
-    def plot_all_cells(list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,list_segmentation_successful=None,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
+    def plot_all_cells(self, list_images, complete_dataframe, selected_channel, list_masks_complete_cells=[None], list_masks_nuclei=[None],spot_type=0,list_segmentation_successful=None,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,show_plot=True):
         # removing images where segmentation was not successful
         if not (list_segmentation_successful is None):
             list_images = [list_images[i] for i in range(len(list_images)) if list_segmentation_successful[i]]
@@ -5092,15 +5226,15 @@ class Plots():
             else:
                 axis_index = axes[r,c]
             if not(list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
             if not(list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities.image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
             # Extracting spot localization
-            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z   = Utilities.extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
+            y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z   = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
             temp_image = np.max(image[:,: ,:,selected_channel],axis=0)
             max_visualization_value = np.percentile(temp_image,99.5)
