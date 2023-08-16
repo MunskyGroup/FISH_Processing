@@ -1414,7 +1414,7 @@ class DataProcessing():
                 centroid_y,centroid_x = ndimage.measurements.center_of_mass(mask)
             else:
                 centroid_y,centroid_x = 0,0
-            return  mask_area, centroid_y, centroid_x
+            return  mask_area, int(centroid_y), int(centroid_x)
         def replace_border_px_with_zeros(mask,number_of_pixels_to_replace_in_border=3):
             mask[:number_of_pixels_to_replace_in_border, :] = 0
             mask[-number_of_pixels_to_replace_in_border:, :] = 0
@@ -2557,7 +2557,7 @@ class PipelineFISH():
                             tifffile.imwrite(filtered_image_path, list_fish_images[j])
                     # Create the image with labels.
                     df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == counter]
-                    df_labels = df_subset.loc[ :, ['image_id','cell_id','nuc_loc_y','nuc_loc_x','cyto_loc_y','cyto_loc_x']].drop_duplicates()
+                    df_labels = df_subset.drop_duplicates(subset=['cell_id'])
                     # Plotting cells 
                     Plots().plotting_masks_and_original_image(image= self.list_images[i], 
                                                             masks_complete_cells=masks_complete_cells, 
@@ -4622,16 +4622,7 @@ class Plots():
             df_spot_intensity = dataframe.loc[   (dataframe['is_cluster']==False) & (dataframe['spot_type']==spot_type)]
             spot_intensity = df_spot_intensity[column_name].values
             if remove_outliers ==True:
-                spot_intensity =Utilities().remove_outliers( spot_intensity,min_percentile=1,max_percentile=99)
-                
-                #max_val = np.percentile(spot_intensity, max_percentile)
-                #if np.isnan(max_val) == True:
-                #    max_val = np.percentile(spot_intensity, max_percentile+0.1)
-                #min_val = np.percentile(spot_intensity, min_percentile)
-                #if np.isnan(min_val) == True:
-                #    min_val = np.percentile(spot_intensity, min_percentile+0.1)
-                #spot_intensity = spot_intensity [spot_intensity > min_val]
-                #spot_intensity = spot_intensity [spot_intensity < max_val]
+                spot_intensity =Utilities().remove_outliers( spot_intensity,min_percentile=1,max_percentile=98)
             ax[i].hist(x=spot_intensity, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
             ax[i].set_xlabel('spot intensity Ch_'+str(i) )
             ax[i].set_ylabel('probability' )
@@ -4656,12 +4647,12 @@ class Plots():
             pattern = r'nuc_pseudo_cyto_int_ratio_ch_\d'
             title_plot  = 'nuc_pseudo_cyto_ratio'
             prefix_column_to_extract = 'nuc_pseudo_cyto_int_ratio_ch_'
-            prefix_x_label = 'nuc_pseudo_cyto_int_ratio_'
+            prefix_x_label = 'nuc_pseudo_cyto_int_ratio_ch_'
         else:
             pattern = r'^nuc_cyto_int_ratio_ch_\d'
             title_plot  = 'nuc_cyto_ratio'
             prefix_column_to_extract = 'nuc_cyto_int_ratio_ch_'
-            prefix_x_label = 'nuc_cyto_int_ratio_'
+            prefix_x_label = 'nuc_cyto_int_ratio_ch_'
         
         string_list = dataframe.columns
         number_color_channels = 0
@@ -4699,7 +4690,7 @@ class Plots():
         for i in range (number_fish_channels):
             number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, number_of_TS_per_cell, ts_size, cell_size, number_cells, nuc_size, cyto_size = Utilities().dataframe_extract_data(dataframe,spot_type=i,minimum_spots_cluster=minimum_spots_cluster)
             file_plots_cell_intensity_vs_num_spots = Plots().plot_cell_intensity_spots(dataframe, number_of_spots_per_cell_nucleus, number_of_spots_per_cell_cytosol,output_identification_string,spot_type=i)
-            file_plots_spot_intensity_distributions = Plots().plot_spot_intensity_distributions(dataframe,output_identification_string,spot_type=i)
+            file_plots_spot_intensity_distributions = Plots().plot_spot_intensity_distributions(dataframe,output_identification_string=output_identification_string,remove_outliers=True,spot_type=i) 
             file_plots_distributions = Plots().plotting_results_as_distributions(number_of_spots_per_cell, number_of_spots_per_cell_cytosol, number_of_spots_per_cell_nucleus, ts_size, number_of_TS_per_cell, minimum_spots_cluster, output_identification_string=output_identification_string,spot_type=i)
             file_plots_cell_size_vs_num_spots = Plots().plot_cell_size_spots(channels_with_cytosol, channels_with_nucleus, cell_size, number_of_spots_per_cell, cyto_size, number_of_spots_per_cell_cytosol, nuc_size, number_of_spots_per_cell_nucleus,output_identification_string=output_identification_string,spot_type=i)
             # Appending list of files
