@@ -2263,8 +2263,21 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,   masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=True,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=True):
-        list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
+    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False):
+        
+        if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) :
+            list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
+        else:
+            #list_images =[image]
+            self.list_files_names = None,
+            self.number_images = None 
+            
+        #if Utilities().is_None(image) == False:
+        if not (image is None):
+            if len(image.shape)<=3:
+                image = np.expand_dims(image,axis=0)
+            list_images =[image]
+        
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
             list_images_extended = [ np.expand_dims(img,axis=0) for img in list_images ] 
@@ -2313,7 +2326,13 @@ class PipelineFISH():
         self.show_plots = show_plots
         CLUSTER_RADIUS = 600 #int(psf_yx*1.5)
         self.CLUSTER_RADIUS = CLUSTER_RADIUS 
-        self.data_folder_path = data_folder_path
+        
+        if not(data_folder_path is None):
+            self.data_folder_path = data_folder_path
+        else:
+            self.data_folder_path = pathlib.Path().absolute()
+            
+        
         if not(file_name_str is None):
             self.name_for_files = file_name_str
         else:
@@ -2821,9 +2840,7 @@ class MicroscopeSimulation():
             path_files_complete = [ str(directory.joinpath(f).resolve()) for f in list_files_names_complete ] # creating the complete path for each file
             list_library_cells =  [ np.load(f) for f in path_files_complete ]
             return list_library_cells
-        #current_dir = pathlib.Path().absolute()
         # Path to data
-        #cell_library_folder_path = current_dir.joinpath('cell_library')
         background_library_path = cell_library_folder_path.joinpath('background_pixels_library.npy')
         dataframe_library_path = cell_library_folder_path.joinpath('dataframe_library.csv')
         # extracting library data
@@ -2849,6 +2866,7 @@ class MicroscopeSimulation():
             'ts_size_3': [],
             'library_id': [],
         }
+        
         # this statement generate a large number of cells if generate_cells_close_to_each_other is true.
         if generate_cells_close_to_each_other == True:
             large_number_initial_simulation = number_of_cells_in_simulation*3
@@ -2857,7 +2875,6 @@ class MicroscopeSimulation():
         # Create the DataFrame
         number_cells_in_library = len(list_library_cells)
         max_cell_size = np.max( [np.max(cell.shape[1:3]) for _, cell in enumerate(list_library_cells)] )
-        
         simulation_dataframe = pd.DataFrame(initial_dictionary_for_df)
         #max_cell_size 
         MAX_NUM_ITERATIONS = 20000
@@ -2917,7 +2934,6 @@ class MicroscopeSimulation():
                             dataframe_cell_library.loc[   (dataframe_cell_library['cell_id']==library_cell_index) ].ts_size_1.values,
                             dataframe_cell_library.loc[   (dataframe_cell_library['cell_id']==library_cell_index) ].ts_size_2.values ,
                             dataframe_cell_library.loc[   (dataframe_cell_library['cell_id']==library_cell_index) ].ts_size_3.values ] 
-                #min_length = min(len(ts_array), len(list_ts))
                 ts_array[:] = list_ts[:]
                 cell_data = pd.Series([ y_positions[counter], x_positions[counter], centroid_y, centroid_x ,cell_size_Z_Y_X[library_cell_index,0], cell_size_Z_Y_X[library_cell_index,1], cell_size_Z_Y_X[library_cell_index,2], nucleus_area, number_of_spots]+ts_array.tolist()+[library_cell_index ], index=simulation_dataframe.columns)
                 simulation_dataframe = simulation_dataframe.append(cell_data, ignore_index=True)
@@ -2957,7 +2973,7 @@ class MicroscopeSimulation():
         complete_image_size_Z_Y_X= [size_Z]+image_size_Y_X
         return simulation_dataframe,complete_image_size_Z_Y_X
     
-    def make_simulated_image(self,z_position, y_position, x_position, x_size, y_size, complete_image_size_Z_Y_X, simulation_dataframe, list_library_cells, background_pixels_library = None,remove_elements_low_intensity=False):
+    def make_simulated_image(self, z_position, y_position, x_position, x_size, y_size, complete_image_size_Z_Y_X, simulation_dataframe, list_library_cells, background_pixels_library = None,alpha_0=0,alpha_1=0,alpha_2=0,remove_elements_low_intensity=False):
         number_color_channels = list_library_cells[0].shape[3]
         # Re-centering z_position index
         length_z_indices = complete_image_size_Z_Y_X[0]
@@ -2968,9 +2984,12 @@ class MicroscopeSimulation():
         #X = position
         #Y = position
         #Z = position
-        # z_new = alpha_0 + alpha_1 * X + alpha_2 * Y + Z
+        
+        # Moving image out of focus
+        z_position_hat = int( alpha_0 + (alpha_1 * x_position) + (alpha_2 * y_position) + z_position)
+        #print(z_position_hat)
         z_position_center_as_zero = complete_image_size_Z_Y_X[0]//2
-        z_position_original = z_position_center_as_zero + z_position
+        z_position_original = z_position_center_as_zero + z_position_hat
         z_array = [int(i - z_position_center_as_zero) if i < z_position_center_as_zero else int(i - z_position_center_as_zero) for i in range(length_z_indices)] 
         list_mean_background_pixels_library=[]
         #list_std_background_pixels_library=[]
@@ -3038,7 +3057,7 @@ class MicroscopeSimulation():
         list_volume_tested_cell=[]    
         for i in range (number_cells_in_library):
             # creating the image if z_position is inside z_array
-            if np.isin(z_position, z_array):
+            if np.isin(z_position_hat, z_array):
                 list_volume_tested_cell.append(list_library_cells[i][z_position_original,:,:,:].astype(np.uint16))
             else:
                 # iterating for each color channel 
@@ -3091,8 +3110,8 @@ class MicroscopeSimulation():
         else:
             simulated_image =volume_simulated_image        
         # add a filter to the image if z is out of bounds
-        if not np.isin(z_position, z_array):
-            z_distance_from_edge = np.abs(z_position)-np.max(z_array)
+        if not np.isin(z_position_hat, z_array):
+            z_distance_from_edge = np.abs(z_position_hat)-np.max(z_array)
             scaling_factor = 1*z_distance_from_edge
             sigma = 10  # The standard deviation of the Gaussian distribution
             for ch in range(number_color_channels):
@@ -3124,7 +3143,7 @@ class Utilities():
         list_is_image_sharp=[]
         list_sharp_images =[]
         for _ , image in enumerate(list_images):
-            temp = image[:,:,:,channels_with_FISH[0]]
+            temp = image[:,:,:,channels_with_FISH[0]].astype(np.uint16)
             focus = stack.compute_focus(temp, neighborhood_size=neighborhood_size)
             mean_sharpeness_image = np.round(np.mean(focus.mean(axis=(1, 2))),3)
             if mean_sharpeness_image > threshold:
@@ -3987,16 +4006,38 @@ class Plots():
         figsize : tuple with figure size, optional.
             Tuple with format (x_size, y_size). the default is (8.5, 5).
         '''
+        #print(image.shape)
+
         number_channels = image.shape[3]
-        center_slice = image.shape[0]//2
+        number_z_slices = image.shape[0]
+        if number_z_slices ==1:
+            center_slice =0
+        else:
+            center_slice = image.shape[0]//2
         _, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=figsize)
         for i in range (0,number_channels ):
-            rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() 
-            img_2D = rescaled_image
-            axes[i].imshow( img_2D ,cmap='Spectral') 
-            axes[i].set_title('Channel_'+str(i))
-            axes[i].grid(color='k', ls = '-.', lw = 0.5)
+            if number_z_slices >1:
+                rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() 
+            else:
+                rescaled_image = image
+            #img_2D = rescaled_image
+            if number_channels ==1:
+                axis_index = axes
+                axis_index.imshow( rescaled_image[center_slice,:,:,i] ,cmap='Spectral') 
+            else:
+                axis_index = axes[i]
+                axis_index.imshow( rescaled_image ,cmap='Spectral') 
+            
+            
+            axis_index.set_title('Channel_'+str(i))
+            axis_index.grid(color='k', ls = '-.', lw = 0.5)
         plt.savefig(image_name,bbox_inches='tight',dpi=180)
+            #if show_plots ==True:
+            #    plt.show()
+            #else:
+            #    plt.close()
+
+            
         if show_plots ==True:
             plt.show()
         else:
@@ -4505,6 +4546,10 @@ class Plots():
         _, axes = plt.subplots(nrows = number_rows, ncols = number_color_channels, figsize = (15, 10))
         for j in range(number_rows):
             for i in range(number_color_channels):
+                if number_color_channels ==1:
+                    axis_index = axes
+                else:
+                    axis_index = axes[i]
                 if (nucleus_exists==True) and (counter ==0):
                     column_with_intensity = 'nuc_int_ch_'+str(i)
                     title_plot='nucleus'
@@ -4516,11 +4561,12 @@ class Plots():
                     x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract=column_with_intensity, extraction_type='values_per_cell') 
                     y = number_of_spots_per_cell_cytosol
                 _,fig_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='Intensity_Ch_'+str(i), y_lable_scatter = 'number_of_spots',temporal_figure=True)
+                
                 if number_rows ==1:
-                    axes[i].imshow(plt.imread(fig_temp_name))
-                    axes[i].grid(False)
-                    axes[i].set_xticks([])
-                    axes[i].set_yticks([])
+                    axis_index.imshow(plt.imread(fig_temp_name))
+                    axis_index.grid(False)
+                    axis_index.set_xticks([])
+                    axis_index.set_yticks([])
                 else:
                     axes[j,i].imshow(plt.imread(fig_temp_name))
                     axes[j,i].grid(False)
@@ -4611,21 +4657,25 @@ class Plots():
             if match:
                 number_color_channels += 1
         # Plotting
-        _, ax = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 5))
+        _, axes = plt.subplots(nrows = 1, ncols = number_color_channels, figsize = (25, 5))
         max_percentile = 99
         min_percentile = 0.5
         title_plot  = 'spot_intensities'
         file_name = title_plot +'_'+title_string+'_spot_type_'+str(spot_type)+'.pdf'
         colors = ['r','g','b','m']
         for i in range (0,number_color_channels ):
+            if number_color_channels ==1:
+                axis_index = axes
+            else:
+                axis_index = axes[i]
             column_name = 'spot_int_ch_'+str(i)
             df_spot_intensity = dataframe.loc[   (dataframe['is_cluster']==False) & (dataframe['spot_type']==spot_type)]
             spot_intensity = df_spot_intensity[column_name].values
             if remove_outliers ==True:
                 spot_intensity =Utilities().remove_outliers( spot_intensity,min_percentile=1,max_percentile=98)
-            ax[i].hist(x=spot_intensity, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
-            ax[i].set_xlabel('spot intensity Ch_'+str(i) )
-            ax[i].set_ylabel('probability' )
+            axis_index.hist(x=spot_intensity, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
+            axis_index.set_xlabel('spot intensity Ch_'+str(i) )
+            axis_index.set_ylabel('probability' )
         plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
         plt.show()
         return file_name

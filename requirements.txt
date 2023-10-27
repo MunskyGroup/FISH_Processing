@@ -1,6 +1,6 @@
 big-fish>=0.6.1
 cellpose~=2.0.0
-pysmb>= 1.2.7
+pysmb>= 1.2.9
 joblib>=1.1.0
 tqdm>=4.62.3
 pysmb>=1.2.7
