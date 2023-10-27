@@ -2036,9 +2036,14 @@ class Metadata():
                 # size of longest name string
                 
                 file_name_len =0
+                max_file_name_len =0
                 for _, img_name in enumerate (self.list_files_names):
                     if len(img_name) > file_name_len:
                         max_file_name_len = len(img_name)
+                    else:
+                        max_file_name_len =0
+                
+
                 
                 str_label_img = '| Image Name'
                 size_str_label_img = len(str_label_img)
@@ -2263,20 +2268,20 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=None,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False):
+    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False,folder_name='temp'):
         
         if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) :
             list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         else:
             #list_images =[image]
-            self.list_files_names = None,
-            self.number_images = None 
+            self.list_files_names = ['temp.tif']
+            self.number_images = 1 
             
         #if Utilities().is_None(image) == False:
         if not (image is None):
             if len(image.shape)<=3:
                 image = np.expand_dims(image,axis=0)
-            list_images =[image]
+            list_images =[image.astype(np.uint16)]
         
         self.number_of_images_to_process = self.number_images
         if len(list_images[0].shape) < 4:
@@ -2330,7 +2335,10 @@ class PipelineFISH():
         if not(data_folder_path is None):
             self.data_folder_path = data_folder_path
         else:
-            self.data_folder_path = pathlib.Path().absolute()
+            data_folder_path = pathlib.Path().absolute().joinpath(folder_name)
+            if not data_folder_path.exists():
+                data_folder_path.mkdir(parents=False, exist_ok=True)
+            self.data_folder_path = data_folder_path
             
         
         if not(file_name_str is None):
@@ -4019,7 +4027,7 @@ class Plots():
             if number_z_slices >1:
                 rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() 
             else:
-                rescaled_image = image
+                rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() #image
             #img_2D = rescaled_image
             if number_channels ==1:
                 axis_index = axes
