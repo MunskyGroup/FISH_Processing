@@ -188,10 +188,10 @@ class NASConnection():
     def __init__(self,path_to_config_file,share_name = 'share'):
         # Loading credentials
         conf = yaml.safe_load(open(str(path_to_config_file)))
-        usr = conf['user']['username']
-        pwd = conf['user']['password']
-        remote_address = conf['user']['remote_address']
-        domain = conf['user']['domain']
+        usr = str(conf['user']['username'])
+        pwd = str(conf['user']['password'])
+        remote_address = str(conf['user']['remote_address'])
+        domain = str(conf['user']['domain'])
         # LOCAL NAME
         try:
             local_name = socket.gethostbyname(socket.gethostname())
@@ -201,7 +201,7 @@ class NASConnection():
         self.share_name = share_name
         self.server_name, _, _ = socket.gethostbyaddr(remote_address)
         # Defining the connection to NAS
-        self.conn = SMBConnection(username=usr, password=pwd, domain=domain, my_name=local_name, remote_name=self.server_name, is_direct_tcp=True)
+        self.conn = SMBConnection(username=usr, password=pwd, domain=domain, my_name=local_name, remote_name=str(self.server_name), is_direct_tcp=True)
     def connect_to_server(self,timeout=60):
         '''
         This method establishes the connection to the NAS.
@@ -211,7 +211,7 @@ class NASConnection():
         timeout : int, optional
             Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
-        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        is_connected = self.conn.connect(str(self.server_name),timeout=timeout)
         if is_connected == True:
             print('Connection established')
         else:
@@ -230,7 +230,7 @@ class NASConnection():
             Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
         # Connecting to NAS
-        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        is_connected = self.conn.connect(str(self.server_name),timeout=timeout)
         if is_connected == True:
             print('Connection established')
         else:
@@ -259,7 +259,7 @@ class NASConnection():
             Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
         # Connecting to NAS
-        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        is_connected = self.conn.connect(str(self.server_name),timeout=timeout)
         if is_connected == True:
             print('Connection established')
         else:
@@ -297,7 +297,7 @@ class NASConnection():
             String representing the file type to download.
         '''
         # Connecting to NAS
-        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        is_connected = self.conn.connect(str(self.server_name),timeout=timeout)
         if is_connected == True:
             print('Connection established')
         else:
@@ -338,7 +338,7 @@ class NASConnection():
             Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
         '''
         # Connecting to NAS
-        is_connected = self.conn.connect(self.server_name,timeout=timeout)
+        is_connected = self.conn.connect(str(self.server_name),timeout=timeout)
         if is_connected == True:
             print('Connection established')
         else:
@@ -1191,7 +1191,7 @@ class BigFISH():
     threshold_for_spot_detection: scalar or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
         if len(image.shape)<4:
             image= np.expand_dims(image,axis =0)
         self.image = image
@@ -1209,6 +1209,7 @@ class BigFISH():
         self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
         self.threshold_for_spot_detection=threshold_for_spot_detection
         self.decompose_dense_regions=True
+        self.save_files=save_files
     def detect(self):
         '''
         This method is intended to detect RNA spots in the cell and Transcription Sites (Clusters) using `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert.
@@ -1271,16 +1272,17 @@ class BigFISH():
         clusterDetectionCSV = clusters
         ## PLOTTING
         try:
-            if not(self.image_name is None):
-                path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
-                plot.plot_elbow(rna, 
-                                voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
-                                spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
-                                path_output = path_output_elbow, show=bool(self.show_plots) )
-                if self.show_plots ==True:
-                    plt.show()
-                else:
-                    plt.close()
+            if self.save_files == True:
+                if not(self.image_name is None):
+                    path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
+                    plot.plot_elbow(rna, 
+                                    voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
+                                    spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
+                                    path_output = path_output_elbow, show=bool(self.show_plots) )
+                    if self.show_plots ==True:
+                        plt.show()
+                    else:
+                        plt.close()
         except:
             print('not showing elbow plot')
         central_slice = rna.shape[0]//2
@@ -1313,22 +1315,23 @@ class BigFISH():
             else:
                 show_figure_in_cli = False                
             if not(self.image_name is None):
-                plot.plot_detection(image_2D, 
-                                spots=[spots_to_plot, clusters_to_plot[:, :3]], 
-                                shape=["circle", "polygon"], 
-                                radius=[3, 6], 
-                                color=["orangered", "blue"],
-                                linewidth=[1, 1], 
-                                fill=[False, False], 
-                                framesize=(12, 7), 
-                                contrast=True,
-                                rescale=True,
-                                show=show_figure_in_cli,
-                                path_output = path_output)
-                if self.show_plots ==True:
-                    plt.show()
-                else:
-                    plt.close()
+                if self.save_files == True:
+                    plot.plot_detection(image_2D, 
+                                    spots=[spots_to_plot, clusters_to_plot[:, :3]], 
+                                    shape=["circle", "polygon"], 
+                                    radius=[3, 6], 
+                                    color=["orangered", "blue"],
+                                    linewidth=[1, 1], 
+                                    fill=[False, False], 
+                                    framesize=(12, 7), 
+                                    contrast=True,
+                                    rescale=True,
+                                    show=show_figure_in_cli,
+                                    path_output = path_output)
+                    if self.show_plots ==True:
+                        plt.show()
+                    else:
+                        plt.close()
             del spots_to_plot, clusters_to_plot
         
         return [spotDetectionCSV, clusterDetectionCSV], rna_filtered, threshold
@@ -1832,7 +1835,7 @@ class SpotDetection():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     
     '''
-    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=500, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None):
+    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=500, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
         if len(image.shape)<4:
             image= np.expand_dims(image,axis =0)
         self.image = image
@@ -1878,7 +1881,7 @@ class SpotDetection():
         if not isinstance(threshold_for_spot_detection, list):
             threshold_for_spot_detection=[threshold_for_spot_detection]
         self.threshold_for_spot_detection=threshold_for_spot_detection
-        
+        self.save_files = save_files
     def get_dataframe(self):
         list_fish_images = []
         list_thresholds_spot_detection = []
@@ -1894,7 +1897,7 @@ class SpotDetection():
             [spotDetectionCSV, clusterDetectionCSV], image_filtered, threshold = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, 
                                                                                 cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plots=self.show_plots,image_name=self.image_name,
                                                                                 save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,
-                                                                                threshold_for_spot_detection=self.threshold_for_spot_detection[i]).detect()
+                                                                                threshold_for_spot_detection=self.threshold_for_spot_detection[i],save_files=self.save_files).detect()
             list_thresholds_spot_detection.append(threshold)
             # converting the psf to pixles
             yx_spot_size_in_px = np.max((1,int(voxel_size_yx / psf_yx))).astype('int')
@@ -2268,7 +2271,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False,folder_name='temp'):
+    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False,folder_name='temp',save_files=True):
         
         if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) :
             list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
@@ -2336,10 +2339,9 @@ class PipelineFISH():
             self.data_folder_path = data_folder_path
         else:
             data_folder_path = pathlib.Path().absolute().joinpath(folder_name)
-            if not data_folder_path.exists():
+            if not data_folder_path.exists() and (save_files == True):
                 data_folder_path.mkdir(parents=False, exist_ok=True)
             self.data_folder_path = data_folder_path
-            
         
         if not(file_name_str is None):
             self.name_for_files = file_name_str
@@ -2408,10 +2410,15 @@ class PipelineFISH():
             threshold_for_spot_detection = Utilities().create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
         self.threshold_for_spot_detection = threshold_for_spot_detection
         self.save_pdf_report = save_pdf_report
+        self.save_files = save_files
+        
         
     def run(self):
         # Creating folder to store outputs.
-        output_identification_string = Utilities().create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
+        if self.save_files == False:
+            output_identification_string = Utilities().create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
+        else:
+            output_identification_string = None
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 1000
         # Prealocating arrays
         list_masks_complete_cells=[]
@@ -2422,10 +2429,12 @@ class PipelineFISH():
         list_thresholds_spot_detection =[]
         list_number_detected_cells = []
         list_average_spots_per_cell =[]
+        
+        # if (self.save_files is None):
         temp_folder_name = str('temp_results_'+ self.name_for_files)
-        if not os.path.exists(temp_folder_name):
+        if not os.path.exists(temp_folder_name) and (self.save_files == True):
             os.makedirs(temp_folder_name)
-        if self.save_masks_as_file ==True:
+        if (self.save_masks_as_file ==True) and (self.save_files == True):
             masks_folder_name = str('masks_'+ self.name_for_files)
             if not os.path.exists(masks_folder_name):
                 os.makedirs(masks_folder_name)
@@ -2446,7 +2455,8 @@ class PipelineFISH():
             print('    Image Name :  ', self.list_files_names[i])
             temp_file_name = self.list_files_names[i][:self.list_files_names[i].rfind('.')] # slcing the name of the file. Removing after finding '.' in the string.
             temp_original_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'ori_' + temp_file_name +'.png' )
-            Plots().plot_images(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name, show_plots = self.show_plots)            
+            if self.save_files == True:
+                Plots().plot_images(self.list_images[i],figsize=(15, 10) ,image_name=  temp_original_img_name, show_plots = self.show_plots)            
             #print('    Image Shape :                            ', list(self.list_images[i].shape ))
             img_shape = list(self.list_images[i].shape )
             if self.remove_z_slices_borders == True:
@@ -2518,7 +2528,7 @@ class PipelineFISH():
                     if not 'masks_cytosol_no_nuclei' in locals():
                         masks_cytosol_no_nuclei=None
                 # saving masks
-                if (self.save_masks_as_file ==True) and (segmentation_successful==True) :
+                if (self.save_masks_as_file ==True) and (segmentation_successful==True) and (self.save_files == True):
                     number_detected_cells = np.max(masks_complete_cells)
                     print('    Number of detected cells:                ', number_detected_cells)
                     if Utilities().is_None(self.channels_with_nucleus) == False: #not (self.channels_with_nucleus is None):
@@ -2554,7 +2564,8 @@ class PipelineFISH():
                                                                                             save_all_images=self.save_all_images,
                                                                                             display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,
                                                                                             use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,
-                                                                                            threshold_for_spot_detection=self.threshold_for_spot_detection).get_dataframe()
+                                                                                            threshold_for_spot_detection=self.threshold_for_spot_detection,
+                                                                                            save_files=self.save_files ).get_dataframe()
                     dataframe = dataframe_FISH
                     list_masks_complete_cells.append(masks_complete_cells)
                     list_masks_nuclei.append(masks_nuclei)
@@ -2586,7 +2597,8 @@ class PipelineFISH():
                     df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == counter]
                     df_labels = df_subset.drop_duplicates(subset=['cell_id'])
                     # Plotting cells 
-                    Plots().plotting_masks_and_original_image(image= self.list_images[i], 
+                    if self.save_files == True:
+                        Plots().plotting_masks_and_original_image(image= self.list_images[i], 
                                                             masks_complete_cells=masks_complete_cells, 
                                                             masks_nuclei=masks_nuclei, 
                                                             channels_with_cytosol=self.channels_with_cytosol, 
@@ -2605,36 +2617,41 @@ class PipelineFISH():
         # Saving all original images as a PDF
         #print('- CREATING THE PLOT WITH ORIGINAL IMAGES')
         image_name= 'original_images_' + self.name_for_files +'.pdf'
-        Plots().plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
+        if self.save_files == True:
+            Plots().plotting_all_original_images(self.list_images,self.list_files_names,image_name,show_plots=self.show_plots)
         # Creating an image with all segmentation results
         image_name= 'segmentation_images_' + self.name_for_files +'.pdf'
-        Plots().plotting_segmentation_images(directory=pathlib.Path().absolute().joinpath(temp_folder_name),
+        if self.save_files == True:
+            Plots().plotting_segmentation_images(directory=pathlib.Path().absolute().joinpath(temp_folder_name),
                                            list_files_names=self.list_files_names,
                                            list_segmentation_successful=list_processing_successful,
                                            image_name=image_name,
                                            show_plots=False)
         # Saving all cells in a single image file
         #print('- CREATING THE PLOT WITH ALL CELL IMAGES') 
-        for k in range (len(self.channels_with_FISH)):
-            Plots().plot_all_cells_and_spots(list_images=self.list_images, 
-                                        complete_dataframe=dataframe, 
-                                        selected_channel=self.channels_with_FISH[k], 
-                                        list_masks_complete_cells = list_masks_complete_cells,
-                                        list_masks_nuclei = list_masks_nuclei,
-                                        spot_type=k,
-                                        list_segmentation_successful=list_processing_successful,
-                                        image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
-                                        microns_per_pixel=None,
-                                        show_legend = True,
-                                        show_plot= False)
-        # Creating the dataframe       
-        if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_successful)>0:
-            dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
-        elif np.sum(list_processing_successful)>0:
-            dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')        
+        if self.save_files == True:
+            for k in range (len(self.channels_with_FISH)):
+                Plots().plot_all_cells_and_spots(list_images=self.list_images, 
+                                            complete_dataframe=dataframe, 
+                                            selected_channel=self.channels_with_FISH[k], 
+                                            list_masks_complete_cells = list_masks_complete_cells,
+                                            list_masks_nuclei = list_masks_nuclei,
+                                            spot_type=k,
+                                            list_segmentation_successful=list_processing_successful,
+                                            image_name='cells_channel_'+ str(self.channels_with_FISH[k])+'_'+ self.name_for_files +'.pdf',
+                                            microns_per_pixel=None,
+                                            show_legend = True,
+                                            show_plot= False)
+        # Creating the dataframe    
+        if self.save_files == True:   
+            if  (not str(self.name_for_files)[0:5] ==  'temp_') and np.sum(list_processing_successful)>0:
+                dataframe.to_csv('dataframe_' + self.name_for_files +'.csv')
+            elif np.sum(list_processing_successful)>0:
+                dataframe.to_csv('dataframe_' + self.name_for_files[5:] +'.csv')        
         # Creating the metadata
         #print('- CREATING THE METADATA FILE')
-        Metadata(self.data_folder_path, 
+        if self.save_files == True:
+            Metadata(self.data_folder_path, 
                 self.channels_with_cytosol, 
                 self.channels_with_nucleus, 
                 self.channels_with_FISH,
@@ -2660,7 +2677,7 @@ class PipelineFISH():
                 sharpness_threshold=self.sharpness_threshold).write_metadata()
         # Creating a PDF report
         #print('CREATING THE PDF REPORT')
-        if self.save_pdf_report ==True:
+        if (self.save_pdf_report ==True) and (self.save_files == True):
             filenames_for_pdf_report = [ f[:-4] for f in self.list_files_names]
             ReportPDF(directory=pathlib.Path().absolute().joinpath(temp_folder_name), 
                     filenames_for_pdf_report=filenames_for_pdf_report, 
