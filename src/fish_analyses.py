@@ -694,7 +694,7 @@ class Cellpose():
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
     '''
-    def __init__(self, image:np.ndarray, num_iterations:int = 6, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1):
+    def __init__(self, image:np.ndarray, num_iterations:int = 6, channels:list = [0, 0], diameter:float = 120, model_type:str = 'cyto', selection_method:str = 'cellpose_max_cells_and_area', NUMBER_OF_CORES:int=1,pretrained_model=None):
         self.image = image
         self.num_iterations = num_iterations
         self.minimum_flow_threshold = 0.1
@@ -708,6 +708,7 @@ class Cellpose():
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_flow_threshold, self.maximum_flow_threshold, self.num_iterations), 2) )
         self.MINIMUM_CELL_AREA =  np.pi*(diameter/4)**2 #1000  # using half of the diameter to calculate area.
         self.BATCH_SIZE = 80
+        self.pretrained_model=pretrained_model
         
     def calculate_masks(self):
         '''
@@ -721,7 +722,10 @@ class Cellpose():
         # Next two lines suppressing output from Cellpose
         gc.collect()
         torch.cuda.empty_cache() 
-        model = models.Cellpose(gpu = 1, model_type = self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
+        if not (self.pretrained_model is None):
+            model = models.Cellpose(gpu = 1, model_type = self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
+        else:
+            model = models.CellposeModel(gpu = 1, pretrained_model = self.pretrained_model,model_type=self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -822,7 +826,7 @@ class CellSegmentation():
     image_name : str or None.
         Name for the image with detected spots. The default is None.
     '''
-    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='default', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,NUMBER_OF_CORES=1, running_in_pipeline = False ):
+    def __init__(self, image:np.ndarray, channels_with_cytosol = None, channels_with_nucleus= None, diameter_cytosol:float = 150, diameter_nucleus:float = 100, optimization_segmentation_method='default', remove_fragmented_cells:bool=False, show_plots: bool = True, image_name = None,NUMBER_OF_CORES=1, running_in_pipeline = False, model_nuc_segmentation= 'nuclei', model_cyto_segmentation = 'cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
         self.image = image
         self.channels_with_cytosol = channels_with_cytosol
         self.channels_with_nucleus = channels_with_nucleus
@@ -838,6 +842,12 @@ class CellSegmentation():
             self.NUMBER_OPTIMIZATION_VALUES= self.number_z_slices
         self.NUMBER_OF_CORES=NUMBER_OF_CORES
         self.running_in_pipeline = running_in_pipeline
+        self.model_nuc_segmentation=model_nuc_segmentation                                                                                       
+        self.model_cyto_segmentation=model_cyto_segmentation
+        self.pretrained_model_nuc_segmentation=pretrained_model_nuc_segmentation
+        self.pretrained_model_cyto_segmentation=pretrained_model_cyto_segmentation
+        
+        
     def calculate_masks(self):
         '''
         This method performs the process of cell detection for FISH images using **Cellpose**.
@@ -891,7 +901,7 @@ class CellSegmentation():
                 masks_radii= np.prod (array_radii)
             return masks_radii
     
-        def metric_paried_masks(masks_complete_cells,masks_nuclei):
+        def metric_paired_masks(masks_complete_cells,masks_nuclei):
             median_radii_complete_cells_complete_cells = approximated_radius(masks_complete_cells,diameter=self.diameter_cytosol)
             median_radii_nuclei = approximated_radius(masks_nuclei,diameter=self.diameter_nucleus)
             return  median_radii_nuclei * median_radii_complete_cells_complete_cells
@@ -915,11 +925,11 @@ class CellSegmentation():
         # Function to find masks
         def function_to_find_masks (image):                    
             if not (self.channels_with_cytosol in (None,[None])):
-                masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = 'cyto', selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
+                masks_cyto = Cellpose(image[:, :, self.channels_with_cytosol],diameter = self.diameter_cytosol, model_type = self.model_cyto_segmentation, selection_method = 'max_cells_and_area' ,NUMBER_OF_CORES=self.NUMBER_OF_CORES,pretrained_model=self.pretrained_model_cyto_segmentation).calculate_masks()
             else:
                 masks_cyto = np.zeros_like(image[:, :, 0])
             if not (self.channels_with_nucleus in (None,[None])):
-                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diameter_nucleus, model_type = 'nuclei', selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES).calculate_masks()
+                masks_nuclei = Cellpose(image[:, :, self.channels_with_nucleus],  diameter = self.diameter_nucleus, model_type = self.model_nuc_segmentation, selection_method = 'max_cells_and_area',NUMBER_OF_CORES=self.NUMBER_OF_CORES,pretrained_model=self.pretrained_model_nuc_segmentation).calculate_masks()
             else:
                 masks_nuclei= np.zeros_like(image[:, :, 0])
             if not (self.channels_with_cytosol in (None,[None])) and not(self.channels_with_nucleus in (None,[None])):
@@ -1088,7 +1098,7 @@ class CellSegmentation():
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
                 list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)           
-                metric = metric_max_cells_and_area(masks_complete_cells)  #metric_paried_masks(masks_complete_cells,masks_nuclei)
+                metric = metric_max_cells_and_area(masks_complete_cells)  #metric_paired_masks(masks_complete_cells,masks_nuclei)
                 array_number_paired_masks[0] = metric
                 # performing segmentation for a subsection of z-slices
                 for idx, idx_value in enumerate(list_idx):
@@ -1097,7 +1107,7 @@ class CellSegmentation():
                     list_masks_complete_cells.append(masks_complete_cells)
                     list_masks_nuclei.append(masks_nuclei)
                     list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
-                    metric = metric_max_cells_and_area(masks_complete_cells) #metric_paried_masks(masks_complete_cells,masks_nuclei)
+                    metric = metric_max_cells_and_area(masks_complete_cells) #metric_paired_masks(masks_complete_cells,masks_nuclei)
                     array_number_paired_masks[idx+1] = metric
                 selected_index = np.argmax(array_number_paired_masks)
                 masks_complete_cells = list_masks_complete_cells[selected_index]
@@ -2271,7 +2281,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False,folder_name='temp',save_files=True):
+    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False,folder_name='temp',save_files=True,model_nuc_segmentation='nuclei',model_cyto_segmentation='cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
         
         if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) :
             list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
@@ -2411,6 +2421,10 @@ class PipelineFISH():
         self.threshold_for_spot_detection = threshold_for_spot_detection
         self.save_pdf_report = save_pdf_report
         self.save_files = save_files
+        self.model_nuc_segmentation=model_nuc_segmentation
+        self.model_cyto_segmentation=model_cyto_segmentation
+        self.pretrained_model_nuc_segmentation=pretrained_model_nuc_segmentation
+        self.pretrained_model_cyto_segmentation=pretrained_model_cyto_segmentation
         
         
     def run(self):
@@ -2485,7 +2499,11 @@ class PipelineFISH():
                                                                                                 optimization_segmentation_method=self.optimization_segmentation_method,
                                                                                                 image_name = temp_segmentation_img_name,
                                                                                                 NUMBER_OF_CORES=self.NUMBER_OF_CORES, 
-                                                                                                running_in_pipeline = True ).calculate_masks() 
+                                                                                                running_in_pipeline = True,
+                                                                                                model_nuc_segmentation=self.model_nuc_segmentation,
+                                                                                                model_cyto_segmentation=self.model_cyto_segmentation,
+                                                                                                pretrained_model_nuc_segmentation=self.pretrained_model_nuc_segmentation,
+                                                                                                pretrained_model_cyto_segmentation=self.pretrained_model_cyto_segmentation).calculate_masks() 
                 # test if segmentation was succcesful
                     if Utilities().is_None(self.channels_with_cytosol) ==True: #(self.channels_with_cytosol is None):
                         detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
@@ -3421,7 +3439,7 @@ class Utilities():
             image = im_zeros
         image_new= np.zeros_like(image)
         for i in range(0, image.shape[2]):  # iterate for each channel
-            if np.max(image[:,:,ch]) >0:
+            if np.max(image[:,:,i]) >0:
                 temp = image[:,:,i].copy()
                 image_new[:,:,i]= ( (temp-np.min(temp))/(np.max(temp)-np.min(temp)) ) * 255
             image_new = np.uint8(image_new)
@@ -4020,7 +4038,7 @@ class Plots():
         
         
     
-    def plot_images(self,image,figsize=(8.5, 5),image_name='temp',show_plots=True):
+    def plot_images(self,image,figsize=(8.5, 5),image_name='temp',show_plots=True, use_maximum_projection=False):
         '''
         This method is intended to plot all the channels from an image with format  [Z, Y, X, C].
         
@@ -4042,10 +4060,16 @@ class Plots():
         _, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=figsize)
         for i in range (0,number_channels ):
             if number_z_slices >1:
-                rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() 
+                if use_maximum_projection == True:
+                    temp_max = np.max(image[:,:,:,i],axis =0)
+                    rescaled_image = RemoveExtrema(temp_max,min_percentile=1, max_percentile=98).remove_outliers() 
+                else:
+                    rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() 
             else:
                 rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() #image
-            #img_2D = rescaled_image
+            
+            
+            
             if number_channels ==1:
                 axis_index = axes
                 axis_index.imshow( rescaled_image[center_slice,:,:,i] ,cmap='Spectral') 
@@ -4456,7 +4480,7 @@ class Plots():
         b.fig.subplots_adjust(top=0.92) 
         name_plot = plot_title 
         if temporal_figure == True:
-            file_name = 'temp__'+str(np.random.randint(1000, size=1)[0])+'__'+name_plot+'.png' # gerating a random name for the temporal plot
+            file_name = 'temp__'+str(np.random.randint(1000, size=1)[0])+'__'+name_plot+'.png' # generating a random name for the temporal plot
             plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='png')
             plt.close(b.fig)
         else:
