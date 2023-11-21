@@ -722,10 +722,10 @@ class Cellpose():
         # Next two lines suppressing output from Cellpose
         gc.collect()
         torch.cuda.empty_cache() 
-        if not (self.pretrained_model is None):
+        if (self.pretrained_model is None):
             model = models.Cellpose(gpu = 1, model_type = self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
         else:
-            model = models.CellposeModel(gpu = 1, pretrained_model = self.pretrained_model,model_type=self.model_type) # model_type = 'cyto' or model_type = 'nuclei'
+            model = models.CellposeModel(gpu = 1, pretrained_model = self.pretrained_model) # model_type = 'cyto' or model_type = 'nuclei'
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
         def cellpose_max_area( optimization_parameter):
             try:
@@ -881,8 +881,10 @@ class CellSegmentation():
             else:
                 center_slice = self.number_z_slices//2
                 max_image = np.max(self.image[:,:,:,:],axis=0)    # taking the mean value
+                max_image = RemoveExtrema(max_image,min_percentile=1, max_percentile=98).remove_outliers() 
         else:
             max_image = self.image # [YXC] 
+            max_image = RemoveExtrema(max_image,min_percentile=1, max_percentile=98).remove_outliers() 
         
         # Function to calculate the approximated radius in a mask
         def approximated_radius(masks,diameter=100):
@@ -1059,6 +1061,7 @@ class CellSegmentation():
                 array_number_paired_masks = np.zeros( len(list_idx)+1 )
                 # performing the segmentation on a maximum projection
                 test_image_optimization = np.max(self.image[:,:,:,:],axis=0)  
+                test_image_optimization = RemoveExtrema(test_image_optimization,min_percentile=1, max_percentile=98).remove_outliers()  
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)       
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
@@ -1067,6 +1070,7 @@ class CellSegmentation():
                 array_number_paired_masks[0] = metric
                 for idx, idx_value in enumerate(list_idx):
                     test_image_optimization = self.image[idx_value,:,:,:]
+                    test_image_optimization = RemoveExtrema(test_image_optimization,min_percentile=1, max_percentile=98).remove_outliers()  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                     list_masks_complete_cells.append(masks_complete_cells)
                     list_masks_nuclei.append(masks_nuclei)
@@ -1093,7 +1097,8 @@ class CellSegmentation():
                 list_masks_cytosol_no_nuclei = []
                 array_number_paired_masks = np.zeros( len(list_idx) +1)
                 # performing the segmentation on a maximum projection
-                test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0)  
+                test_image_optimization = np.max(self.image[num_slices_range:-num_slices_range,:,:,:],axis=0) 
+                test_image_optimization = RemoveExtrema(test_image_optimization,min_percentile=1, max_percentile=98).remove_outliers()  
                 masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)     
                 list_masks_complete_cells.append(masks_complete_cells)
                 list_masks_nuclei.append(masks_nuclei)
@@ -1103,6 +1108,7 @@ class CellSegmentation():
                 # performing segmentation for a subsection of z-slices
                 for idx, idx_value in enumerate(list_idx):
                     test_image_optimization = np.max(self.image[idx_value-num_slices_range:idx_value+num_slices_range,:,:,:],axis=0)  
+                    test_image_optimization = RemoveExtrema(test_image_optimization,min_percentile=1, max_percentile=98).remove_outliers()  
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                     list_masks_complete_cells.append(masks_complete_cells)
                     list_masks_nuclei.append(masks_nuclei)
@@ -1122,6 +1128,7 @@ class CellSegmentation():
             num_slices_range = np.min( (5,center_slice-1))  # range to consider above and below a selected z-slice
             # Optimization based on slice
             test_image_optimization = self.image[center_slice,:,:,:] 
+            test_image_optimization = RemoveExtrema(test_image_optimization,min_percentile=1, max_percentile=98).remove_outliers()  
             masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
         elif (self.optimization_segmentation_method == 'gaussian_filter_segmentation') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
             # Optimization based on testing different sigmas in a gaussian filter to find the maximum number of index_paired_masks. 
@@ -1134,7 +1141,8 @@ class CellSegmentation():
                 list_masks_cytosol_no_nuclei = []
                 array_number_paired_masks = np.zeros( len(list_sigmas)  )
                 for idx, sigma_value in enumerate(list_sigmas):
-                    test_image_optimization = stack.gaussian_filter(np.max(self.image[:,:,:,:],axis=0),sigma=sigma_value)  
+                    test_image_optimization = stack.gaussian_filter(np.max(self.image[:,:,:,:],axis=0),sigma=sigma_value) 
+                    test_image_optimization = RemoveExtrema(test_image_optimization,min_percentile=1, max_percentile=98).remove_outliers()   
                     masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei = function_to_find_masks(test_image_optimization)
                     list_masks_complete_cells.append(masks_complete_cells)
                     list_masks_nuclei.append(masks_nuclei)
@@ -2429,10 +2437,10 @@ class PipelineFISH():
         
     def run(self):
         # Creating folder to store outputs.
-        if self.save_files == False:
+        if self.save_files == True:
             output_identification_string = Utilities().create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
         else:
-            output_identification_string = None
+            output_identification_string = ''
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 1000
         # Prealocating arrays
         list_masks_complete_cells=[]
@@ -4416,6 +4424,8 @@ class Plots():
                 title_string = output_identification_string[0:index_string]
             else :
                 title_string = ''
+        else:
+            title_string = ''
         # Plotting intensity distributions
         def plot_probability_distribution(data_to_plot, numBins = 10, title='', xlab='', ylab='', color='r', subplots=False, show_grid=True, fig=plt.figure() ):
             n, bins, _ = plt.hist(data_to_plot,bins=numBins,density=False,color=color)
@@ -4504,6 +4514,8 @@ class Plots():
                 title_string = output_identification_string[0:index_string]
             else :
                 title_string = ''
+        else:
+            title_string = ''
         
         if not channels_with_cytosol in (None, 'None', 'none',['None'],['none'],[None]):
             cyto_exists = True
@@ -4568,6 +4580,8 @@ class Plots():
                 title_string = output_identification_string[0:index_string]
             else :
                 title_string = ''
+        else:
+            title_string = ''
         # Counting the number of color channels in the dataframe
         pattern = r'^spot_int_ch_\d'
         string_list = dataframe.columns
@@ -4598,7 +4612,7 @@ class Plots():
                 if number_color_channels ==1:
                     axis_index = axes
                 else:
-                    axis_index = axes[i]
+                    axis_index = axes[j,i]
                 if (nucleus_exists==True) and (counter ==0):
                     column_with_intensity = 'nuc_int_ch_'+str(i)
                     title_plot='nucleus'
@@ -4636,6 +4650,8 @@ class Plots():
                 title_string = output_identification_string[0:index_string]
             else :
                 title_string = ''
+        else:
+            title_string = ''
         # Counting the number of color channels in the dataframe
         pattern = r'^spot_int_ch_\d'
         string_list = dataframe.columns
@@ -4740,7 +4756,6 @@ class Plots():
                 title_string = ''
         else:
             title_string=''
-            
         # Counting the number of color channels in the dataframe
         if plot_for_pseudo_cytosol == True:
             pattern = r'nuc_pseudo_cyto_int_ratio_ch_\d'
