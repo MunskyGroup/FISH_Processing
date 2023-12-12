@@ -482,7 +482,7 @@ class MergeChannels():
                     if self.save_figure ==1 and len(list_files_per_image)>1:
                         if not os.path.exists(str(save_to_path)):
                             os.makedirs(str(save_to_path))
-                        tifffile.imsave(str(save_to_path.joinpath(prefix+'_merged'+'.tif')), merged_img, metadata={'axes': 'ZYXC'})
+                        tifffile.imsave(str(save_to_path.joinpath(prefix+'_merged'+'.tif')), merged_img)
         number_files = len(list_file_names)
         return list_file_names, list_merged_images, number_files,save_to_path
 
@@ -3332,7 +3332,7 @@ class Utilities():
         # Saving images as tif files
         for i in range(number_images):
             # image_name = list_files_names[i].split(".")[0] +'.tif'
-            tifffile.imsave(str(destination_folder.joinpath(list_files_names[i])), list_images_standard_format[i], metadata={'axes': 'ZYXC'})
+            tifffile.imsave(str(destination_folder.joinpath(list_files_names[i])), list_images_standard_format[i])
         masks_dir = None
         return destination_folder,masks_dir, list_files_names, list_images_all_fov, list_images_standard_format
     
