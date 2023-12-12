@@ -28,6 +28,7 @@ masks_*
 tests/
 results/
 test*/
+test*
 filtered_images_*/
 kk*
 test_simulation/
