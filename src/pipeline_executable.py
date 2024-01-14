@@ -34,6 +34,8 @@ share_name = 'share'
 ######################################
 ######################################
 
+#for i in range(1,len(sys.argv)):
+#    print (i , sys.argv[i])
 
 ######################################
 ######################################
@@ -84,6 +86,8 @@ optimization_segmentation_method= sys.argv[16]
 # Additional parameters
 if optimization_segmentation_method in tuple_none:
     optimization_segmentation_method = None
+    
+
 save_all_images=int(sys.argv[17])
 # converting the threshold_for_spot_detection to a list to iterate for each FISH channel
 if sys.argv[18] in tuple_none:

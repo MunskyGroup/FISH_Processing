@@ -2055,7 +2055,6 @@ class Metadata():
                 # for loop for all the images.
                 fd.write('\n    Images in the directory :'  )
                 # size of longest name string
-                
                 file_name_len =0
                 max_file_name_len =0
                 for _, img_name in enumerate (self.list_files_names):
@@ -2063,8 +2062,6 @@ class Metadata():
                         max_file_name_len = len(img_name)
                     else:
                         max_file_name_len =0
-                
-
                 
                 str_label_img = '| Image Name'
                 size_str_label_img = len(str_label_img)
@@ -2109,12 +2106,17 @@ class Metadata():
                                                 '    '+average_spots_per_cells_str )
                     
                     total_average_number_cells = str(int(np.mean(self.list_number_detected_cells)))
-                    total_average = str(int(np.mean(self.list_average_spots_per_cell[:][k])))
+                    total_detected_cells = str(int(np.sum(self.list_number_detected_cells)))
+                    #total_average = ' '#str(int(np.mean(self.list_average_spots_per_cell[:][k])))
                     
-                    fd.write('\n             ' +'Average:' + ' '* np.max((1,(13-len_id))) +
+                    fd.write('\n              ' +'Average:' + ' '* np.max((1,(13-len_id))) +
                                                 '    '+' '*len_ts +  ' '* np.max((1,(14-len_ts))) +
-                                                '    '+ total_average_number_cells + ' '* np.max((1,(17-len_nc))) +
-                                                '    '+total_average )
+                                                '    '+ total_average_number_cells + ' '* np.max((1,(17-len_nc))) )
+                    
+                    fd.write('\n              ' +'Total  :' + ' '* np.max((1,(13-len_id))) +
+                                                '    '+' '*len_ts +  ' '* np.max((1,(14-len_ts))) +
+                                                '    '+ total_detected_cells + ' '* np.max((1,(17-len_nc)))  )
+                    
                         #self.list_average_spots_per_cell, self.list_number_detected_cells
                 fd.write('\n') 
                 fd.write('#' * (number_spaces_pound_sign)) 
@@ -2531,6 +2533,7 @@ class PipelineFISH():
                         try:
                             masks_nuclei = imread(str(mask_nuc_path)) 
                             segmentation_successful = True
+                            number_detected_cells = np.max(masks_nuclei)
                         except:
                             segmentation_successful = False
                     if Utilities().is_None(self.channels_with_cytosol) ==False: #not (self.channels_with_cytosol is None):
@@ -2538,6 +2541,7 @@ class PipelineFISH():
                         try:
                             masks_complete_cells = imread(str( mask_cyto_path   )) 
                             segmentation_successful = True
+                            number_detected_cells = np.max(masks_complete_cells)
                         except:
                             segmentation_successful = False
                     if  (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(self.channels_with_cytosol) ==False): # not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None) :
@@ -2566,8 +2570,8 @@ class PipelineFISH():
                     if (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(self.channels_with_cytosol) ==False): #not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
                         mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                         tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
-                else:
-                    number_detected_cells = 0
+                #else:
+                #    number_detected_cells = 0
                 list_number_detected_cells.append(number_detected_cells)
                 #print('- SPOT DETECTION')
                 if segmentation_successful==True:
@@ -3464,6 +3468,7 @@ class Utilities():
         if (isinstance(list_dirs, tuple)==False) and (isinstance(list_dirs, list)==False):
             list_dirs = [list_dirs]
         for folder in list_dirs:
+            print(folder)
             list_files = NASConnection(path_to_config_file,share_name = share_name).read_files(folder,timeout=60)
             for file in list_files:
                 if ('.zip' in file) and (mandatory_substring in file):   # add an argument with re conditions 
@@ -4075,17 +4080,12 @@ class Plots():
                     rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() 
             else:
                 rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() #image
-            
-            
-            
             if number_channels ==1:
                 axis_index = axes
                 axis_index.imshow( rescaled_image[center_slice,:,:,i] ,cmap='Spectral') 
             else:
                 axis_index = axes[i]
                 axis_index.imshow( rescaled_image ,cmap='Spectral') 
-            
-            
             axis_index.set_title('Channel_'+str(i))
             axis_index.grid(color='k', ls = '-.', lw = 0.5)
         plt.savefig(image_name,bbox_inches='tight',dpi=180)
