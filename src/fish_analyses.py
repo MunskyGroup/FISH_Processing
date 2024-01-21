@@ -2517,10 +2517,13 @@ class PipelineFISH():
                 # test if segmentation was succcesful
                     if Utilities().is_None(self.channels_with_cytosol) ==True: #(self.channels_with_cytosol is None):
                         detected_mask_pixels = np.count_nonzero([masks_nuclei.flatten()])
+                        number_detected_cells = np.max(masks_nuclei)
                     if Utilities().is_None(self.channels_with_nucleus) ==True: #(self.channels_with_nucleus  is None):
                         detected_mask_pixels = np.count_nonzero([masks_complete_cells.flatten()])
+                        number_detected_cells = np.max(masks_complete_cells)
                     if (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(self.channels_with_cytosol) ==False):#not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
                         detected_mask_pixels =np.count_nonzero([masks_complete_cells.flatten(), masks_nuclei.flatten(), masks_cytosol_no_nuclei.flatten()])
+                        number_detected_cells = np.max(masks_complete_cells)
                     # Counting pixels
                     if  detected_mask_pixels > MINIMAL_NUMBER_OF_PIXELS_IN_MASK:
                         segmentation_successful = True
@@ -2571,7 +2574,9 @@ class PipelineFISH():
                         mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath( masks_folder_name, 'masks_cyto_no_nuclei_' + temp_file_name +'.tif' )
                         tifffile.imwrite(mask_cyto_no_nuclei_path, masks_cytosol_no_nuclei)
                 #else:
-                #    number_detected_cells = 0
+                if segmentation_successful==False:
+                    number_detected_cells = 0
+                
                 list_number_detected_cells.append(number_detected_cells)
                 #print('- SPOT DETECTION')
                 if segmentation_successful==True:
@@ -4609,10 +4614,12 @@ class Plots():
         _, axes = plt.subplots(nrows = number_rows, ncols = number_color_channels, figsize = (15, 10))
         for j in range(number_rows):
             for i in range(number_color_channels):
-                if number_color_channels ==1:
+                if number_rows==1 and (number_color_channels==1):
                     axis_index = axes
-                else:
-                    axis_index = axes[j,i]
+                elif number_rows==1 and (number_color_channels>=1):
+                    axis_index = axes[j]
+                elif number_rows==2 and (number_color_channels>1):
+                    axis_index = axes[j,i]                
                 if (nucleus_exists==True) and (counter ==0):
                     column_with_intensity = 'nuc_int_ch_'+str(i)
                     title_plot='nucleus'

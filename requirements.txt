@@ -1,18 +1,14 @@
 big-fish>=0.6.1
-cellpose~=2.0.0
+cellpose==2.2.3
 pysmb>= 1.2.9
 joblib>=1.1.0
 tqdm>=4.62.3
-pysmb>=1.2.7
 tifffile>=2020.9.3
-ipykernel>=5.5.6
-scikit-image>=0.14.2
+ipykernel>=6.9.0
+scikit-image>=0.19.1
 fpdf>=1.7.2
 seaborn>=0.11.2
 PyYAML>=6.0
-croparray~=0.0.8
 matplotlib-scalebar~=0.8.1
-fastapi~=0.95.1
 pydantic~=1.10.7
-matplotlib-scalebar~=0.8.1
 joypy~=0.2.6
