@@ -1443,9 +1443,29 @@ class DataProcessing():
             mask[:, -number_of_pixels_to_replace_in_border:] = 0
             return mask
         
+        def testing_intenisty_calculation(temp_img,temp_masked_img,color_channel=0):
+            fig, axs = plt.subplots(1, 3, figsize=(10, 5))
+            # Plot temp_img in the first subplot
+            axs[0].imshow(temp_img)
+            axs[0].set_title('temp_img ch' + str(color_channel))
+            # Plot temp_masked_img in the second subplot
+            axs[1].imshow(temp_masked_img)
+            axs[1].set_title('temp_masked_img')
+            axs[2].hist(temp_masked_img[np.nonzero(temp_masked_img)], bins=30)
+            # Display the plot
+            plt.show()
+            print('color channel ',color_channel)
+            print ('img ' ,temp_masked_img[np.nonzero(temp_masked_img)])
+            print('len ',len (temp_masked_img[np.nonzero(temp_masked_img)]))
+            print('mean',int( temp_masked_img[np.nonzero(temp_masked_img)].mean() ) )
+            print('std ',int( temp_masked_img[np.nonzero(temp_masked_img)].std() ) )
+            num_zeros = np.count_nonzero(temp_masked_img[np.nonzero(temp_masked_img)] == 0)
+            print("Number of zeros: ", num_zeros )
+            return None
+        
         def data_to_df(df, spotDetectionCSV, clusterDetectionCSV, mask_nuc = None, mask_cytosol_only=None,masks_complete_cells=None, nuc_area = 0, cyto_area =0, cell_area=0,
                         nuc_centroid_y=0, nuc_centroid_x=0, cyto_centroid_y=0, cyto_centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0,
-                        nuc_int=None, cyto_int = None,pseudo_cyto_int=None,nucleus_cytosol_intensity_ratio=None,nucleus_pseudo_cytosol_intensity_ratio=None):
+                        nuc_int=None, cyto_int = None, complete_cell_int=None,pseudo_cyto_int=None,nucleus_cytosol_intensity_ratio=None,nucleus_pseudo_cytosol_intensity_ratio=None):
             # spotDetectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus
@@ -1601,16 +1621,16 @@ class DataProcessing():
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+c] = nuc_int[c] 
                 if not (self.channels_with_cytosol in (None,[None]) ) :
                     array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels+c] = cyto_int[c]    
+                if not (self.channels_with_cytosol in (None,[None]) ) :
+                    # populating with complete_cell_int
+                    array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*2+c] = complete_cell_int[c]  
                 # populating with pseudo_cyto_int
-                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*2+c] = pseudo_cyto_int[c]  
+                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*3+c] = pseudo_cyto_int[c]  
                 # populating with nucleus_cytosol_intensity_ratio
-                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*3+c] = nucleus_cytosol_intensity_ratio[c]  
+                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*4+c] = nucleus_cytosol_intensity_ratio[c]  
                 # populating with nucleus_pseudo_cytosol_intensity_ratio
-                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*4+c] = nucleus_pseudo_cytosol_intensity_ratio[c]  
+                array_complete[:,self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+self.number_color_channels*5+c] = nucleus_pseudo_cytosol_intensity_ratio[c]  
 
-                
-                    
-            
             # This section calculates the intenisty fo each spot and cluster
             # ts                     n x [Z,Y,X,size,idx_ts]
             # spots_nuc              n x [Z,Y,X]
@@ -1622,7 +1642,6 @@ class DataProcessing():
                 intensity_spots_nuc = Intensity(original_image=self.image, spot_size=self.yx_spot_size_in_px, array_spot_location_z_y_x=spots_nuc[:,0:3],  method = 'disk_donut').calculate_intensity()[0]
             if num_cyto >0 :
                 intensity_spots_cyto = Intensity(original_image=self.image, spot_size=self.yx_spot_size_in_px, array_spot_location_z_y_x=spots_cytosol_only[:,0:3],  method = 'disk_donut').calculate_intensity()[0]
-            
             
             # Cancatenating the final array
             if (detected_ts == True) and (detected_nuc == True) and (detected_cyto == True):
@@ -1641,7 +1660,7 @@ class DataProcessing():
                 array_spot_int = np.zeros( ( 1,self.number_color_channels )  )
             
             # Populating the columns wth the spots intensity for each channel.
-            number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+5*self.number_color_channels                        
+            number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+(6*self.number_color_channels )                       
             array_complete[:, number_columns_after_adding_intensity_in_cell: number_columns_after_adding_intensity_in_cell+self.number_color_channels] = array_spot_int
             
             # Creating the dataframe  
@@ -1668,6 +1687,7 @@ class DataProcessing():
             # Generate columns for the number of color channels
             list_columns_intensity_nuc = []
             list_columns_intensity_cyto = []
+            list_columns_intensity_complete_cell =[]
             list_intensity_spots = []
             list_intensity_clusters = []
             list_nucleus_cytosol_intensity_ratio =[]
@@ -1676,12 +1696,13 @@ class DataProcessing():
             for c in range(self.number_color_channels):
                 list_columns_intensity_nuc.append( 'nuc_int_ch_' + str(c) )
                 list_columns_intensity_cyto.append( 'cyto_int_ch_' + str(c) )
+                list_columns_intensity_complete_cell.append( 'complete_cell_int_ch_' + str(c) )
                 list_intensity_spots.append( 'spot_int_ch_' + str(c) )
                 list_nucleus_cytosol_intensity_ratio.append('nuc_cyto_int_ratio_ch_' + str(c) )
                 list_columns_intensity_pseudo_cyto.append('pseudo_cyto_int_ch_' + str(c) )
                 list_nucleus_pseudo_cytosol_intensity_ratio.append('nuc_pseudo_cyto_int_ratio_ch_' + str(c) )
             # creating the main dataframe with column names
-            new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_columns_intensity_pseudo_cyto + list_nucleus_cytosol_intensity_ratio+list_nucleus_pseudo_cytosol_intensity_ratio +list_intensity_spots+list_intensity_clusters )
+            new_dataframe = pd.DataFrame( columns= ['image_id', 'cell_id', 'spot_id','nuc_loc_y', 'nuc_loc_x','cyto_loc_y', 'cyto_loc_x','nuc_area_px','cyto_area_px', 'cell_area_px','z', 'y', 'x','is_nuc','is_cluster','cluster_size','spot_type','is_cell_fragmented'] + list_columns_intensity_nuc + list_columns_intensity_cyto +list_columns_intensity_complete_cell+list_columns_intensity_pseudo_cyto + list_nucleus_cytosol_intensity_ratio+list_nucleus_pseudo_cytosol_intensity_ratio +list_intensity_spots+list_intensity_clusters )
             counter_total_cells = 0
         # loop for each cell in image
         
@@ -1703,6 +1724,8 @@ class DataProcessing():
                     temp_masked_img_with_psedudo_cytosol_mask = temp_img * psedudo_cytosol_mask
                     nuc_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5)
                     pseudo_cyto_int[k] =  np.round( temp_masked_img_with_psedudo_cytosol_mask[np.nonzero(temp_masked_img_with_psedudo_cytosol_mask)].mean() , 5)
+                    #if k ==0:
+                    #    testing_intenisty_calculation(temp_img,temp_masked_img,color_channel=k)
                     del temp_img, temp_masked_img,temp_masked_img_with_psedudo_cytosol_mask
             else:
                 nuc_area, nuc_centroid_y, nuc_centroid_x = 0,0,0
@@ -1713,15 +1736,24 @@ class DataProcessing():
             if not (self.channels_with_cytosol in (None, [None])):
                 cell_area, cyto_centroid_y, cyto_centroid_x  = mask_selector(self.masks_complete_cells[id_cell],calculate_centroid=True)
                 tested_mask_for_border =  self.masks_complete_cells[id_cell]
+                complete_cell_int = np.zeros( (self.number_color_channels ))
                 cyto_int = np.zeros( (self.number_color_channels ))
                 for k in range(self.number_color_channels ):
                     temp_img = np.max (self.image[:,:,:,k ],axis=0)
+                    # calculating cytosol intensity for complete cell mask
                     temp_masked_img = temp_img * self.masks_complete_cells[id_cell]
-                    cyto_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5) 
-                    del temp_img, temp_masked_img
+                    complete_cell_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5) 
+                    # calculating cytosol intensity only. Removing the nucleus
+                    temp_masked_img_cyto_only = temp_img * self.masks_cytosol_no_nuclei[id_cell]
+                    cyto_int[k]=  np.round( temp_masked_img_cyto_only[np.nonzero(temp_masked_img_cyto_only)].mean() , 5)
+                    #if k ==0:
+                    #    testing_intenisty_calculation(temp_img,temp_masked_img,color_channel=k)
+                    #    testing_intenisty_calculation(temp_img,temp_masked_img_cyto_only,color_channel=k)
+                    del temp_img, temp_masked_img, temp_masked_img_cyto_only
             else:
-                cyto_int = None
+                complete_cell_int = None
                 cell_area, cyto_centroid_y, cyto_centroid_x  = 0,0,0
+                cyto_int = None
             
             # Calculating ratio between nucleus and cytosol intensity
             nucleus_cytosol_intensity_ratio = np.zeros( (self.number_color_channels ))
@@ -1734,13 +1766,7 @@ class DataProcessing():
             # case where nucleus is  passed but not cyto
             elif (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
                 for k in range(self.number_color_channels ):
-                    #nucleus_cytosol_intensity_ratio[k] = 0
                     nucleus_pseudo_cytosol_intensity_ratio[k] = nuc_int[k]/ pseudo_cyto_int[k]
-            #else:
-            #    nucleus_cytosol_intensity_ratio  = np.zeros( (self.number_color_channels )) 
-            #    nucleus_pseudo_cytosol_intensity_ratio = np.zeros( (self.number_color_channels )) 
-            
-            
             # case where nucleus and cyto are passed 
             if not (self.channels_with_cytosol in (None, [None])) and not (self.channels_with_nucleus in  (None, [None])):
                 slected_masks_cytosol_no_nuclei = self.masks_cytosol_no_nuclei[id_cell]
@@ -1782,6 +1808,7 @@ class DataProcessing():
                                         cell_counter =counter_total_cells,
                                         nuc_int=nuc_int,
                                         cyto_int=cyto_int,
+                                        complete_cell_int = complete_cell_int,
                                         pseudo_cyto_int=pseudo_cyto_int,
                                         nucleus_cytosol_intensity_ratio=nucleus_cytosol_intensity_ratio,
                                         nucleus_pseudo_cytosol_intensity_ratio=nucleus_pseudo_cytosol_intensity_ratio)

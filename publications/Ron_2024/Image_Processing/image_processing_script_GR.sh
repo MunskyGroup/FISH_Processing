@@ -192,8 +192,8 @@ runnning_image_processing() {
     path_to_executable="${PWD%/*/*/*}/src/pipeline_executable.py" 
     path_to_config_file="$HOME/Desktop/config.yml"
     NUMBER_OF_CORES=4
-    diameter_nucleus=100                 # Approximate nucleus size in pixels
-    diameter_cytosol=200                 # Approximate cytosol size in pixels
+    diameter_nucleus=102                 # Approximate nucleus size in pixels
+    diameter_cytosol=202                 # Approximate cytosol size in pixels
     psf_z=350                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
     psf_yx=160                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
     voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
@@ -224,8 +224,6 @@ runnning_image_processing() {
         output_names=""output__"${folder////__}"".txt"
         path_to_masks_dir="${arr2[$index]}"
         nohup python3 "$path_to_executable" "$folder" $send_data_to_NAS $diameter_nucleus $diameter_cytosol $voxel_size_z $voxel_size_yx $psf_z $psf_yx "$channels_with_nucleus" "$channels_with_cytosol" "$channels_with_FISH" "$output_names" "$path_to_config_file" $download_data_from_NAS $path_to_masks_dir $optimization_segmentation_method $save_all_images $threshold_for_spot_detection $NUMBER_OF_CORES $save_filtered_images $remove_z_slices_borders $remove_out_of_focus_images $save_pdf_report $convert_to_standard_format $number_color_channels $number_of_fov >> "$output_names" &
-        echo "$folder  ---> completed"
-        echo ""
         wait
     done
     end_time=$(date +%s)

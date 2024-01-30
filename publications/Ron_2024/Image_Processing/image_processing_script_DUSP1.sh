@@ -127,16 +127,7 @@ DUSP1_Dex_75min_conc_sweep_R1_masks=(\
 'smFISH_images/Eric_smFISH_images/20220705/DUSP1_conc_sweep_1uM_75min_060322/masks_DUSP1_conc_sweep_1uM_75min_060322___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20220628/DUSP1_conc_sweep_10uM_75min_060322/masks_DUSP1_conc_sweep_10uM_75min_060322___nuc_100__cyto_200.zip' \
 )
-DUSP1_Dex_75min_conc_sweep_R2_masks=(
-'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_0min_071422/masks_DUSP1_conc_sweep_R2_0min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_1pM_75min_071422/masks_DUSP1_conc_sweep_R2_1pM_75min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_10pM_75min_071422/masks_DUSP1_conc_sweep_R2_10pM_75min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_100pM_75min_071422/masks_DUSP1_conc_sweep_R2_100pM_75min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_1nM_75min_071422/masks_DUSP1_conc_sweep_R2_1nM_75min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_10nM_75min_071422/masks_DUSP1_conc_sweep_R2_10nM_75min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_1uM_75min_071422/masks_DUSP1_conc_sweep_R2_1uM_75min_071422___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_10uM_75min_071422/masks_DUSP1_conc_sweep_R2_10uM_75min_071422___nuc_100__cyto_200.zip' \
-)
+
 DUSP1_Dex_75min_conc_sweep_R2=(\
 'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_0min_071422' \
 'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_1pM_75min_071422' \
@@ -146,6 +137,16 @@ DUSP1_Dex_75min_conc_sweep_R2=(\
 'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_10nM_75min_071422' \
 'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_1uM_75min_071422' \
 'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_10uM_75min_071422' \
+)
+DUSP1_Dex_75min_conc_sweep_R2_masks=(
+'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_0min_071422/masks_DUSP1_conc_sweep_R2_0min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_1pM_75min_071422/masks_DUSP1_conc_sweep_R2_1pM_75min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_10pM_75min_071422/masks_DUSP1_conc_sweep_R2_10pM_75min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220721/DUSP1_conc_sweep_R2_100pM_75min_071422/masks_DUSP1_conc_sweep_R2_100pM_75min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_1nM_75min_071422/masks_DUSP1_conc_sweep_R2_1nM_75min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_10nM_75min_071422/masks_DUSP1_conc_sweep_R2_10nM_75min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_1uM_75min_071422/masks_DUSP1_conc_sweep_R2_1uM_75min_071422___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20220718/DUSP1_conc_sweep_R2_10uM_75min_071422/masks_DUSP1_conc_sweep_R2_10uM_75min_071422___nuc_100__cyto_200.zip' \
 )
 DUSP1_Dex_75min_conc_sweep_R3=(\
 'smFISH_images/Eric_smFISH_images/20221003/DUSP1_Dex_Sweep_0nM_0min_Control_092022' \
@@ -163,9 +164,9 @@ DUSP1_Dex_75min_conc_sweep_R3_masks=(\
 'smFISH_images/Eric_smFISH_images/20221003/DUSP1_Dex_Sweep_1pM_75min_092022/masks_DUSP1_Dex_Sweep_1pM_75min_092022___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20221003/DUSP1_Dex_Sweep_10pM_75min_092022/masks_DUSP1_Dex_Sweep_10pM_75min_092022___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20221003/DUSP1_Dex_Sweep_100pM_75min_092022/masks_DUSP1_Dex_Sweep_100pM_75min_092022___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20221006/DUSP1_Dex_Sweep_100nM_75min_092022/masks_DUSP1_Dex_Sweep_100nM_75min_092022___nuc_100__cyto_200.zip' \
-'smFISH_images/Eric_smFISH_images/20221006/DUSP1_Dex_Sweep_10nM_75min_092022/masks_DUSP1_Dex_Sweep_10nM_75min_092022___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20221006/DUSP1_Dex_Sweep_1nM_75min_092022/masks_DUSP1_Dex_Sweep_1nM_75min_092022___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20221006/DUSP1_Dex_Sweep_10nM_75min_092022/masks_DUSP1_Dex_Sweep_10nM_75min_092022___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20221006/DUSP1_Dex_Sweep_100nM_75min_092022/masks_DUSP1_Dex_Sweep_100nM_75min_092022___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20221011/DUSP1_Dex_Sweep_1uM_75min_092022/masks_DUSP1_Dex_Sweep_1uM_75min_092022___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20221011/DUSP1_Dex_Sweep_10uM_75min_092022/masks_DUSP1_Dex_Sweep_10uM_75min_092022___nuc_100__cyto_200.zip' \
 )
@@ -290,6 +291,7 @@ DUSP1_Dex_Conc_timesweep_R3_masks=(\
 'smFISH_images/Eric_smFISH_images/20230614/DUSP1_Dex_10nM_30min_050223_R3_redo/masks_DUSP1_Dex_10nM_30min_050223_R3_redo___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20230608/DUSP1_Dex_10nM_50min_050223_R3/masks_DUSP1_Dex_10nM_50min_050223_R3___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20230608/DUSP1_Dex_10nM_75min_050223_R3/masks_DUSP1_Dex_10nM_75min_050223_R3___nuc_100__cyto_200.zip' \
+'smFISH_images/Eric_smFISH_images/20230608/DUSP1_Dex_10nM_90min_050223_R3/masks_DUSP1_Dex_10nM_90min_050223_R3___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20230608/DUSP1_Dex_10nM_120min_050223_R3/masks_DUSP1_Dex_10nM_120min_050223_R3___nuc_100__cyto_200.zip' \
 'smFISH_images/Eric_smFISH_images/20230608/DUSP1_Dex_10nM_180min_050223_R3/masks_DUSP1_Dex_10nM_180min_050223_R3___nuc_100__cyto_200.zip' \
 )
@@ -383,6 +385,7 @@ DUSP1_Dex_100nM_TPL_R2_masks=(\
 'smFISH_images/Eric_smFISH_images/20221129/DUSP1_Dex_180min_TPL_60min_110222/masks_DUSP1_Dex_180min_TPL_60min_110222___nuc_100__cyto_200.zip' \
 )
 
+
 # #############################################################################
 # #############################################################################
 # ###########  FUNCTION TO RUN THE CODES #####################################
@@ -396,8 +399,8 @@ runnning_image_processing() {
     path_to_executable="${PWD%/*/*/*}/src/pipeline_executable.py" 
     path_to_config_file="$HOME/Desktop/config.yml"
     NUMBER_OF_CORES=4
-    diameter_nucleus=100                 # Approximate nucleus size in pixels
-    diameter_cytosol=200                 # Approximate cytosol size in pixels
+    diameter_nucleus=102                 # Approximate nucleus size in pixels
+    diameter_cytosol=202                 # Approximate cytosol size in pixels
     psf_z=350                            # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
     psf_yx=160                           # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
     voxel_size_z=500                     # Microscope conversion px to nanometers in the z axis.
@@ -434,6 +437,7 @@ runnning_image_processing() {
     total_time=$(( (end_time - start_time) / 60 ))
     echo "Total time to complete the job: $total_time minutes"
 }
+
 
 # #############################################################################
 # #############################################################################
