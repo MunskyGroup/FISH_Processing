@@ -169,4 +169,3 @@ dependencies:
     - wget==3.2
     - widgetsnbextension==3.6.0
     - zipp==3.7.0
-prefix: /home/luisub/anaconda3/envs/FISH_processing
