@@ -144,21 +144,21 @@ class GaussianFilter():
             Filtered video resulting from the bandpass process. Array with format [T, Y, X, C].
         '''
         video_bp_filtered_float = np.zeros_like(self.video, dtype = np.float64)
-        #video_filtered = np.zeros_like(self.video, dtype = np.uint16)
+        video_filtered = np.zeros_like(self.video, dtype = np.uint16)
         number_time_points, number_channels   = self.video.shape[0], self.video.shape[3]
         for index_channels in range(0, number_channels):
             for index_time in range(0, number_time_points):
                 if np.max(self.video[index_time, :, :, index_channels])>0:
                     video_bp_filtered_float[index_time, :, :, index_channels] = gaussian(self.video[index_time, :, :, index_channels], self.sigma)
         # temporal function that converts floats to uint
-        # def img_uint(image):
-        #     temp_vid = img_as_uint(image)
-        #     return temp_vid
-        # # returning the image normalized as uint. Notice that difference_of_gaussians converts the image into float.
-        # for index_channels in range(0, number_channels):
-        #     init_video = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(img_uint)(video_bp_filtered_float[i, :, :, index_channels]) for i in range(0, number_time_points))
-        #     video_filtered[:,:,:,index_channels] = np.asarray(init_video)
-        return video_bp_filtered_float # img_as_uint(video_bp_filtered_float)
+        def img_uint(image):
+            temp_vid = img_as_uint(image)
+            return temp_vid
+        # returning the image normalized as uint. Notice that difference_of_gaussians converts the image into float.
+        for index_channels in range(0, number_channels):
+            init_video = Parallel(n_jobs = self.NUMBER_OF_CORES)(delayed(img_uint)(video_bp_filtered_float[i, :, :, index_channels]) for i in range(0, number_time_points))
+            video_filtered[:,:,:,index_channels] = np.asarray(init_video)
+        return video_filtered # video_bp_filtered_float # img_as_uint(video_bp_filtered_float)
 
 
 class NASConnection():
@@ -1723,13 +1723,13 @@ class DataProcessing():
                     temp_masked_img_with_psedudo_cytosol_mask = temp_img * psedudo_cytosol_mask
                     nuc_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5)
                     pseudo_cyto_int[k] =  np.round( temp_masked_img_with_psedudo_cytosol_mask[np.nonzero(temp_masked_img_with_psedudo_cytosol_mask)].mean() , 5)
-                    #if k ==0:
-                    #    print('nucleus intensity calculation')
-                    #    testing_intenisty_calculation(temp_img,temp_masked_img,color_channel=k)
-                    #    print('psedudo_cytosol intensity calculation')
-                    #    print('max',np.max(dilated_image_mask))
-                    #    print('min,max',np.min(psedudo_cytosol_mask),np.max(psedudo_cytosol_mask), )
-                    #    testing_intenisty_calculation(temp_img,temp_masked_img_with_psedudo_cytosol_mask,color_channel=k)
+                    # if k ==0:
+                    #     print('nucleus intensity calculation')
+                    #     testing_intenisty_calculation(temp_img,temp_masked_img,color_channel=k)
+                    #     print('psedudo_cytosol intensity calculation')
+                    #     print('max',np.max(dilated_image_mask))
+                    #     print('min,max',np.min(psedudo_cytosol_mask),np.max(psedudo_cytosol_mask), )
+                    #     testing_intenisty_calculation(temp_img,temp_masked_img_with_psedudo_cytosol_mask,color_channel=k)
                     del temp_img, temp_masked_img,temp_masked_img_with_psedudo_cytosol_mask
             else:
                 nuc_area, nuc_centroid_y, nuc_centroid_x = 0,0,0
@@ -3934,7 +3934,7 @@ class Utilities():
         df_spots_subsection_coordinates = df_spots.copy()
         df_spots_subsection_coordinates['y'] = df_spots_subsection_coordinates['y'] - y_min_value
         df_spots_subsection_coordinates['x'] = df_spots_subsection_coordinates['x'] - x_min_value
-        return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_cell, subsection_mask_nuc
+        return subsection_image_with_selected_cell, df_spots_subsection_coordinates,subsection_mask_cell, subsection_mask_nuc,selected_image_id
     
     
     def extract_spot_location_from_cell(self,df, spot_type=0, min_ts_size= None,z_slice=None):
@@ -5049,7 +5049,11 @@ class Plots():
         else:
             max_subsection_image_with_selected_cell = np.max(image[:,: ,:,:],axis=0)
         # Converting to int8
+        print('max_sub',np.max(max_subsection_image_with_selected_cell))
         subsection_image_with_selected_cell_int8 = Utilities().convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=99.8)
+        print('max',np.max(subsection_image_with_selected_cell_int8))
+        print('shape',subsection_image_with_selected_cell_int8.shape)
+        print('test', subsection_image_with_selected_cell_int8.shape[2]<3  )
         # padding with zeros the channel dimension.
         while subsection_image_with_selected_cell_int8.shape[2]<3:
             zeros_plane = np.zeros_like(subsection_image_with_selected_cell_int8[:,:,0])
@@ -5111,7 +5115,7 @@ class Plots():
         return None
     
     
-    def plot_complete_fov(self, list_images, df, number_of_selected_image, use_GaussianFilter=True,microns_per_pixel = None,image_name=None,show_cell_ids=True):
+    def plot_complete_fov(self, list_images, df, number_of_selected_image, use_GaussianFilter=True,microns_per_pixel = None,image_name=None,show_cell_ids=True,list_channel_order_to_plot=None):
         df_selected_cell = df.loc[   (df['image_id']==number_of_selected_image)]
         if use_GaussianFilter == True:
             video_filtered = GaussianFilter(video=list_images[number_of_selected_image], sigma = 1).apply_filter()
@@ -5121,7 +5125,10 @@ class Plots():
         max_complete_image_int8 = Utilities().convert_to_int8(max_complete_image, rescale=True, min_percentile=10, max_percentile=99.5)    
         # Plot maximum projection
         _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 15))
-        axes.imshow( max_complete_image_int8[:,:,[2,1,0]])
+        if not (list_channel_order_to_plot is None):
+            axes.imshow( max_complete_image_int8[:,:,list_channel_order_to_plot])
+        else:
+            axes.imshow( max_complete_image_int8[:,:,[2,1,0]])
         axes.grid(False)
         axes.set_xticks([])
         axes.set_yticks([])
@@ -5196,7 +5203,7 @@ class Plots():
                 axis_index = axes[r]
             else:
                 axis_index = axes[r,c]
-            image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
+            image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, dataframe=complete_dataframe)
             # maximum and minimum values to plot
             central_z_slice = int(image.shape[0]/2)
             if use_max_projection ==True:
@@ -5239,13 +5246,13 @@ class Plots():
             else:
                 axis_index = axes[r,c]
             if not(list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
             if not(list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
             # Extracting spot localization
             #y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
@@ -5371,13 +5378,13 @@ class Plots():
             else:
                 axis_index = axes[r,c]
             if not(list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and not(list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=list_cell_masks[cell_id], mask_nuc=None, dataframe=complete_dataframe)
             if not(list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=list_nuc_masks[cell_id], dataframe=complete_dataframe)
             if (list_nuc_masks[0] is None) and (list_cell_masks[0] is None):
-                image, df, cell_mask, nuc_mask = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
+                image, df, cell_mask, nuc_mask,_ = Utilities().image_cell_selection(cell_id=cell_id, list_images=list_images, mask_cell=None, mask_nuc=None, dataframe=complete_dataframe)
             # Extracting spot localization
             y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z   = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
             # maximum and minimum values to plot
