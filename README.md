@@ -17,27 +17,36 @@ Repository to automatically process ​Fluorescence In Situ Hybridization (FISH)
 # Code overview
 
 ## Cell segmentation
-    * The code can achieve accurate cell segmentation for the nucleus and cytosol in the images. The segmentation is performed using cellpose and complex optimization routines that ensure the maximum number of cells detected in the image.
+    * The code can achieve accurate cell segmentation for the nucleus and cytosol in the images. 
+    The segmentation is performed using Cellpose and complex optimization routines that ensure 
+    the maximum number of cells detected in the image.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/cell_segmentation.png alt="drawing" width="1200"/>
 
 ## Spot detection
-    * Spot detection is achieved using Big-FISH. Customization is added in this code to detect spots in multiple color channels. Additionally, this repository contains algorithms to measure spots that are co-detected in different color channels.  
+    * Spot detection is achieved using Big-FISH. Customization is added in this code to detect 
+    spots in multiple color channels. Additionally, this repository contains algorithms to 
+    measure spots that are co-detected in different color channels.  
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/single_cells.png alt="drawing" width="1200"/>
 
 ## Spot counting 
-    * The code quantifies the number of spots per cell and allows the visualization of these numbers as a function of cell size.
+    * The code quantifies the number of spots per cell and allows the visualization of these
+    numbers as a function of cell size.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/scatter_cell_size_vs_spots.png alt="drawing" width="1200"/>
 
 ## Spot intensity quantification
-    * The code allows quantifying the intensity of each spot, using the disk and a ring mask method developed by Morisaki and Stasevich, Methods Mol Biol. 2022.
+    * The code allows quantifying the intensity of each spot, using the disk and a ring mask 
+    method developed by Morisaki and Stasevich, Methods Mol Biol. 2022.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/spot_intensities.png alt="drawing" width="1200"/>
 
 ## Data management
-    * A complete data-frame for all processed images and cells is generated. This data-frame contains information about the location and intensity of each detected spot.
+    * A complete data-frame for all processed images and cells is generated. This data-frame
+    contains information about the location and intensity of each detected spot.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/dataframe.png alt="drawing" width="1200"/>
 
 ## Data reproducibility report
-    * To increase reproducibility a metadata report is generated. This report contains information about the list of images processed, the specific parameters used to process the data, the user that processed the data, and the version of the modules and packages used.
+    * To increase reproducibility a metadata report is generated. This report contains information
+     about the list of images processed, the specific parameters used to process the data, 
+     the user that processed the data, and the version of the modules and packages used.
 <img src= https://github.com/MunskyGroup/FISH_Processing/raw/main/docs/images/images_readme/metadata.png alt="drawing" width="600"/>
 
 ## Data visualization and publication quality images.
