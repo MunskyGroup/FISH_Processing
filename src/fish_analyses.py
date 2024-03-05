@@ -1285,6 +1285,10 @@ class BigFISH():
                                             voxel_size=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx),
                                             radius= self.cluster_radius,
                                             nb_min_spots = self.minimum_spots_cluster)
+        
+        # remove spots that are part of a cluster
+        spots_post_clustering = spots_post_clustering[spots_post_clustering[:,-1]==-1 ]
+        
         # Saving results with new variable names
         spotDetectionCSV = spots_post_clustering
         clusterDetectionCSV = clusters
@@ -3294,13 +3298,14 @@ class Utilities():
         return reordered_mask  
     
     # Function that reorder the index to make it continuos 
-    def remove_artifacts_from_mask_image(self,mask_image_tested, minimal_mask_area_size = 5000):
+    def remove_artifacts_from_mask_image(self,mask_image_tested, minimal_mask_area_size = 2000):
         number_masks = np.max(mask_image_tested)
         if number_masks>0:
             for index_mask in range(1,number_masks+1):
                 mask_size = np.sum(mask_image_tested == index_mask)
                 if mask_size <= minimal_mask_area_size:
-                    mask_image_tested = np.where(mask_image_tested == index_mask, mask_image_tested, 0)
+                    #mask_image_tested = np.where(mask_image_tested == index_mask, mask_image_tested, 0)
+                    mask_image_tested = np.where(mask_image_tested == index_mask,0,mask_image_tested )
             reordered_mask = Utilities().reorder_mask_image(mask_image_tested)
         else:
             reordered_mask=mask_image_tested
