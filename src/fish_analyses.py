@@ -1717,24 +1717,24 @@ class DataProcessing():
                 nuc_area, nuc_centroid_y, nuc_centroid_x = mask_selector(self.masks_nuclei[id_cell], calculate_centroid=True)
                 selected_mask_nuc = self.masks_nuclei[id_cell]
                 dilated_image_mask = binary_dilation(selected_mask_nuc, iterations=num_pixels_to_dilate).astype('int')
-                psedudo_cytosol_mask = np.subtract(dilated_image_mask, selected_mask_nuc)
+                pseudo_cytosol_mask = np.subtract(dilated_image_mask, selected_mask_nuc)
                 pseudo_cyto_int = np.zeros( (self.number_color_channels ))
                 tested_mask_for_border =  self.masks_nuclei[id_cell]
                 nuc_int = np.zeros( (self.number_color_channels ))
                 for k in range(self.number_color_channels ):
                     temp_img = np.max (self.image[:,:,:,k ],axis=0)
                     temp_masked_img = temp_img * self.masks_nuclei[id_cell]
-                    temp_masked_img_with_psedudo_cytosol_mask = temp_img * psedudo_cytosol_mask
+                    temp_masked_img_with_pseudo_cytosol_mask = temp_img * pseudo_cytosol_mask
                     nuc_int[k] =  np.round( temp_masked_img[np.nonzero(temp_masked_img)].mean() , 5)
-                    pseudo_cyto_int[k] =  np.round( temp_masked_img_with_psedudo_cytosol_mask[np.nonzero(temp_masked_img_with_psedudo_cytosol_mask)].mean() , 5)
+                    pseudo_cyto_int[k] =  np.round( temp_masked_img_with_pseudo_cytosol_mask[np.nonzero(temp_masked_img_with_pseudo_cytosol_mask)].mean() , 5)
                     # if k ==0:
                     #     print('nucleus intensity calculation')
                     #     testing_intenisty_calculation(temp_img,temp_masked_img,color_channel=k)
-                    #     print('psedudo_cytosol intensity calculation')
+                    #     print('pseudo_cytosol intensity calculation')
                     #     print('max',np.max(dilated_image_mask))
-                    #     print('min,max',np.min(psedudo_cytosol_mask),np.max(psedudo_cytosol_mask), )
-                    #     testing_intenisty_calculation(temp_img,temp_masked_img_with_psedudo_cytosol_mask,color_channel=k)
-                    del temp_img, temp_masked_img,temp_masked_img_with_psedudo_cytosol_mask
+                    #     print('min,max',np.min(pseudo_cytosol_mask),np.max(pseudo_cytosol_mask), )
+                    #     testing_intenisty_calculation(temp_img,temp_masked_img_with_pseudo_cytosol_mask,color_channel=k)
+                    del temp_img, temp_masked_img,temp_masked_img_with_pseudo_cytosol_mask
             else:
                 nuc_area, nuc_centroid_y, nuc_centroid_x = 0,0,0
                 selected_mask_nuc = None
