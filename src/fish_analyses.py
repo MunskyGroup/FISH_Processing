@@ -1085,8 +1085,11 @@ class CellSegmentation():
                 raise ValueError("Error: No nucleus or cytosol channels were selected. ")
         
         elif (self.optimization_segmentation_method == 'default') and (len(self.image.shape) > 3) and (self.image.shape[0]>1):
-            # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks. 
-            num_slices_range = 3  # range to consider above and below a selected z-slice
+            # Optimization based on selecting a z-slice to find the maximum number of index_paired_masks.
+            if self.number_z_slices > 20:
+                num_slices_range = 3  # range to consider above and below a selected z-slice
+            else:
+                num_slices_range = 1
             list_idx = np.round(np.linspace(num_slices_range, self.number_z_slices-num_slices_range, self.NUMBER_OPTIMIZATION_VALUES), 0).astype(int)  
             list_idx = np.unique(list_idx)  #list(set(list_idx))
             # Optimization based on slice
@@ -4105,14 +4108,13 @@ class Plots():
         figsize : tuple with figure size, optional.
             Tuple with format (x_size, y_size). the default is (8.5, 5).
         '''
-        #print(image.shape)
-
         number_channels = image.shape[3]
         number_z_slices = image.shape[0]
         if number_z_slices ==1:
             center_slice =0
         else:
             center_slice = image.shape[0]//2
+            
         _, axes = plt.subplots(nrows=1, ncols=number_channels, figsize=figsize)
         for i in range (0,number_channels ):
             if number_z_slices >1:
@@ -4125,17 +4127,14 @@ class Plots():
                 rescaled_image = RemoveExtrema(image[center_slice,:,:,i],min_percentile=1, max_percentile=98).remove_outliers() #image
             if number_channels ==1:
                 axis_index = axes
-                axis_index.imshow( rescaled_image[center_slice,:,:,i] ,cmap='Spectral') 
+                axis_index.imshow( rescaled_image ,cmap='Spectral') 
+                #axis_index.imshow( rescaled_image[center_slice,:,:,i] ,cmap='Spectral') 
             else:
                 axis_index = axes[i]
                 axis_index.imshow( rescaled_image ,cmap='Spectral') 
             axis_index.set_title('Channel_'+str(i))
             axis_index.grid(color='k', ls = '-.', lw = 0.5)
         plt.savefig(image_name,bbox_inches='tight',dpi=180)
-            #if show_plots ==True:
-            #    plt.show()
-            #else:
-            #    plt.close()
 
             
         if show_plots ==True:
