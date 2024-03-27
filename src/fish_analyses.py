@@ -3237,6 +3237,17 @@ class Utilities():
     '''
     def __init__(self):
         pass
+    def remove_images_not_processed(images_metadata, list_images):
+        if images_metadata is None:
+            return list_images
+        else:
+            selected_images = []
+            max_image_id = images_metadata['Image_id'].max()+1
+            for i in range (max_image_id):
+                processing_status = images_metadata[images_metadata['Image_id'] == i].Processing.values[0]
+                if processing_status == 'successful':
+                    selected_images.append(list_images[i])
+        return selected_images
     
     def calculate_sharpness(self,list_images, channels_with_FISH, neighborhood_size=31, threshold=1.12):
         list_mean_sharpeness_image = []
@@ -5043,7 +5054,7 @@ class Plots():
         return None
     
     
-    def plot_selected_cell_colors(self, image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True,list_channel_order_to_plot=[0,1,2]):
+    def plot_selected_cell_colors(self, image, df, spot_type=0, min_ts_size=None, show_spots=True,use_gaussian_filter = True, image_name=None,microns_per_pixel=None, show_legend=True,list_channel_order_to_plot=[0,1,2], max_percentile=99.8):
         # Extracting spot location
         y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # Applying Gaussian filter
@@ -5054,10 +5065,10 @@ class Plots():
             max_subsection_image_with_selected_cell = np.max(image[:,: ,:,:],axis=0)
         # Converting to int8
         print('max_sub',np.max(max_subsection_image_with_selected_cell))
-        subsection_image_with_selected_cell_int8 = Utilities().convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=99.8)
+        subsection_image_with_selected_cell_int8 = Utilities().convert_to_int8(max_subsection_image_with_selected_cell, rescale=True, min_percentile=0.5, max_percentile=max_percentile)
         print('max',np.max(subsection_image_with_selected_cell_int8))
         print('shape',subsection_image_with_selected_cell_int8.shape)
-        print('test', subsection_image_with_selected_cell_int8.shape[2]<3  )
+        #print('test', subsection_image_with_selected_cell_int8.shape[2]<3  )
         # padding with zeros the channel dimension.
         while subsection_image_with_selected_cell_int8.shape[2]<3:
             zeros_plane = np.zeros_like(subsection_image_with_selected_cell_int8[:,:,0])
@@ -5119,14 +5130,14 @@ class Plots():
         return None
     
     
-    def plot_complete_fov(self, list_images, df, number_of_selected_image, use_GaussianFilter=True,microns_per_pixel = None,image_name=None,show_cell_ids=True,list_channel_order_to_plot=None):
+    def plot_complete_fov(self, list_images, df, number_of_selected_image, use_GaussianFilter=True,microns_per_pixel = None,image_name=None,show_cell_ids=True,list_channel_order_to_plot=None,min_percentile=10, max_percentile=99.5):
         df_selected_cell = df.loc[   (df['image_id']==number_of_selected_image)]
         if use_GaussianFilter == True:
             video_filtered = GaussianFilter(video=list_images[number_of_selected_image], sigma = 1).apply_filter()
             max_complete_image = np.max(video_filtered,axis=0)
         else:
             max_complete_image = np.max(list_images[number_of_selected_image],axis=0)
-        max_complete_image_int8 = Utilities().convert_to_int8(max_complete_image, rescale=True, min_percentile=10, max_percentile=99.5)    
+        max_complete_image_int8 = Utilities().convert_to_int8(max_complete_image, rescale=True, min_percentile=min_percentile, max_percentile=max_percentile)    
         # Plot maximum projection
         _, axes = plt.subplots(nrows = 1, ncols = 1, figsize = (15, 15))
         if not (list_channel_order_to_plot is None):
