@@ -52,7 +52,6 @@ warnings.filterwarnings('ignore')
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 from skimage.measure import find_contours
-from skimage.io import imread
 from scipy import signal
 from scipy import ndimage
 import matplotlib.pyplot as plt
@@ -82,6 +81,7 @@ import seaborn as sns
 import scipy.stats as stats
 from  matplotlib.ticker import FuncFormatter
 from matplotlib_scalebar.scalebar import ScaleBar
+font_props = {'size': 16}
 import joypy
 from matplotlib import cm
 from scipy.ndimage import binary_dilation
@@ -4950,7 +4950,7 @@ class Plots():
                         circleTS=plt.Circle((x_TS_locations[ts], y_TS_locations[ts]), 6, color = 'b', fill = False,lw=3)
                         axes[i].add_artist(circleTS)  
             if not (microns_per_pixel is None): 
-                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
                 axes[i].add_artist(scalebar)
         # Saving the image
         if not (image_name is None):               
@@ -4960,7 +4960,7 @@ class Plots():
         plt.show()
         return None
     
-    def plot_single_cell(self, image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,max_percentile=99.5,selected_colormap = 'plasma'):
+    def plot_single_cell(self, image, df, selected_channel, spot_type=0,min_ts_size=4,show_spots=True,image_name=None,microns_per_pixel=None,show_legend = True,max_percentile=99.5,selected_colormap = 'plasma',show_title=True):
         # Extracting spot localization
         y_spot_locations, x_spot_locations, y_TS_locations, x_TS_locations, number_spots, number_TS, number_spots_selected_z = Utilities().extract_spot_location_from_cell(df=df, spot_type=spot_type, min_ts_size= min_ts_size)
         # maximum and minimum values to plot
@@ -4985,9 +4985,10 @@ class Plots():
         axis_index.grid(False)
         axis_index.set_xticks([])
         axis_index.set_yticks([])
-        axis_index.set_title(r'$_{max}$z (channel '+str(selected_channel) +')')
+        if show_title == True:
+            axis_index.set_title(r'$_{max}$z (channel '+str(selected_channel) +')')
         if not (microns_per_pixel is None): 
-            scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+            scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
             axis_index.add_artist(scalebar)
         # Visualization image with detected spots
         if show_spots == True:
@@ -4998,7 +4999,7 @@ class Plots():
             axes[1].set_yticks([])
             axes[1].set_title(r'$_{max}$z channel ('+str(selected_channel) + ') and detected spots')
             if not (microns_per_pixel is None): 
-                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
                 axes[1].add_artist(scalebar)
             if show_spots == True:
                 # Plotting spots on image
@@ -5091,7 +5092,7 @@ class Plots():
         axis_index.set_xticks([])
         axis_index.set_yticks([])
         if not (microns_per_pixel is None): 
-            scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+            scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
             axis_index.add_artist(scalebar)
         if show_spots == True:
             # Plotting image with detected spots
@@ -5100,7 +5101,7 @@ class Plots():
             axes[1].set_xticks([])
             axes[1].set_yticks([])
             if not (microns_per_pixel is None): 
-                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
                 axes[1].add_artist(scalebar)
         if show_spots == True:
             # Plotting spots on image
@@ -5148,7 +5149,7 @@ class Plots():
         axes.set_xticks([])
         axes.set_yticks([])
         if not (microns_per_pixel is None): 
-            scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+            scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.5,location='lower right',box_color='k',color='w', font_properties=font_props)
             axes.add_artist(scalebar)
         if show_cell_ids == True:
             moving_scale =40 # This parameter moves the label position.
@@ -5245,7 +5246,7 @@ class Plots():
             axis_index.set_title('Cell_'+str(cell_id) )
             #Showing scale bar
             if not (microns_per_pixel is None): 
-                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
                 axis_index.add_artist(scalebar)
             # Updating indexes
             c+=1
@@ -5322,7 +5323,7 @@ class Plots():
                 legend.get_frame().set_alpha(None)
             #Showing scale bar
             if not (microns_per_pixel is None): 
-                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
                 axis_index.add_artist(scalebar)
             # Updating indexes
             c+=1
@@ -5454,7 +5455,7 @@ class Plots():
                     legend.get_frame().set_alpha(None)
             #Showing scale bar
             if not (microns_per_pixel is None): 
-                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w')
+                scalebar = ScaleBar(dx = microns_per_pixel, units= 'um', length_fraction=0.25,location='lower right',box_color='k',color='w', font_properties=font_props)
                 axis_index.add_artist(scalebar)
             # Updating indexes
             c+=1
