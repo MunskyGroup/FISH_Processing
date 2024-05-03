@@ -9,9 +9,9 @@
 #source /home/"$USER"/anaconda3/envs/FISH_processing
 conda activate FISH_processing
 export CUDA_VISIBLE_DEVICES=0,1
-pgrep -f "parameter_estimation2.py" | xargs kill
+pgrep -f "parameter_estimation_constitutive.py" | xargs kill
 
-rm nohup.out
+rm output.txt
 
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
@@ -19,9 +19,9 @@ rm nohup.out
 # Where sys.argv[0] is the name  of the <<python_file.py>>, and  the rest are in positional order 
 # Make sure to convert str to the desired data types.
 # Paths with configuration files
-path_to_executable="${PWD%/*}/UQ_Bio_2024/parameter_estimation2.py" 
-chain_length=500000
-nohup python3 "$path_to_executable" $chain_length &
+path_to_executable="${PWD%/*}/UQ_Bio_2024/parameter_estimation_constitutive.py" 
+chain_length=220000
+nohup python3 "$path_to_executable" $chain_length > output.txt 2>&1 &
 
 # #####################################
 # #####################################
