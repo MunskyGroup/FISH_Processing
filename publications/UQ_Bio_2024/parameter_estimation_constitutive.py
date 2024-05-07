@@ -35,7 +35,7 @@ folder_outputs.mkdir(parents=True, exist_ok=True)
 # Plotting configuration
 plt.rcParams.update({ 'axes.labelsize': 14, 'axes.titlesize': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14, 'legend.fontsize': 10,})
 colors = ['#FBD148', '#6BCB77', '#AA66CC', '#FF6B6B', '#4D96FF']
-species_colors = { 'G_on': colors[1], 'R_n': colors[2], 'R_c': colors[3], 'P': colors[4]}
+species_colors = { 'R_n': colors[2], 'R_c': colors[3], 'P': colors[4]}
 
 # function to calculate effective kt
 def calculate_effective_kt(D, k_diff_r, transport_rate, model_type):
@@ -82,12 +82,13 @@ kt = calculate_effective_kt(D=nucleus_diameter, k_diff_r=diffusion_rate, transpo
 print('Effective transport rate: ', kt)
 max_y_val = 65
 parameter_values = {'k_r': k_r, 'k_t': kt, 'k_p': k_p, 'gamma_r': gamma_r, 'gamma_p': gamma_p}
-initial_conditions = {'G_on': 1, 'R_n': 0, 'R_c': 0, 'P': 0}
+initial_conditions = { 'R_n': 0, 'R_c': 0, 'P': 0}
 # Updating parameter values
-parameter_symbols = ['k_{r}', 'k_{t}', 'k_{p}', '\gamma_{r}', '\gamma_{p}', 'k_{i}']
+parameter_symbols = ['k_{r}', 'k_{t}', 'k_{p}', '\gamma_{r}', '\gamma_{p}', '\u03B1']
 true_parameter_values = [k_r, kt, k_p, gamma_r, gamma_p, inhibition_constant]
 time_points = np.array([5,10,20,40,60,80,100,130,150,200]).astype(int)
 number_parameters = len(true_parameter_values)
+
 
 
 class GeneExpressionModel(gillespy2.Model):
@@ -98,7 +99,6 @@ class GeneExpressionModel(gillespy2.Model):
             self.add_parameter(gillespy2.Parameter(name=name, expression=expression))
         # Define species with initial conditions and add them to the model
         species_list = [
-            gillespy2.Species(name='G_on', initial_value=initial_conditions.get('G_on', 1), mode=mode),
             gillespy2.Species(name='R_n', initial_value=initial_conditions.get('R_n', 0), mode=mode),
             gillespy2.Species(name='R_c', initial_value=initial_conditions.get('R_c', 0), mode=mode),
             gillespy2.Species(name='P', initial_value=initial_conditions.get('P', 0), mode=mode)
@@ -106,12 +106,12 @@ class GeneExpressionModel(gillespy2.Model):
         self.add_species(species_list)
         # Define reactions and add them to the model
         reactions = [
-            gillespy2.Reaction(name='mRNA_production', reactants={species_list[0]: 1}, products={species_list[0]: 1, species_list[1]: 1}, rate=self.listOfParameters['k_r']),
-            gillespy2.Reaction(name='mRNA_transport', reactants={species_list[1]: 1}, products={species_list[2]: 1}, rate=self.listOfParameters['k_t']),
-            gillespy2.Reaction(name='protein_production', reactants={species_list[2]: 1}, products={species_list[2]: 1, species_list[3]: 1}, rate=self.listOfParameters['k_p']),
-            gillespy2.Reaction(name='nuclear_mRNA_decay', reactants={species_list[1]: 1}, products={}, rate=self.listOfParameters['gamma_r']),
-            gillespy2.Reaction(name='cytoplasm_mRNA_decay', reactants={species_list[2]: 1}, products={}, rate=self.listOfParameters['gamma_r']),
-            gillespy2.Reaction(name='protein_decay', reactants={species_list[3]: 1}, products={}, rate=self.listOfParameters['gamma_p'])
+            gillespy2.Reaction(name='mRNA_production', reactants={}, products={species_list[0]: 1}, rate=self.listOfParameters['k_r']),
+            gillespy2.Reaction(name='mRNA_transport', reactants={species_list[0]: 1}, products={species_list[1]: 1}, rate=self.listOfParameters['k_t']),
+            gillespy2.Reaction(name='protein_production', reactants={species_list[1]: 1}, products={species_list[1]: 1, species_list[2]: 1}, rate=self.listOfParameters['k_p']),
+            gillespy2.Reaction(name='nuclear_mRNA_decay', reactants={species_list[0]: 1}, products={}, rate=self.listOfParameters['gamma_r']),
+            gillespy2.Reaction(name='cytoplasm_mRNA_decay', reactants={species_list[1]: 1}, products={}, rate=self.listOfParameters['gamma_r']),
+            gillespy2.Reaction(name='protein_decay', reactants={species_list[2]: 1}, products={}, rate=self.listOfParameters['gamma_p'])
         ]
         self.add_reaction(reactions)
         # Define the simulation time span
@@ -148,71 +148,6 @@ def run_simulation_phase(model_initializer, parameter_values, initial_conditions
         else:
             trajectories_species = {species: result[0][species] for species in model.listOfSpecies.keys()}
         return trajectories_species
-
-# def simulate_model(parameter_values, initial_conditions, total_simulation_time, simulation_type='continuous', burn_in_time=None, drug_application_time=None, inhibited_parameters=None, number_of_trajectories=1):
-#     if burn_in_time is None or burn_in_time < 50:
-#         burn_in_time = None
-#     if burn_in_time is not None:
-#         end_time_initial_phase = drug_application_time + burn_in_time if drug_application_time is not None else total_simulation_time + burn_in_time
-#     else:
-#         end_time_initial_phase = drug_application_time if drug_application_time is not None else total_simulation_time
-#     trajectories_initial = run_simulation_phase(initialize_model, parameter_values=parameter_values, initial_conditions=initial_conditions, simulation_end=end_time_initial_phase, number_of_trajectories=number_of_trajectories, apply_drug=False, inhibited_parameters=None, simulation_type=simulation_type, burn_in_time=burn_in_time)
-#     if drug_application_time is not None:
-#         drug_simulation_end = total_simulation_time - drug_application_time
-#         updated_initial_conditions = {species: np.max((0,trajectories_initial[species][-1])) for species in trajectories_initial}
-#         trajectories_drug = run_simulation_phase(initialize_model, parameter_values=parameter_values, initial_conditions=updated_initial_conditions, simulation_end=drug_simulation_end, number_of_trajectories=1, apply_drug=True, inhibited_parameters=inhibited_parameters, simulation_type=simulation_type)
-#         trajectories_species = {species: np.concatenate([trajectories_initial[species], trajectories_drug[species][1:]]) for species in trajectories_initial}
-#     else:
-#         trajectories_species = trajectories_initial
-#     time = np.linspace(0, total_simulation_time, num=total_simulation_time + 1)
-#     return time, trajectories_species
-
-
-# def simulate_model(parameter_values, initial_conditions, total_simulation_time, simulation_type, burn_in_time=None, drug_application_time=None, inhibited_parameters=None, number_of_trajectories=1):
-#     """
-#     Simulate a model either as deterministic or stochastic based on user input,
-#     including optional burn-in and drug application phases.
-#     """
-#     # Determine the end time for the initial simulation phase
-#     # This phase may include the burn-in period (if any) and extends up to the drug application time or the total simulation time
-#     if burn_in_time is None or burn_in_time < 50:
-#         burn_in_time = None
-#     if burn_in_time is not None:
-#         end_time_initial_phase = drug_application_time + burn_in_time if drug_application_time is not None else total_simulation_time+burn_in_time
-#     else:
-#         end_time_initial_phase = drug_application_time if drug_application_time is not None else total_simulation_time
-#     # The run_simulation_phase function will only return results after the burn-in period, adjusting the timespan accordingly
-#     trajectories_initial = run_simulation_phase( initialize_model, parameter_values=parameter_values, initial_conditions=initial_conditions, simulation_end=end_time_initial_phase, number_of_trajectories=number_of_trajectories, apply_drug=False,inhibited_parameters= None, simulation_type=simulation_type, burn_in_time=burn_in_time)  
-#     # If there's a drug application phase
-#     if drug_application_time is not None:
-#         drug_simulation_end = total_simulation_time - drug_application_time
-#         if simulation_type == 'continuous':
-#             updated_initial_conditions = {species: trajectories_initial[species][-1] for species in trajectories_initial}
-#             trajectories_drug = run_simulation_phase( initialize_model, parameter_values=parameter_values, initial_conditions=updated_initial_conditions, simulation_end=drug_simulation_end, number_of_trajectories=1, apply_drug=True, inhibited_parameters=inhibited_parameters, simulation_type=simulation_type)
-#             trajectories_species = {species: np.concatenate([trajectories_initial[species], trajectories_drug[species][1:]])
-#                                     for species in trajectories_initial}
-#         else:
-#             all_results_after_drug = []
-#             for i in range(number_of_trajectories):
-#                 updated_initial_conditions = {species: trajectories_initial[i][species][-1] for species in trajectories_initial[i].keys()}
-#                 trajectories_drug = run_simulation_phase( initialize_model, parameter_values=parameter_values, initial_conditions=updated_initial_conditions, simulation_end=drug_simulation_end, number_of_trajectories=1, apply_drug=True, inhibited_parameters=inhibited_parameters, simulation_type=simulation_type)
-#                 all_results_after_drug.append(trajectories_drug[0])
-#             # append the results from the first phase to the results from the second phase
-#             trajectories_species = {}
-#             #if len(trajectories_initial) > 0 and len(all_results_after_drug) > 0:
-#             for species in trajectories_initial[0].keys():
-#                 species_data_across_trajectories = []
-#                 for i in range(number_of_trajectories):
-#                     initial_data = trajectories_initial[i][species]
-#                     after_drug_data = all_results_after_drug[i][species]
-#                     concatenated_data = np.concatenate([initial_data[:-1], after_drug_data])
-#                     species_data_across_trajectories.append(concatenated_data)
-#                 trajectories_species[species] = np.stack(species_data_across_trajectories)
-#     else:
-#         trajectories_species = trajectories_initial
-#     # creating a vector for time span
-#     time = np.linspace(0, total_simulation_time, num=total_simulation_time + 1)
-#     return time, trajectories_species
 
 
 def simulate_model(parameter_values, initial_conditions, total_simulation_time, simulation_type, burn_in_time=None, drug_application_time=None, inhibited_parameters=None, number_of_trajectories=1):
@@ -271,7 +206,7 @@ def Loglikelihood(parameters, observations_data_mean, observations_data_sem, dru
         'k_r': parameters[0], 'k_t': parameters[1], 'k_p': parameters[2],
         'gamma_r': parameters[3], 'gamma_p': parameters[4], 'inhibition_constant': parameters[5]
     }
-    initial_conditions = { 'G_on': 1, 'R_n': 0, 'R_c': 0, 'P': 0}
+    initial_conditions = { 'R_n': 0, 'R_c': 0, 'P': 0}
     inhibited_parameters = {'k_t': parameter_values['k_t'] * parameter_values['inhibition_constant']}
     # time, concentrations_species =simulate_model(parameter_values, 
     #                                          initial_conditions, 
@@ -351,6 +286,7 @@ number_cells = simulated_data_protein.shape[0]
 observations_data_dist = [simulated_data_protein , simulated_data_Rn, simulated_data_Rc]
 observations_data_mean = [np.mean(simulated_data_protein, axis=0), np.mean(simulated_data_Rn, axis=0), np.mean(simulated_data_Rc, axis=0)]
 observations_data_sem = [np.std(simulated_data_protein, axis=0)/np.sqrt(number_cells), np.std(simulated_data_Rn, axis=0)/np.sqrt(number_cells), np.std(simulated_data_Rc, axis=0)/np.sqrt(number_cells)]
+observations_data_sd = [np.std(simulated_data_protein, axis=0), np.std(simulated_data_Rn, axis=0), np.std(simulated_data_Rc, axis=0)]
 
 # Initial values for the chain
 # parameter_symbols = [ 'k_r', 'k_t', 'k_p', 'gamma_r', 'gamma_p', 'inhibition_constant']
@@ -405,9 +341,9 @@ print(ll)
 # Plotting the ODE model and the experimental data only for variables P and R_n
 plt.figure(figsize=(8, 5))
 # plotting the std for observations_data
-plt.errorbar(time_points, observations_data_mean[0], yerr=observations_data_sem[0], fmt='o', color=species_colors['P'], label='Spatial Model ' + f"${'(P)'}$", markersize=10, lw=1)
-plt.errorbar(time_points, observations_data_mean[1], yerr=observations_data_sem[1], fmt='o', color=species_colors['R_n'], label='Spatial Model ' + f"${'(R_n)'}$", markersize=10, lw=1)
-plt.errorbar(time_points, observations_data_mean[2], yerr=observations_data_sem[2], fmt='o', color=species_colors['R_c'], label= 'Spatial Model ' + f"${'(R_c)'}$", markersize=10, lw=1)
+plt.errorbar(time_points, observations_data_mean[0], yerr=observations_data_sd[0], fmt='o', color=species_colors['P'], label='Spatial Model ' + f"${'(P)'}$", markersize=10, lw=1)
+plt.errorbar(time_points, observations_data_mean[1], yerr=observations_data_sd[1], fmt='o', color=species_colors['R_n'], label='Spatial Model ' + f"${'(R_n)'}$", markersize=10, lw=1)
+plt.errorbar(time_points, observations_data_mean[2], yerr=observations_data_sd[2], fmt='o', color=species_colors['R_c'], label= 'Spatial Model ' + f"${'(R_c)'}$", markersize=10, lw=1)
 # plotting model fit
 plt.plot(time, concentrations_species['P'],   color=species_colors['P'], label='Model Fit ' + f"${'(P)'}$", lw=2, linestyle='--')
 plt.plot(time, concentrations_species['R_n'], color=species_colors['R_n'], label='Model Fit ' + f"${'(R_n)'}$", lw=2, linestyle='--')
@@ -488,7 +424,7 @@ fig, axs = plt.subplots(number_parameters, number_parameters, figsize=(15, 15))
 fig.tight_layout(pad=2.0)
 for i in range(number_parameters):
     for j in range(i):
-        axs[i, j].hexbin(chain_trunc[:, j], chain_trunc[:, i], gridsize=15, cmap='plasma', mincnt=1)
+        axs[i, j].hexbin(chain_trunc[:, j], chain_trunc[:, i], gridsize=30, cmap='plasma', mincnt=1)
         axs[i, j].tick_params(axis='both', which='major', labelsize=12)
         if j == 0:
             # Use LaTeX for y-labels
@@ -510,9 +446,6 @@ plt.show()
 
 
 
-
-
-
 #@title Plotting SSA model
 def plotting_stochastic(time, trajectories_species,species_colors,drug_application_time=None,ylim_val=False,save_figure=True,plot_name='ssa.png',time_points=None, observations_data_mean=None, observations_data_sem=None):
     def plot_species_trajectories(time, trajectories_species, species_name, color):
@@ -522,8 +455,8 @@ def plotting_stochastic(time, trajectories_species,species_colors,drug_applicati
         mean_trajectories = np.mean(trajectories, axis=0)
         std_trajectories = np.std(trajectories, axis=0)
         # Plot mean concentration with standard deviation as shaded area
-        plt.plot(time, mean_trajectories, '-', color=color, label=species_name, lw=4)
-        plt.fill_between(time, mean_trajectories - std_trajectories, mean_trajectories + std_trajectories, color=color, alpha=0.1)
+        #plt.plot(time, mean_trajectories, ':', color=color, label='SSA '+ species_name, lw=2)
+        plt.fill_between(time, mean_trajectories - std_trajectories, mean_trajectories + std_trajectories, color=color, alpha=0.4, label='SSA ('+ f"${species_name}$" +')')
     plt.figure(figsize=(8, 5))
     # Plot each species
     for species, color in species_colors.items():
@@ -557,7 +490,7 @@ def plotting_stochastic(time, trajectories_species,species_colors,drug_applicati
 # Running SSA
 parameter_values = {'k_r': best_fit[0], 'k_t': best_fit[1], 'k_p': best_fit[2],
                 'gamma_r': best_fit[3], 'gamma_p': best_fit[4], 'inhibition_constant': best_fit[5]}
-initial_conditions = { 'G_on': 1, 'R_n': 0, 'R_c': 0, 'P': 0}
+initial_conditions = { 'R_n': 0, 'R_c': 0, 'P': 0}
 inhibited_parameters = {'k_t': parameter_values['k_t'] * parameter_values['inhibition_constant']}
 time_ssa, trajectories_species_ssa =simulate_model(parameter_values, 
                                         initial_conditions, 
