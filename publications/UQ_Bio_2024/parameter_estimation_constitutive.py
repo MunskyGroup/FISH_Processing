@@ -358,7 +358,7 @@ plt.legend(bbox_to_anchor=(1.3, 1),loc='upper right', fontsize=9)
 plt.grid(True, linestyle='--', alpha=0.7)
 #plt.ylim(0, 55)
 # save the figure
-plt.savefig(folder_outputs.joinpath('model_fit.png'), dpi=400, bbox_inches="tight")
+plt.savefig(folder_outputs.joinpath('model_fit.jpg'), dpi=300, bbox_inches="tight")
 plt.show()
 
 
@@ -368,7 +368,7 @@ fig.set_tight_layout(True)
 for i in range(number_parameters):
     axs[i].set_title(f"${parameter_symbols[i]}$", fontsize=20)
     axs[i].plot(10.0**(bg_chain[burnin_time:, i]), color='lightslategray', lw=2)
-fig.savefig(folder_outputs.joinpath("mcmc_trajectories.png"), dpi=400, bbox_inches="tight")
+fig.savefig(folder_outputs.joinpath("mcmc_trajectories.jpg"), dpi=300, bbox_inches="tight")
 plt.show()
 
 
@@ -379,7 +379,7 @@ for i in range(number_parameters):
     axs[i].set_title(f"${parameter_symbols[i]}$", fontsize=20)
     autocorrelation = autocorr(bg_chain[burnin_time:, i])
     axs[i].plot(autocorrelation, color='lightslategray', lw=3)
-fig.savefig(folder_outputs.joinpath("mcmc_ac.png"), dpi=400, bbox_inches="tight")
+fig.savefig(folder_outputs.joinpath("mcmc_ac.jpg"), dpi=300, bbox_inches="tight")
 plt.show()
 
 
@@ -412,7 +412,7 @@ for i in range(number_parameters):
 # Adding a title for all plots
 fig.tight_layout()
 # Save the figure
-fig.savefig(folder_outputs.joinpath("mcmc_1D.png"), dpi=400, bbox_inches="tight")
+fig.savefig(folder_outputs.joinpath("mcmc_1D.jpg"), dpi=300, bbox_inches="tight")
 plt.show()
 
 
@@ -440,14 +440,14 @@ for i in range(number_parameters):
     axs[i, i].yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
     axs[i, i].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 # Save the figure
-fig.savefig(folder_outputs.joinpath("mcmc_2D.png"), dpi=400, bbox_inches="tight")
+fig.savefig(folder_outputs.joinpath("mcmc_2D.jpg"), dpi=300, bbox_inches="tight")
 plt.show()
 
 
 
 
 #@title Plotting SSA model
-def plotting_stochastic(time, trajectories_species,species_colors,drug_application_time=None,ylim_val=False,save_figure=True,plot_name='ssa.png',time_points=None, observations_data_mean=None, observations_data_sem=None):
+def plotting_stochastic(time, trajectories_species,species_colors,drug_application_time=None,ylim_val=False,save_figure=True,plot_name='ssa.jpg',time_points=None, observations_data_mean=None, observations_data_sem=None):
     def plot_species_trajectories(time, trajectories_species, species_name, color):
         # Extract the trajectories for the species
         trajectories = trajectories_species[species_name]
@@ -545,34 +545,7 @@ fig.legend([ssa_plots[0], obs_plot[2]],     # Plot elements to be included in th
            loc='center right',          # Position of the legend
            bbox_to_anchor=(1.10, 0.5),
            fontsize=16)   
-plt.savefig(folder_outputs.joinpath("ssa_distributions.png"), dpi=400, bbox_inches='tight', transparent=False, pad_inches=0.1)
-
-
-# # Plotting the distributions for the SSA and the observed data
-# fig, axs = plt.subplots(3, len(time_points), figsize=(20, 6))
-# fig.tight_layout(pad=2.0)
-# def bins_histogram(data1, data2):
-#     data = np.concatenate([data1, data2])
-#     if data.max() > 20:
-#         step_bins =3
-#     else:
-#         step_bins=1
-#     bins = np.arange(np.floor(data.min()), np.ceil(data.max()), step_bins)
-#     return bins
-# # Plotting the distributions for the SSA at a given time point
-# for j, time_point in enumerate (time_points):
-#     for i, species in enumerate(['P', 'R_n', 'R_c']):
-#         ssa_data = trajectories_species_ssa[species][:,time_point]
-#         obs_data = observations_data_dist[i][:,j]
-#         # fix the bins to the max between simulation and observations
-#         step_bins = bins_histogram(ssa_data, obs_data)
-#         axs[i,j].hist(ssa_data, bins=step_bins, color='royalblue', lw=1.2, alpha=0.7, density=True, cumulative=True) #species_colors[species]
-#         axs[i,j].hist(obs_data, bins=step_bins,  color='orangered', lw=1.2, alpha=0.15, density=True, cumulative=True)
-#         axs[i,j].set_title(f"$t = {time_point}$", fontsize=16)  #"${parameter_symbols[j]}$"
-#         if j == 0:
-#             axs[i,j].set_ylabel(f"${species}$", fontsize=20)
-# plt.savefig(folder_outputs.joinpath("ssa_cdfs.png"), dpi=400, bbox_inches='tight', transparent=False, pad_inches=0.1)
-
+plt.savefig(folder_outputs.joinpath("ssa_distributions.jpg"), dpi=300, bbox_inches='tight', transparent=False, pad_inches=0.1)
 
 
 
@@ -618,104 +591,5 @@ fig.legend([ssa_plots[0], obs_plot[2]],     # Plot elements to be included in th
            loc='center right',          # Position of the legend
            bbox_to_anchor=(1.10, 0.5),
            fontsize=16)                 # Font size of the legen
-plt.savefig(folder_outputs.joinpath("ssa_cdfs_steps.png"), dpi=300, bbox_inches='tight', transparent=False, pad_inches=0.1)
+plt.savefig(folder_outputs.joinpath("ssa_cdfs_steps.jpg"), dpi=300, bbox_inches='tight', transparent=False, pad_inches=0.1)
 plt.show()
-
-# fig, axs = plt.subplots(3, len(time_points), figsize=(20, 6))
-# fig.tight_layout(pad=2.0)
-# def bins_histogram(data1, data2):
-#     data = np.concatenate([data1, data2])
-#     if data.max() > 20:
-#         step_bins = 3
-#     else:
-#         step_bins = 1
-#     bins = np.arange(np.floor(data.min()), np.ceil(data.max()), step_bins)
-#     return bins
-# # Plotting the distributions for the SSA at a given time point
-# legend_labels = ['SSA', 'Observed '+f"${'P'}$", 'Observed ' +f"${'R_n'}$", 'Observed ' +f"${'R_c'}$"]  # Labels for the legend
-# legents_for_obs = []
-# obs_plot=[]
-# count=0
-# for j, time_point in enumerate(time_points):
-#     for i, species in enumerate(['P', 'R_n', 'R_c']):
-#         ssa_data = trajectories_species_ssa[species][:, time_point]
-#         obs_data = observations_data_dist[i][:, j]
-#         # Using the same bins for both SSA data and observations data
-#         bins = bins_histogram(ssa_data, obs_data)
-#         # Plotting observations data as histograms
-#         obs_plot=axs[i, j].hist(obs_data, bins=bins, color=species_colors[species], lw=0.5, density=True, cumulative=True,alpha=0.7) #species_colors[species]
-        
-#         if j == 0 and i==count:
-#             legents_for_obs.append(obs_plot[2])
-#             count+=1
-#             print(obs_plot[2])
-#         del obs_plot
-#         # Calculating histogram values for SSA data
-#         ssa_counts, bin_edges = np.histogram(ssa_data, bins=bins, density=True)
-#         ssa_cdf = np.cumsum(ssa_counts) / np.sum(ssa_counts)
-#         # Adding an extra element to ssa_cdf to match the length of bins
-#         ssa_cdf = np.concatenate([[0], ssa_cdf])
-#         # Plotting SSA data as steps
-#         ssa_plot = axs[i, j].step(bins, ssa_cdf, color='royalblue', lw=5) #'royalblue'
-#         if i == 0:
-#             axs[i, j].set_title(f"$t = {time_point}$", fontsize=16)
-#         if j == 0:
-#             axs[i, j].set_ylabel(f"${species}$", fontsize=20)
-#         if i == 2:
-#             axs[i, j].set_xlabel('Molecules', fontsize=16)
-# # Create a legend outside the plot area
-# fig.legend([ssa_plot[0], legents_for_obs[0],legents_for_obs[1],legents_for_obs[2]],     # Plot elements to be included in the legend
-#            labels=legend_labels,        # Labels for the legend
-#            loc='center right',          # Position of the legend
-#            bbox_to_anchor=(1.10, 0.5),
-#            fontsize=16)                 # Font size of the legend
-# plt.savefig(folder_outputs.joinpath("ssa_cdfs_steps.png"), dpi=300, bbox_inches='tight', transparent=False, pad_inches=0.1)
-# plt.show()
-
-
-
-# fig, axs = plt.subplots(3, len(time_points), figsize=(20, 6))
-# fig.tight_layout(pad=2.0)
-# def bins_histogram(data1, data2):
-#     data = np.concatenate([data1, data2])
-#     if data.max() > 20:
-#         step_bins = 3
-#     else:
-#         step_bins = 1
-#     bins = np.arange(np.floor(data.min()), np.ceil(data.max()), step_bins)
-#     return bins
-# # Plotting the distributions for the SSA at a given time point
-# legend_labels = ['SSA', 'Observed '+f"${'P'}$", 'Observed ' +f"${'R_n'}$", 'Observed ' +f"${'R_c'}$"]  # Labels for the legend
-# legents_for_obs = []
-# for j, time_point in enumerate(time_points):
-#     for i, species in enumerate(['P', 'R_n', 'R_c']):
-#         ssa_data = trajectories_species_ssa[species][:, time_point]
-#         obs_data = observations_data_dist[i][:, j]
-#         # Using the same bins for both SSA data and observations data
-#         bins = bins_histogram(ssa_data, obs_data)
-#         # Calculating histogram values for SSA data
-#         ssa_counts, bin_edges = np.histogram(ssa_data, bins=bins, density=True)
-#         ssa_cdf = np.cumsum(ssa_counts) / np.sum(ssa_counts)
-#         # Adding an extra element to ssa_cdf to match the length of bins
-#         ssa_cdf = np.concatenate([[0], ssa_cdf])
-#         # Plotting SSA data as steps
-#         ssa_plot = axs[i, j].step(bins, ssa_cdf, color='royalblue', lw=5) #'royalblue'
-#         # Plotting observations data as histograms
-#         obs_plot = axs[i, j].hist(obs_data, bins=bins, color=species_colors[species], lw=0.5, density=True, cumulative=True,alpha=0.7) #species_colors[species]
-#         if i == 0:
-#             axs[i, j].set_title(f"$t = {time_point}$", fontsize=16)
-#         if j == 0:
-#             axs[i, j].set_ylabel(f"${species}$", fontsize=20)
-#         if j == 0:
-#             legents_for_obs.append(obs_plot[2])
-#         if i == 2:
-#             axs[i, j].set_xlabel('Molecules', fontsize=16)
-# # Create a legend outside the plot area
-# fig.legend([ssa_plot, legents_for_obs[0],legents_for_obs[1],legents_for_obs[2]],     # Plot elements to be included in the legend
-#            labels=legend_labels,        # Labels for the legend
-#            loc='center right',          # Position of the legend
-#            bbox_to_anchor=(1.10, 0.5),
-#            fontsize=16)                 # Font size of the legend
-# plt.savefig(folder_outputs.joinpath("ssa_cdfs_steps.png"), dpi=300, bbox_inches='tight', transparent=False, pad_inches=0.1)
-# plt.show()
-
