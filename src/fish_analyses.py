@@ -3795,6 +3795,8 @@ class Utilities():
             name_final_masks = data_folder_path.name +'___nuc_' + str(diameter_nucleus) + '__cyto_' + str(diameter_cytosol) 
             mask_dir_complete_name = 'masks_'+ name_final_masks # final name for masks dir
             shutil.move(mask_folder_created_by_pipeline, mask_dir_complete_name ) # remaing the masks dir
+        elif masks_dir is None:
+            mask_dir_complete_name = None
         else: 
             mask_dir_complete_name = masks_dir.name
         ## Sending masks to NAS
