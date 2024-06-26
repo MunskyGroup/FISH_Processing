@@ -67,6 +67,9 @@ import yaml
 import shutil
 from fpdf import FPDF
 import gc
+import pickle
+import pycromanager as pycro
+
 # Selecting the GPU. This is used in case multiple scripts run in parallel.
 try:
     import torch
@@ -281,7 +284,7 @@ class NASConnection():
         print('Files downloaded to: ' + str(local_folder_path.joinpath(filename)))
         return None
     
-    def copy_files(self, remote_folder_path, local_folder_path, timeout=600, file_extension ='.tif'):
+    def copy_files(self, remote_folder_path, local_folder_path, timeout=600, file_extension =['.index','.tif']):
         '''
         This method downloads tif files from NAS to a temporal folder in the local computer.
         
@@ -314,7 +317,8 @@ class NASConnection():
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
         for file in list_dir:
-            if (file.filename not in ['.', '..']) and (file_extension in file.filename)  :
+            #if (file.filename not in ['.', '..']) and (file_extension in file.filename) :
+            if (file.filename not in ['.', '..']) and  any(file.filename.endswith(ext) for ext in file_extension):
                 print ('File Downloaded :', file.filename)
                 fileobj = open(file.filename,'wb')
                 self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj)
@@ -3338,19 +3342,33 @@ class Utilities():
         if number_of_fov >1:
             # This option sections a single tif file containing multiple fov.
             # The format of the original FOV is [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+            local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
             number_images_all_fov = len(list_files_names_all_fov)
             number_images = 0
+            
+            # reading metadata
+            try:
+                metadata = data = pycro.Dataset(local_data_dir)
+                number_z_slices = max(metadata.axes['z'])+1
+                number_color_channels = max(metadata.axes['channel'])+1
+                number_of_fov = max(metadata.axes['position'])+1
+                detected_metadata = True
+            except:
+                detected_metadata = False
+                print('Metadata not detected')
+            
+            
             for k in range(number_images_all_fov):
                 # Section that separaters all fov into single tif files
                 image_with_all_fov = list_images_all_fov[k]
                 number_total_images_in_fov = image_with_all_fov.shape[0]
-                if (number_total_images_in_fov % (number_color_channels*number_of_fov)) == 0:
-                    number_z_slices = int(number_total_images_in_fov / (number_color_channels*number_of_fov))
-                else:
-                    raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
-                if number_z_slices > 50:
-                    raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
+                if detected_metadata == False:
+                    if (number_total_images_in_fov % (number_color_channels*number_of_fov)) == 0:
+                        number_z_slices = int(number_total_images_in_fov / (number_color_channels*number_of_fov))
+                    else:
+                        raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
+                    if number_z_slices > 50:
+                        raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
                 number_elements_on_fov = number_color_channels*number_z_slices
                 list_files_names = []
                 y_shape, x_shape = image_with_all_fov.shape[1], image_with_all_fov.shape[2]                
