@@ -1345,18 +1345,21 @@ class BigFISH():
                 show_figure_in_cli = False                
             if not(self.image_name is None):
                 if self.save_files == True:
-                    plot.plot_detection(image_2D, 
-                                    spots=[spots_to_plot, clusters_to_plot[:, :3]], 
-                                    shape=["circle", "polygon"], 
-                                    radius=[3, 6], 
-                                    color=["orangered", "blue"],
-                                    linewidth=[1, 1], 
-                                    fill=[False, False], 
-                                    framesize=(12, 7), 
-                                    contrast=True,
-                                    rescale=True,
-                                    show=show_figure_in_cli,
-                                    path_output = path_output)
+                    try:
+                        plot.plot_detection(image_2D, 
+                                        spots=[spots_to_plot, clusters_to_plot[:, :3]], 
+                                        shape=["circle", "polygon"], 
+                                        radius=[3, 6], 
+                                        color=["orangered", "blue"],
+                                        linewidth=[1, 1], 
+                                        fill=[False, False], 
+                                        framesize=(12, 7), 
+                                        contrast=True,
+                                        rescale=True,
+                                        show=show_figure_in_cli,
+                                        path_output = path_output)
+                    except:
+                        pass
                     if self.show_plots ==True:
                         plt.show()
                     else:
@@ -3367,7 +3370,6 @@ class Utilities():
             number_images =0
             for i in range(number_images_all_fov):
                 for j in range (number_of_fov):
-                    
                     temp_image_fov = list_images_all_fov[i]
                     if use_metadata == False:
                         number_z_slices = temp_image_fov.shape[0]//2
