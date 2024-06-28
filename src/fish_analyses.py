@@ -3351,17 +3351,21 @@ class Utilities():
             destination_folder.mkdir(parents=True, exist_ok=True)
         else:
             destination_folder.mkdir(parents=True, exist_ok=True)
+        
+        local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+        if download_data_from_NAS == False:
+            local_data_dir = data_folder_path
         # Downloading data
         if use_metadata == True:
             try:
-                metadata = pycro.Dataset(str(data_folder_path))
+                metadata = pycro.Dataset(str(local_data_dir))
                 number_z_slices = max(metadata.axes['z'])+1
                 number_color_channels = max(metadata.axes['channel'])+1
                 number_of_fov = max(metadata.axes['position'])+1
                 detected_metadata = True
                 print('Number of z slices: ', str(number_z_slices), '\n',
-                        'Number of color channels: ', str(number_color_channels) , '\n'
-                        'Number of FOV: ', str(number_of_fov) , '\n', '\n', '\n')
+                    'Number of color channels: ', str(number_color_channels) , '\n'
+                    'Number of FOV: ', str(number_of_fov) , '\n', '\n', '\n')
             except:
                 raise ValueError('The metadata file is not found. Please check the path to the metadata file.')
         
@@ -3398,9 +3402,9 @@ class Utilities():
             if number_of_fov > 1:  
                 # This option sections a single tif file containing multiple fov.
                 # The format of the original FOV is [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-                local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
-                if download_data_from_NAS == False:
-                    local_data_dir = data_folder_path
+                #local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+                #if download_data_from_NAS == False:
+                #    local_data_dir = data_folder_path
                 number_images_all_fov = len(list_files_names_all_fov)
                 number_images = 0
                 # This option sections a single tif file containing multiple fov.
@@ -3437,7 +3441,7 @@ class Utilities():
                         del temp_image, temp_image_fov
             elif number_of_fov == 1:
                 # This option takes multiple tif files containing multiple images with format [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-                _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+                #_, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
                 number_images = len(list_files_names_all_fov)
                 # Re-arranging the image
                 list_images_standard_format= []
