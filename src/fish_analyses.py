@@ -3370,7 +3370,7 @@ class Utilities():
                 raise ValueError('The metadata file is not found. Please check the path to the metadata file.')
         
         if is_format_FOV_Z_Y_X_C == True:
-            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+            #_, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
             number_images_all_fov = len(list_files_names_all_fov)
             # Re-arranging the image from shape [FOV, Z, Y, X, C] to multiple tifs with shape [Z, Y, X, C]  FOV_Z_Y_X_C
             list_images_standard_format= []
