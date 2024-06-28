@@ -373,7 +373,7 @@ class ReadImages():
         Directory containing the images to read.
     '''    
     def __init__(self, directory:str,number_of_images_to_process=None):
-        if type(directory)== pathlib.PosixPath:
+        if type(directory)== pathlib.PosixPath or type(data_folder_path)== pathlib.WindowsPath:
             self.directory = directory
         else:
             self.directory = pathlib.Path(directory)
@@ -427,7 +427,7 @@ class MergeChannels():
         If True, it saves the merged images as tif. The default is False. 
     '''
     def __init__(self, directory:str ,substring_to_detect_in_file_name:str = '.*_C0.tif', save_figure:bool = False ):
-        if type(directory)== pathlib.PosixPath:
+        if type(directory)== pathlib.PosixPath or type(data_folder_path)== pathlib.WindowsPath:
             self.directory = directory
         else:
             self.directory = pathlib.Path(directory)
@@ -2343,7 +2343,7 @@ class PipelineFISH():
 
     def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.05,save_pdf_report=False,folder_name='temp',save_files=True,model_nuc_segmentation='nuclei',model_cyto_segmentation='cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
         
-        if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) :
+        if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) or type(data_folder_path)== pathlib.WindowsPath:
             list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
         else:
             #list_images =[image]
