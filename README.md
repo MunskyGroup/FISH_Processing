@@ -77,8 +77,8 @@ git clone --depth 1 https://github.com/MunskyGroup/FISH_Processing.git
 
 * To create a virtual environment, navigate to the location of the requirements file, and use:
 ```sh
- conda create -n FISH_processing_py10 python=3.10 -y
- source activate FISH_processing_py10
+ conda create -n FISH_processing python=3.10 -y
+ source activate FISH_processing
 ```
 * To install pytorch for GPU usage in Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```sh
