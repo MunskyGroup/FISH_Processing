@@ -2285,7 +2285,10 @@ class ReportPDF():
                     # Plotting the image with detected spots
                     temp_seg_name = pathlib.Path().absolute().joinpath( self.directory, 'det_' + temp_file_name + '_ch_'+str(channel)+'.png' )
                     pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + ': '+ temp_file_name,ln =2,align = 'L') 
-                    pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)                    
+                    try:
+                        pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-30)  
+                    except:
+                        pdf.cell(w=0, h=10, txt='Error during the calculation of the elbow plot',ln =2,align = 'L')                  
                     # adding some space
                     for j in range(0, 12):
                         pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
@@ -2338,7 +2341,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.10,save_pdf_report=False,folder_name='temp',save_files=True,model_nuc_segmentation='nuclei',model_cyto_segmentation='cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
+    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.05,save_pdf_report=False,folder_name='temp',save_files=True,model_nuc_segmentation='nuclei',model_cyto_segmentation='cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
         
         if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) :
             list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
@@ -2473,6 +2476,7 @@ class PipelineFISH():
                 mask_ts = (array_threshold_spot_detection != min_val) & (array_threshold_spot_detection != max_val)
                 average_threshold_spot_detection= int(np.mean(array_threshold_spot_detection[mask_ts]))
                 threshold_for_spot_detection.append(average_threshold_spot_detection)
+            print('Most images are noisy. An average threshold value for spot detection has been calculated using all images:', threshold_for_spot_detection)
         else:
             threshold_for_spot_detection = Utilities().create_list_thresholds_FISH(channels_with_FISH,threshold_for_spot_detection)
         self.threshold_for_spot_detection = threshold_for_spot_detection
@@ -2654,7 +2658,7 @@ class PipelineFISH():
                     list_masks_cytosol_no_nuclei.append(masks_cytosol_no_nuclei)
                     list_counter_image_id.append(counter)
                     list_thresholds_spot_detection.append(list_thresholds_spot_detection_in_image)
-                    print('    Intensity threshold for spot detection : ', list_thresholds_spot_detection_in_image)
+                    print('    Intensity threshold for spot detection : ', str(list_thresholds_spot_detection[-1]))
                     # Create the image with labels.
                     df_test = dataframe.loc[dataframe['image_id'] == counter]
                     test_cells_ids = np.unique(df_test['cell_id'].values)
