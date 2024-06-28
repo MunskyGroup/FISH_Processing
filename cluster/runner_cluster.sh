@@ -53,6 +53,7 @@ save_pdf_report=0
 convert_to_standard_format=0
 number_color_channels=0
 number_of_fov=0
+# Use the following parameters if you have a metadatafile that contains the number of color channels and the number of FOVs
 use_metadata=0
 is_format_FOV_Z_Y_X_C=0
 # #####################################################################

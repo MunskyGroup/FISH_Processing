@@ -1,4 +1,4 @@
-pycromanager>=0.34.6
+pycromanager==0.23.0
 cellpose==3.0.9
 pysmb== 1.2.9.1
 joblib==1.4.2
