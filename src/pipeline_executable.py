@@ -106,6 +106,8 @@ save_pdf_report= int(sys.argv[23])
 convert_to_standard_format = int(sys.argv[24])
 number_color_channels = int(sys.argv[25])
 number_of_fov = int(sys.argv[26])
+use_metadata = int(sys.argv[27])
+is_format_FOV_Z_Y_X_C = int(sys.argv[28])
 ######################################
 ######################################
 ####################################################################
@@ -128,12 +130,20 @@ if convert_to_standard_format == False:
                                                                                     data_folder_path, 
                                                                                     path_to_masks_dir,  
                                                                                     download_data_from_NAS)
-else:
+elif (convert_to_standard_format == True) and (use_metadata==True):
+    ####################################################################
+    local_data_dir, masks_dir, _, _, list_images= fa.Utilities().convert_to_standard_format(data_folder_path=data_folder_path, 
+                                                                                            path_to_config_file=path_to_config_file, 
+                                                                                            download_data_from_NAS = download_data_from_NAS,
+                                                                                            use_metadata=use_metadata,
+                                                                                            is_format_FOV_Z_Y_X_C=is_format_FOV_Z_Y_X_C)
+elif (convert_to_standard_format == True) and (use_metadata==False):
     local_data_dir,masks_dir, _, _, _= fa.Utilities().convert_to_standard_format(data_folder_path=data_folder_path, 
                                                                                     path_to_config_file=path_to_config_file, 
                                                                                     download_data_from_NAS = download_data_from_NAS,
                                                                                     number_color_channels=number_color_channels,
                                                                                     number_of_fov=number_of_fov )
+
 # Running the pipeline
 dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_dir, 
                                                                     channels_with_cytosol, 
