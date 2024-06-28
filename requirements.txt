@@ -1,14 +1,15 @@
-big-fish>=0.6.1
-cellpose==2.2.3
-pysmb>= 1.2.9
-joblib>=1.1.0
-tqdm>=4.62.3
-tifffile>=2020.9.3
-ipykernel>=6.9.0
-scikit-image>=0.19.1
-fpdf>=1.7.2
-seaborn>=0.11.2
-PyYAML>=6.0
-matplotlib-scalebar~=0.8.1
-pydantic~=1.10.7
-joypy~=0.2.6
+pycromanager>=0.34.6
+cellpose==3.0.9
+pysmb== 1.2.9.1
+joblib==1.4.2
+tqdm>=4.66.4
+tifffile==2024.5.22
+ipykernel==6.29.4
+scikit-image==0.23.2
+fpdf==1.7.2
+seaborn==0.13.2
+PyYAML>=6.0.1
+matplotlib-scalebar==0.8.1
+pydantic==2.7.4
+joypy==0.2.6
+big-fish==0.6.2

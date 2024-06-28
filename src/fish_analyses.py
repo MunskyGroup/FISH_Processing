@@ -510,7 +510,7 @@ class Intensity():
         self.method = method
         self.number_channels = original_image.shape[-1]
         self.PIXELS_AROUND_SPOT = 3 # THIS HAS TO BE AN EVEN NUMBER
-        if isinstance(spot_size,(int,np.int64,np.int,np.int32)) :
+        if isinstance(spot_size,(int, np.int64,np.int32)) :
             self.spot_size = np.full(number_spots , spot_size)
         elif isinstance(spot_size , (list, np.ndarray) ):
             self.spot_size = spot_size.astype('int')
@@ -1669,13 +1669,13 @@ class DataProcessing():
                 array_spot_int = intensity_spots_cyto
             else:
                 array_spot_int = np.zeros( ( 1,self.number_color_channels )  )
-            
             # Populating the columns wth the spots intensity for each channel.
             number_columns_after_adding_intensity_in_cell = self.NUMBER_OF_CONSTANT_COLUMNS_IN_DATAFRAME+(6*self.number_color_channels )                       
             array_complete[:, number_columns_after_adding_intensity_in_cell: number_columns_after_adding_intensity_in_cell+self.number_color_channels] = array_spot_int
-            
             # Creating the dataframe  
-            df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
+            #df = df.append(pd.DataFrame(array_complete, columns=df.columns), ignore_index=True)
+            df_new = pd.DataFrame(array_complete, columns=df.columns)
+            df = pd.concat([df, df_new], ignore_index=True)
             new_dtypes = {'image_id':int, 'cell_id':int, 'spot_id':int,'is_nuc':int,'is_cluster':int,'nuc_loc_y':int, 'nuc_loc_x':int,'cyto_loc_y':int, 'cyto_loc_x':int,'nuc_area_px':int,'cyto_area_px':int, 'cell_area_px':int,'x':int,'y':int,'z':int,'cluster_size':int,'spot_type':int,'is_cell_fragmented':int}
             df = df.astype(new_dtypes)
             return df
@@ -3040,7 +3040,13 @@ class MicroscopeSimulation():
                             dataframe_cell_library.loc[   (dataframe_cell_library['cell_id']==library_cell_index) ].ts_size_3.values ] 
                 ts_array[:] = list_ts[:]
                 cell_data = pd.Series([ y_positions[counter], x_positions[counter], centroid_y, centroid_x ,cell_size_Z_Y_X[library_cell_index,0], cell_size_Z_Y_X[library_cell_index,1], cell_size_Z_Y_X[library_cell_index,2], nucleus_area, number_of_spots]+ts_array.tolist()+[library_cell_index ], index=simulation_dataframe.columns)
-                simulation_dataframe = simulation_dataframe.append(cell_data, ignore_index=True)
+                #simulation_dataframe = simulation_dataframe.append(cell_data, ignore_index=True)
+                cell_data_df = cell_data.to_frame().T
+                simulation_dataframe = pd.concat([simulation_dataframe, cell_data_df], ignore_index=True)
+
+
+                
+                
                 printed_cells+=1
             counter+=1
         new_dtypes = { 'start_y_position':int,'start_x_position':int,'centroid_y':int,'centroid_x':int,'z_size':int,'y_size':int,'x_size':int,'nucleus_area':int,'number_of_spots':int,'ts_size_0':int,'ts_size_1':int,'ts_size_2':int,'ts_size_3':int,'library_id':int}
@@ -3329,7 +3335,7 @@ class Utilities():
             reordered_mask=mask_image_tested
         return reordered_mask  
     
-    def convert_to_standard_format(self,data_folder_path,path_to_config_file, number_color_channels=2,number_of_fov=1, download_data_from_NAS = True):
+    def convert_to_standard_format(self,data_folder_path,path_to_config_file, number_color_channels=2,number_of_fov=1, download_data_from_NAS = True, use_metadata=False, is_format_FOV_Z_Y_X_C=True):
         path_to_masks_dir = None
         # Creating a folder to store all plots
         destination_folder = pathlib.Path().absolute().joinpath('temp_'+data_folder_path.name+'_sf')
@@ -3339,75 +3345,112 @@ class Utilities():
         else:
             destination_folder.mkdir(parents=True, exist_ok=True)
         # Downloading data
-        if number_of_fov >1:
-            # This option sections a single tif file containing multiple fov.
-            # The format of the original FOV is [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-            local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
-            number_images_all_fov = len(list_files_names_all_fov)
-            number_images = 0
-            
-            # reading metadata
+        if use_metadata == True:
             try:
-                metadata = data = pycro.Dataset(local_data_dir)
+                metadata = pycro.Dataset(str(data_folder_path))
                 number_z_slices = max(metadata.axes['z'])+1
                 number_color_channels = max(metadata.axes['channel'])+1
                 number_of_fov = max(metadata.axes['position'])+1
                 detected_metadata = True
+                print('Number of z slices: ', str(number_z_slices), '\n',
+                        'Number of color channels: ', str(number_color_channels) , '\n'
+                        'Number of FOV: ', str(number_of_fov) , '\n', '\n', '\n')
             except:
-                detected_metadata = False
-                print('Metadata not detected')
+                raise ValueError('The metadata file is not found. Please check the path to the metadata file.')
+        
+        if is_format_FOV_Z_Y_X_C == True:
+            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+            number_images_all_fov = len(list_files_names_all_fov)
+            # Re-arranging the image from shape [FOV, Z, Y, X, C] to multiple tifs with shape [Z, Y, X, C]  FOV_Z_Y_X_C
+            list_images_standard_format= []
+            list_files_names = []
+            number_images =0
+            for i in range(number_images_all_fov):
+                for j in range (number_of_fov):
+                    
+                    temp_image_fov = list_images_all_fov[i]
+                    if use_metadata == False:
+                        number_z_slices = temp_image_fov.shape[0]//2
+                        if number_z_slices > 50:
+                            raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
+                    y_shape, x_shape = temp_image_fov.shape[2], temp_image_fov.shape[3]
+                    list_files_names.append(  list_files_names_all_fov[i].split(".")[0]+'_fov_'+str(j) +'.tif' )
+                    temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
+                    
+                    temp_image = temp_image_fov[j,:,:,:] # format [Z,Y,X,C]
+                    #for ch in range(number_color_channels):
+                    #    temp_image[:,:,:,ch] = temp_image_fov[ch::number_color_channels,:,:] 
+                    list_images_standard_format.append(temp_image)
+                    number_images+=1
             
+            for k in range(number_images):
+                # image_name = list_files_names[i].split(".")[0] +'.tif'
+                tifffile.imsave(str(destination_folder.joinpath(list_files_names[k])), list_images_standard_format[k])
             
-            for k in range(number_images_all_fov):
-                # Section that separaters all fov into single tif files
-                image_with_all_fov = list_images_all_fov[k]
-                number_total_images_in_fov = image_with_all_fov.shape[0]
-                if detected_metadata == False:
-                    if (number_total_images_in_fov % (number_color_channels*number_of_fov)) == 0:
-                        number_z_slices = int(number_total_images_in_fov / (number_color_channels*number_of_fov))
-                    else:
-                        raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
+            masks_dir = None
+        else:
+            if number_of_fov > 1:  
+                # This option sections a single tif file containing multiple fov.
+                # The format of the original FOV is [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
+                local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+                if download_data_from_NAS == False:
+                    local_data_dir = data_folder_path
+                number_images_all_fov = len(list_files_names_all_fov)
+                number_images = 0
+                # This option sections a single tif file containing multiple fov.
+                # The format of the original FOV is [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]  
+                for k in range(number_images_all_fov):
+                    # Section that separaters all fov into single tif files
+                    image_with_all_fov = list_images_all_fov[k]
+                    number_total_images_in_fov = image_with_all_fov.shape[0]
+                    if detected_metadata == False:
+                        if (number_total_images_in_fov % (number_color_channels*number_of_fov)) == 0:
+                            number_z_slices = int(number_total_images_in_fov / (number_color_channels*number_of_fov))
+                        else:
+                            raise ValueError('The number of z slices is not defined correctly double-check the number_of_fov and number_color_channels.' )
+                        if number_z_slices > 50:
+                            raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
+                    number_elements_on_fov = number_color_channels*number_z_slices
+                    list_files_names = []
+                    y_shape, x_shape = image_with_all_fov.shape[1], image_with_all_fov.shape[2]                
+                    # Iterating for each image. Note that the color channels are intercalated in the original image. For that reason a for loop is needed and then selecting even and odd indexes.
+                    list_images_standard_format= []
+                    counter=0
+                    for i in range(number_of_fov):
+                        list_files_names.append(  list_files_names_all_fov[k].split(".")[0]+'_img_'+str(k)+'_fov_'+str(i) +'.tif' )
+                        temp_image_fov = np.zeros((number_elements_on_fov,y_shape, x_shape))
+                        temp_image_fov = image_with_all_fov[counter*number_elements_on_fov:number_elements_on_fov*(counter+1),:,:]
+                        temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
+                        for ch in range(number_color_channels):
+                            temp_image[:,:,:,ch] = temp_image_fov[ch::number_color_channels,:,:] 
+                        #temp_image[:,:,:,0] = temp_image_fov[::2,:,:] # even indexes
+                        #temp_image[:,:,:,1] = temp_image_fov[1::2,:,:] # odd indexes
+                        list_images_standard_format.append(temp_image)
+                        counter+=1
+                        number_images+=1
+                        del temp_image, temp_image_fov
+            elif number_of_fov == 1:
+                # This option takes multiple tif files containing multiple images with format [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
+                _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
+                number_images = len(list_files_names_all_fov)
+                # Re-arranging the image
+                list_images_standard_format= []
+                list_files_names = []
+                for i in range(number_images):
+                    temp_image_fov = list_images_all_fov[i]
+                    number_z_slices = temp_image_fov.shape[0]//2
                     if number_z_slices > 50:
                         raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
-                number_elements_on_fov = number_color_channels*number_z_slices
-                list_files_names = []
-                y_shape, x_shape = image_with_all_fov.shape[1], image_with_all_fov.shape[2]                
-                # Iterating for each image. Note that the color channels are intercalated in the original image. For that reason a for loop is needed and then selecting even and odd indexes.
-                list_images_standard_format= []
-                counter=0
-                for i in range(number_of_fov):
-                    list_files_names.append(  list_files_names_all_fov[k].split(".")[0]+'_img_'+str(k)+'_fov_'+str(i) +'.tif' )
-                    temp_image_fov = np.zeros((number_elements_on_fov,y_shape, x_shape))
-                    temp_image_fov = image_with_all_fov[counter*number_elements_on_fov:number_elements_on_fov*(counter+1),:,:]
+                    y_shape, x_shape = temp_image_fov.shape[1], temp_image_fov.shape[2]
+                    list_files_names.append(  list_files_names_all_fov[i].split(".")[0]+'_fov_'+str(i) +'.tif' )
                     temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
                     for ch in range(number_color_channels):
                         temp_image[:,:,:,ch] = temp_image_fov[ch::number_color_channels,:,:] 
-                    #temp_image[:,:,:,0] = temp_image_fov[::2,:,:] # even indexes
-                    #temp_image[:,:,:,1] = temp_image_fov[1::2,:,:] # odd indexes
+                    #temp_image[:,:,:,0] = list_images_all_fov[i][::2,:,:] # even indexes
+                    #temp_image[:,:,:,1] = list_images_all_fov[i][1::2,:,:] # odd indexes
                     list_images_standard_format.append(temp_image)
-                    counter+=1
-                    number_images+=1
-                    del temp_image, temp_image_fov
-        else:
-            # This option takes multiple tif files containing multiple images with format [FOV_0:Ch_0-Ch_1-Z_1...Z_N, ... FOV_N:Ch_0-Ch_1-Z_1...Z_N]
-            _, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(path_to_config_file, data_folder_path, path_to_masks_dir,  download_data_from_NAS)
-            number_images = len(list_files_names_all_fov)
-            # Re-arranging the image
-            list_images_standard_format= []
-            list_files_names = []
-            for i in range(number_images):
-                temp_image_fov = list_images_all_fov[i]
-                number_z_slices = temp_image_fov.shape[0]//2
-                if number_z_slices > 50:
-                    raise ValueError('The number of automatically detected z slices is '+str(number_z_slices)+', double-check the number_of_fov and number_color_channels.' )
-                y_shape, x_shape = temp_image_fov.shape[1], temp_image_fov.shape[2]
-                list_files_names.append(  list_files_names_all_fov[i].split(".")[0]+'_fov_'+str(i) +'.tif' )
-                temp_image = np.zeros((number_z_slices,y_shape, x_shape,number_color_channels))
-                for ch in range(number_color_channels):
-                    temp_image[:,:,:,ch] = temp_image_fov[ch::number_color_channels,:,:] 
-                #temp_image[:,:,:,0] = list_images_all_fov[i][::2,:,:] # even indexes
-                #temp_image[:,:,:,1] = list_images_all_fov[i][1::2,:,:] # odd indexes
-                list_images_standard_format.append(temp_image)
+            
+        
         # Saving images as tif files
         for i in range(number_images):
             # image_name = list_files_names[i].split(".")[0] +'.tif'
