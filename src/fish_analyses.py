@@ -373,7 +373,7 @@ class ReadImages():
         Directory containing the images to read.
     '''    
     def __init__(self, directory:str,number_of_images_to_process=None):
-        if type(directory)== pathlib.PosixPath or type(data_folder_path)== pathlib.WindowsPath:
+        if type(directory)== pathlib.PosixPath or type(directory)== pathlib.WindowsPath:
             self.directory = directory
         else:
             self.directory = pathlib.Path(directory)
@@ -427,7 +427,7 @@ class MergeChannels():
         If True, it saves the merged images as tif. The default is False. 
     '''
     def __init__(self, directory:str ,substring_to_detect_in_file_name:str = '.*_C0.tif', save_figure:bool = False ):
-        if type(directory)== pathlib.PosixPath or type(data_folder_path)== pathlib.WindowsPath:
+        if type(directory)== pathlib.PosixPath or type(directory)== pathlib.WindowsPath:
             self.directory = directory
         else:
             self.directory = pathlib.Path(directory)
