@@ -3362,10 +3362,12 @@ class Utilities():
                 number_z_slices = max(metadata.axes['z'])+1
                 number_color_channels = max(metadata.axes['channel'])+1
                 number_of_fov = max(metadata.axes['position'])+1
+                number_of_tp = max(metadata.axes['time'])+1
                 detected_metadata = True
                 print('Number of z slices: ', str(number_z_slices), '\n',
                     'Number of color channels: ', str(number_color_channels) , '\n'
-                    'Number of FOV: ', str(number_of_fov) , '\n', '\n', '\n')
+                    'Number of FOV: ', str(number_of_fov) , '\n',
+                    'Number of TimePoints', str(number_of_tp), '\n', '\n', '\n')
             except:
                 raise ValueError('The metadata file is not found. Please check the path to the metadata file.')
         
