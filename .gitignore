@@ -34,3 +34,17 @@ kk*
 test_simulation/
 database*
 OneDrive*/
+.idea/FISH_Processing.iml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/vcs.xml
+.idea/modules.xml
+.idea/misc.xml
+src/SandBox/pdf_report_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.pdf
+src/SandBox/original_images_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.pdf
+src/SandBox/metadata_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.txt
+src/SandBox/images_report_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.csv
+src/SandBox/pipelineData.pkl
+src/SandBox/segmentation_images_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.pdf
+src/SandBox/Sequence diagram of .PipelineFISH() of -src-fish_analyses.py.mmd
+src/SandBox/cells_channel_0_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.pdf
+src/SandBox/dataframe_H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2.csv
