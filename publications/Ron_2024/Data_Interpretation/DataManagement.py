@@ -17,7 +17,7 @@ import fish_analyses as fa
 
 
 class DataManagement:
-    def __init__(self, file_path, Condition, DexConc, Replica, time_value,time_TPL_value,output_path,minimum_spots_cluster=4,mandatory_substring=None,connect_to_NAS=False,path_to_config_file=None,save_csv=True):
+    def __init__(self, file_path, Condition, DexConc, Replica, time_value,time_TPL_value,output_path,minimum_spots_cluster=2,mandatory_substring=None,connect_to_NAS=False,path_to_config_file=None,save_csv=True):
         # This section downloads the zip file from NAS and extracts the dataframe or uses the dataframe from the local folder.
         if connect_to_NAS == False:
             self.file_path = file_path
@@ -68,7 +68,6 @@ class DataManagement:
         RNA_cyto_list = []  
         ts_size_list = []
         
-        # This code will loop through each cell and store the values in the lists above.
         for i in range(number_cells):
             nuc_area = np.asarray(dataframe.loc[
                 (dataframe['cell_id'] == i)
@@ -97,19 +96,35 @@ class DataManagement:
                     (dataframe['is_cell_fragmented'] != -1)
                 ].pseudo_cyto_int_ch_0.values[0])
             
-            #  This is counting the number of spots in the nucleus that meet certain conditions and storing this in the nuc variable.
-            nuc = np.asarray(len(dataframe.loc[
+            # Count the number of RNA in the nucleus
+            nuc_spots = len(dataframe.loc[
                 (dataframe['cell_id'] == i) &
                 (dataframe['is_nuc'] == True) &
                 (dataframe['is_cell_fragmented'] != -1)
-            ].spot_id))
+            ].spot_id)
             
-            #  This is counting the number of spots in the nucleus that meet certain conditions and storing this in the nuc variable.
-            cyto = np.asarray(len(dataframe.loc[
+            nuc_cluster_rna = dataframe.loc[
+                (dataframe['cell_id'] == i) &
+                (dataframe['is_nuc'] == True) &
+                (dataframe['is_cell_fragmented'] != -1)
+            ].cluster_size.sum()
+            
+            nuc = np.asarray(nuc_spots + nuc_cluster_rna - 1)
+            
+            # Count the number of RNA in the cytoplasm
+            cyto_spots = len(dataframe.loc[
                 (dataframe['cell_id'] == i) &
                 (dataframe['is_nuc'] == False) &
                 (dataframe['is_cell_fragmented'] != -1)
-            ].spot_id))
+            ].spot_id)
+            
+            cyto_cluster_rna = dataframe.loc[
+                (dataframe['cell_id'] == i) &
+                (dataframe['is_nuc'] == False) &
+                (dataframe['is_cell_fragmented'] != -1)
+            ].cluster_size.sum()
+            
+            cyto = np.asarray(cyto_spots + cyto_cluster_rna - 1)
             
             ####### This is counting all transcription sites for DUSP1 that are larger than "minimum_spots_cluster".
             ts_size = dataframe.loc[
@@ -141,6 +156,7 @@ class DataManagement:
             RNA_nuc_list.append(nuc)
             RNA_cyto_list.append(cyto)
             ts_size_list.append(ts_size_array)
+
         
         # Create a pandas DataFrame from the list of ts_int values
         df_ts_size_per_cell = pd.DataFrame(ts_size_list) 

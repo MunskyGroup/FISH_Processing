@@ -67,8 +67,8 @@ import yaml
 import shutil
 from fpdf import FPDF
 import gc
-import pickle
-import pycromanager as pycro
+#import pickle
+#import pycromanager as pycro
 
 # Selecting the GPU. This is used in case multiple scripts run in parallel.
 try:
