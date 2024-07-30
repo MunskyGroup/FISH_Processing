@@ -1898,9 +1898,13 @@ class SpotDetection():
         Uses Big_FISH log_filter. The default is True.
     threshold_for_spot_detection: scalar or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
+    save_files : bool, optional
+        If True, it saves the images with detected spots. The default is True.
+    yx_spot_size_in_px : int or None
+        Size of the spot in pixels. The default is None and assumes the minimum spot size is 3 pixels.
     
     '''
-    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=500, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
+    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=500, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True,yx_spot_size_in_px=None):
         if len(image.shape)<4:
             image= np.expand_dims(image,axis =0)
         self.image = image
@@ -1947,6 +1951,8 @@ class SpotDetection():
             threshold_for_spot_detection=[threshold_for_spot_detection]
         self.threshold_for_spot_detection=threshold_for_spot_detection
         self.save_files = save_files
+        self.MINIMUM_SPOT_SIZE_IN_PX = 3
+        self.yx_spot_size_in_px =yx_spot_size_in_px
     def get_dataframe(self):
         list_fish_images = []
         list_thresholds_spot_detection = []
@@ -1965,7 +1971,11 @@ class SpotDetection():
                                                                                 threshold_for_spot_detection=self.threshold_for_spot_detection[i],save_files=self.save_files).detect()
             list_thresholds_spot_detection.append(threshold)
             # converting the psf to pixles
-            yx_spot_size_in_px = np.max((1,int(voxel_size_yx / psf_yx))).astype('int')
+            
+            if self.yx_spot_size_in_px is None:
+                yx_spot_size_in_px = np.max((self.MINIMUM_SPOT_SIZE_IN_PX,int(voxel_size_yx / psf_yx))).astype('int')
+            else:
+                yx_spot_size_in_px = self.yx_spot_size_in_px
             
             dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.image, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus,
                                             yx_spot_size_in_px=yx_spot_size_in_px, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i,number_color_channels=self.number_color_channels ).get_dataframe()
