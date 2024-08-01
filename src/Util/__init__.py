@@ -1,3 +1,5 @@
+from .All_in_one import *
+
 
 # from .BigFish import BigFISH
 # from .CellPose import Cellpose
@@ -17,21 +19,21 @@
 # from .Utilities import Utilities
 
 
-__all__ = [
-    "BigFISH",
-    "Cellpose",
-    "CellSegmentation",
-    "ColocalizationDistance",
-    "DataProcessing",
-    "GaussianFilter",
-    "Intensity",
-    "MergeChannels",
-    "Metadata",
-    "NASConnection",
-    "Plots",
-    "ReadImages",
-    "RemoveExtrema",
-    "ReportPDF",
-    "SpotDetection",
-    "Utilities",
-]
+# __all__ = [
+#     "BigFISH",
+#     "Cellpose",
+#     "CellSegmentation",
+#     "ColocalizationDistance",
+#     "DataProcessing",
+#     "GaussianFilter",
+#     "Intensity",
+#     "MergeChannels",
+#     "Metadata",
+#     "NASConnection",
+#     "Plots",
+#     "ReadImages",
+#     "RemoveExtrema",
+#     "ReportPDF",
+#     "SpotDetection",
+#     "Utilities",
+# ]

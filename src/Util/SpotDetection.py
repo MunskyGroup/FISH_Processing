@@ -1,13 +1,14 @@
-import numpy as np                     # For numerical operations with arrays
+import numpy as np  # For numerical operations with arrays
+
+# from . import Utilities, DataProcessing, BigFISH
+from src.Util.BigFish import BigFISH
+from src.Util.DataProcessing import DataProcessing
+from src.Util.Utilities import Utilities
+
+
 # from Util.BigFish import BigFISH             # For spot detection using Big-FISH
 # from Utilities import Utilities         # Assuming a utility class for mask separation
 # from Util.DataProcessing import DataProcessing  # Assuming a class for processing data
-
-#from . import Utilities, DataProcessing, BigFISH
-from src.Util.BigFish import BigFISH
-from src.Util.Utilities import Utilities
-from src.Util.DataProcessing import DataProcessing
-
 
 
 class SpotDetection():

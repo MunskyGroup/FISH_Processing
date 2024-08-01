@@ -1,57 +1,28 @@
-from skimage import img_as_float64, img_as_uint
-from skimage.filters import gaussian
 from joblib import Parallel, delayed
 import multiprocessing
 import bigfish.stack as stack
-import bigfish.plot as plot
-import bigfish.detection as detection
-import bigfish.multistack as multistack
-import pandas as pd
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 import re
 from skimage.io import imread
-from scipy.ndimage import gaussian_filter
-from skimage.morphology import erosion
-from scipy import ndimage
 from scipy.optimize import curve_fit
-import itertools
-import glob
-import tifffile
-import sys
-import datetime
-import getpass
-import pkg_resources
-import platform
-import math
 from cellpose import models
-import os; from os import listdir; from os.path import isfile, join
+import os;
 import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 from skimage.measure import find_contours
 from scipy import signal
-from scipy import ndimage
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.path as mpltPath
 import matplotlib as mpl
 mpl.rc('image', cmap='viridis')
 plt.style.use('ggplot')  # ggplot  #default
 import multiprocessing
-from smb.SMBConnection import SMBConnection
-import socket
-import pathlib
-import yaml
-import shutil
-from fpdf import FPDF
 import gc
-import pickle
-import pycromanager as pycro
 
-import torch
 import warnings
 
 warnings.filterwarnings('ignore', category=matplotlib.MatplotlibDeprecationWarning)
@@ -65,15 +36,10 @@ try:
         os.environ["CUDA_VISIBLE_DEVICES"] =  str(np.random.randint(0,number_gpus,1)[0])
 except:
     print('No GPUs are detected on this computer. Please follow the instructions for the correct installation.')
-import zipfile
 import seaborn as sns
-import scipy.stats as stats
 from  matplotlib.ticker import FuncFormatter
 from matplotlib_scalebar.scalebar import ScaleBar
 font_props = {'size': 16}
-import joypy
-from matplotlib import cm
-from scipy.ndimage import binary_dilation
 
 from src.Util.Utilities import Utilities
 

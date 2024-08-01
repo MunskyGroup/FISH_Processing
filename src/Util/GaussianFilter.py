@@ -1,8 +1,9 @@
-import numpy as np                      # For numerical operations with arrays
-from skimage.filters import gaussian   # For applying Gaussian filter
-from skimage import img_as_uint        # For converting images to uint16 format
-from joblib import Parallel, delayed   # For parallel processing
-import multiprocessing                  # For CPU count
+import multiprocessing  # For CPU count
+
+import numpy as np  # For numerical operations with arrays
+from joblib import Parallel, delayed  # For parallel processing
+from skimage import img_as_uint  # For converting images to uint16 format
+from skimage.filters import gaussian  # For applying Gaussian filter
 
 
 class GaussianFilter():

@@ -1,9 +1,10 @@
 import os
 import pathlib
 import shutil
-from smb.SMBConnection import SMBConnection
 import socket
+
 import yaml
+from smb.SMBConnection import SMBConnection
 
 
 class NASConnection():

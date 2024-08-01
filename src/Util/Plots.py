@@ -1,22 +1,23 @@
-import numpy as np
-from skimage.io import imread
-import matplotlib.pyplot as plt
-import math
-from skimage.morphology import erosion
-from skimage.measure import find_contours
-import seaborn as sns
-import os
-from scipy import signal
-import pathlib
-import pandas as pd
-import joypy
-from  matplotlib.ticker import FuncFormatter
-from matplotlib import cm
-import warnings
 import itertools
-import re  
+import math
+import os
+import pathlib
+import re
+import warnings
+
+import joypy
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import scipy.stats as stats
+import seaborn as sns
+from matplotlib import cm
+from matplotlib.ticker import FuncFormatter
 from matplotlib_scalebar.scalebar import ScaleBar
+from scipy import signal
+from skimage.io import imread
+from skimage.measure import find_contours
+from skimage.morphology import erosion
 
 font_props = {'size': 16}
 

@@ -1,13 +1,15 @@
+import bigfish.multistack as multistack
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import bigfish.multistack as multistack
 from scipy import ndimage
-import matplotlib.pyplot as plt
 from scipy.ndimage import binary_dilation
 
+from src.Util.Intensity import Intensity
 # from . import Utilities, Intensity
 from src.Util.Utilities import Utilities
-from src.Util.Intensity import Intensity
+
+
 # from Utilities import Utilities
 # from Util.Intensity import Intensity
 

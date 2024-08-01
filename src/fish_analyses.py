@@ -710,7 +710,7 @@ class Cellpose():
         self.NUMBER_OF_CORES = NUMBER_OF_CORES
         self.default_flow_threshold = 0.4 # default is 0.4
         self.optimization_parameter = np.unique(  np.round(np.linspace(self.minimum_flow_threshold, self.maximum_flow_threshold, self.num_iterations), 2) )
-        self.MINIMUM_CELL_AREA =  np.pi*(diameter/4)**2 #1000  # using half of the diameter to calculate area.
+        self.MINIMUM_CELL_AREA = np.pi*(diameter/4)**2 #1000  # using half of the diameter to calculate area.
         self.BATCH_SIZE = 80
         self.pretrained_model=pretrained_model
         
@@ -2630,7 +2630,7 @@ class PipelineFISH():
                 
                 list_number_detected_cells.append(number_detected_cells)
                 #print('- SPOT DETECTION')
-                if segmentation_successful==True:
+                if segmentation_successful:
                     temp_detection_img_name = pathlib.Path().absolute().joinpath( temp_folder_name, 'det_' + temp_file_name )
                     dataframe_FISH, list_fish_images,list_thresholds_spot_detection_in_image = SpotDetection(self.list_images[i],
                                                                                             self.channels_with_FISH,

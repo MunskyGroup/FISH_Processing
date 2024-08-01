@@ -1,10 +1,10 @@
-import numpy as np
-import bigfish.stack as stack
-import bigfish.plot as plot
 import bigfish.detection as detection
-import bigfish.multistack as multistack
+import bigfish.plot as plot
+import bigfish.stack as stack
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 class BigFISH():
     '''

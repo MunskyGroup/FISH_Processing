@@ -1,9 +1,10 @@
 import pathlib
+import re
 from os import listdir
 from os.path import isfile, join
+
 from skimage.io import imread
-import re
-import numpy as np
+
 
 class ReadImages():
     '''

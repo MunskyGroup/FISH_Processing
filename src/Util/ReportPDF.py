@@ -1,5 +1,6 @@
+import pathlib  # For working with file paths
+
 from fpdf import FPDF  # For creating PDF documents
-import pathlib         # For working with file paths
 
 
 class ReportPDF():

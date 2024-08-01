@@ -1,11 +1,11 @@
-import pathlib                      # For working with filesystem paths
-import os                           # For filesystem operations
-import re                           # For regular expressions
-import glob                         # For finding files using Unix shell rules
-from skimage.io import imread       # For reading images with skimage
-import numpy as np                  # For numerical operations with arrays
-import tifffile                     # For saving images in TIFF format
+import glob  # For finding files using Unix shell rules
+import os  # For filesystem operations
+import pathlib  # For working with filesystem paths
+import re  # For regular expressions
 
+import numpy as np  # For numerical operations with arrays
+import tifffile  # For saving images in TIFF format
+from skimage.io import imread  # For reading images with skimage
 
 
 class MergeChannels():
