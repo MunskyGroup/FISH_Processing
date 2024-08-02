@@ -67,6 +67,8 @@ class DataManagement:
         RNA_nuc_list = []  
         RNA_cyto_list = []  
         ts_size_list = []
+        nuc_cluster_list = []
+        cyto_cluster_list = []
         
         for i in range(number_cells):
             nuc_area = np.asarray(dataframe.loc[
@@ -110,6 +112,13 @@ class DataManagement:
             ].cluster_size.sum()
             
             nuc = np.asarray(nuc_spots + nuc_cluster_rna - 1)
+
+            number_nuc_cluster = len(dataframe.loc[
+                (dataframe['cell_id'] == i) &
+                (dataframe['is_cluster'] == True) &
+                (dataframe['is_nuc'] == True) &
+                (dataframe['is_cell_fragmented'] != -1)
+            ].spot_id)
             
             # Count the number of RNA in the cytoplasm
             cyto_spots = len(dataframe.loc[
@@ -125,6 +134,13 @@ class DataManagement:
             ].cluster_size.sum()
             
             cyto = np.asarray(cyto_spots + cyto_cluster_rna - 1)
+
+            cyto_cluster_number = len(dataframe.loc[
+                (dataframe['cell_id'] == i) &
+                (dataframe['is_cluster'] == True) &
+                (dataframe['is_nuc'] == False) &
+                (dataframe['is_cell_fragmented'] != -1)
+            ].spot_id)
             
             ####### This is counting all transcription sites for DUSP1 that are larger than "minimum_spots_cluster".
             ts_size = dataframe.loc[
@@ -156,6 +172,8 @@ class DataManagement:
             RNA_nuc_list.append(nuc)
             RNA_cyto_list.append(cyto)
             ts_size_list.append(ts_size_array)
+            nuc_cluster_list.append(number_nuc_cluster)
+            cyto_cluster_list.append(cyto_cluster_number)
 
         
         # Create a pandas DataFrame from the list of ts_int values
@@ -176,8 +194,10 @@ class DataManagement:
             'Cyto_GR_avg_int': GR_avg_cyto_intensity_list,
             'Nuc_DUSP1_avg_int': DUSP1_avg_nuc_intensity_list, # Only relevant for condition == DUSP1_timesweep and DUSP1_TPL. NaNs for GR_timesweep.
             'Cyto_DUSP1_avg_int': DUSP1_avg_cyto_intensity_list, # Only relevant for condition == DUSP1_timesweep and DUSP1_TPL. NaNs for GR_timesweep.
-            'RNA_DUSP1_nuc': RNA_nuc_list,    # RNA_GR_cyto do we need also for DUSP1?
-            'RNA_DUSP1_cyto': RNA_cyto_list  # RNA_GR_cyto do we need also for DUSP1?
+            'RNA_DUSP1_nuc': RNA_nuc_list,    
+            'RNA_DUSP1_cyto': RNA_cyto_list,
+            'Nuc_cluster_number': nuc_cluster_list,
+            'Cyto_cluster_number': cyto_cluster_list
         }
         # Create a pandas DataFrame from the dictionary
         df_data = pd.DataFrame(data)
