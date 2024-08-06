@@ -82,8 +82,8 @@ from matplotlib import cm
 from scipy.ndimage import binary_dilation
 
 from src import PipelineStepsClass, StepOutputsClass
-from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
+from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
 # from src.Util.Utilities import Utilities
 # from src.Util.Plots import Plots

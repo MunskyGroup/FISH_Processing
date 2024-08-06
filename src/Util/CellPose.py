@@ -8,7 +8,7 @@ import re
 from skimage.io import imread
 from scipy.optimize import curve_fit
 from cellpose import models
-import os;
+import os
 import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -44,15 +44,17 @@ font_props = {'size': 16}
 from src.Util.Utilities import Utilities
 
 
-class Cellpose():
-    '''
-    This class is intended to detect cells by image masking using `Cellpose <https://github.com/MouseLand/cellpose>`_ . The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
-    For a complete description of Cellpose check the `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
+class Cellpose:
+    """
+    This class is intended to detect cells by image masking using `Cellpose <https://github.com/MouseLand/cellpose>`_ .
+    The class uses optimization to maximize the number of cells or maximize the size of the detected cells.
+    For a complete description of Cellpose check the
+    `Cellpose documentation <https://cellpose.readthedocs.io/en/latest/>`_ .
 
     Parameters
 
     image : NumPy array
-        Array of images with dimensions [Z, Y, X, C].
+        of images with dimensions [Z, Y, X, C].
     num_iterations : int, optional
         Number of iterations for the optimization process. The default is 5.
     channels : List, optional
@@ -65,7 +67,7 @@ class Cellpose():
         Option to use the optimization algorithm to maximize the number of cells or maximize the size options are 'max_area' or 'max_cells' or 'max_cells_and_area'. The default is 'max_cells_and_area'.
     NUMBER_OF_CORES : int, optional
         The number of CPU cores to use for parallel computing. The default is 1.
-    '''
+    """
 
     def __init__(self, image: np.ndarray, num_iterations: int = 6, channels: list = [0, 0], diameter: float = 120,
                  model_type: str = 'cyto', selection_method: str = 'cellpose_max_cells_and_area',
@@ -87,104 +89,46 @@ class Cellpose():
         self.pretrained_model = pretrained_model
 
     def calculate_masks(self):
-        '''
+        """
         This method performs the process of image masking using **Cellpose**.
 
         Returns
 
         selected_masks : List of NumPy arrays
             List of NumPy arrays with values between 0 and the number of detected cells in the image, where an integer larger than zero represents the masked area for each cell, and 0 represents the background in the image.
-        '''
+        """
         # Next two lines suppressing output from Cellpose
         gc.collect()
         torch.cuda.empty_cache()
-        if (self.pretrained_model is None):
+        if self.pretrained_model is None:
             self.model = models.Cellpose(gpu=1, model_type=self.model_type)  # model_type = 'cyto' or model_type = 'nuclei'
         else:
             self.model = models.CellposeModel(gpu=1,
                                          pretrained_model=self.pretrained_model)  # model_type = 'cyto' or model_type = 'nuclei'
 
         # Loop that test multiple probabilities in cell pose and returns the masks with the longest area.
-        def cellpose_max_area(optimization_parameter):
-            try:
-                masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
-                                   flow_threshold=optimization_parameter, diameter=self.diameter,
-                                   min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
-                # removing artifacts.
-                masks = Utilities().remove_artifacts_from_mask_image(masks,
-                                                                     minimal_mask_area_size=self.MINIMUM_CELL_AREA)
-            except:
-                masks = 0
-            n_masks = np.max(masks)
-            if n_masks > 1:  # detecting if more than 1 mask are detected per cell
-                size_mask = []
-                for nm in range(1,
-                                n_masks + 1):  # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                    size_mask.append(np.sum(masks == nm))  # creating a list with the size of each mask
-                largest_mask = np.argmax(size_mask) + 1  # detecting the mask with the largest value
-                temp_mask = np.zeros_like(masks)  # making a copy of the image
-                selected_mask = temp_mask + (
-                            masks == largest_mask)  # Selecting a single mask and making this mask equal to one and the background equal to zero.
-                return np.sum(selected_mask)
-            else:  # do nothing if only a single mask is detected per image.
-                return np.sum(masks)
 
-        def cellpose_max_cells(optimization_parameter):
-            try:
-                masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
-                                   flow_threshold=optimization_parameter, diameter=self.diameter,
-                                   min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
-                # removing artifacts.
-                masks = Utilities().remove_artifacts_from_mask_image(masks,
-                                                                     minimal_mask_area_size=self.MINIMUM_CELL_AREA)
-            except:
-                masks = 0
-            return np.max(masks)
-
-        def cellpose_max_cells_and_area(optimization_parameter):
-            try:
-                masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
-                                   flow_threshold=optimization_parameter, diameter=self.diameter,
-                                   min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
-                # removing artifacts.
-                masks = Utilities().remove_artifacts_from_mask_image(masks,
-                                                                     minimal_mask_area_size=self.MINIMUM_CELL_AREA)
-            except:
-                masks = 0
-            number_masks = np.max(masks)
-            if number_masks > 1:  # detecting if more than 1 mask are detected per cell
-                size_mask = []
-                for nm in range(1,
-                                number_masks + 1):  # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
-                    approximated_radius = np.sqrt(np.sum(masks == nm) / np.pi)  # a=  pi r2
-                    size_mask.append(
-                        approximated_radius)  # np.sum(masks == nm)) # creating a list with the size of each mask
-                size_masks_array = np.array(size_mask)
-                metric = np.mean(size_masks_array).astype(int) * number_masks
-            elif number_masks == 1:  # do nothing if only a single mask is detected per image.
-                approximated_radius = np.sqrt(np.sum(masks == 1) / np.pi)
-                metric = approximated_radius.astype(int)
-            else:  # return zero if no mask are detected
-                metric = 0
-            return metric
 
         if self.selection_method == 'max_area':
             list_metrics_masks = Parallel(n_jobs=self.NUMBER_OF_CORES)(
-                delayed(cellpose_max_area)(tested_parameter) for _, tested_parameter in
+                delayed(self.cellpose_max_area)(tested_parameter) for _, tested_parameter in
                 enumerate(self.optimization_parameter))
             evaluated_metric_for_masks = np.array(list_metrics_masks)
         if self.selection_method == 'max_cells':
             list_metrics_masks = Parallel(n_jobs=self.NUMBER_OF_CORES)(
-                delayed(cellpose_max_cells)(tested_parameter) for _, tested_parameter in
+                delayed(self.cellpose_max_cells)(tested_parameter) for _, tested_parameter in
                 enumerate(self.optimization_parameter))
             evaluated_metric_for_masks = np.array(list_metrics_masks)
         if self.selection_method == 'max_cells_and_area':
+            # list_metrics_masks = [self.cellpose_max_cells_and_area(i) for i in self.optimization_parameter]
             list_metrics_masks = Parallel(n_jobs=self.NUMBER_OF_CORES)(
-                delayed(cellpose_max_cells_and_area)(tested_parameter) for _, tested_parameter in
+                delayed(self.cellpose_max_cells_and_area)(tested_parameter) for _, tested_parameter in
                 enumerate(self.optimization_parameter))
             evaluated_metric_for_masks = np.array(list_metrics_masks)
-        if not (self.selection_method is None) and (np.max(evaluated_metric_for_masks) > 0):
-        # if not (self.selection_method is None):
+        # if not (self.selection_method is None) and (np.max(evaluated_metric_for_masks) > 0):
+        # if np.max(evaluated_metric_for_masks) > 0:
+        #     print('idk why the evaluation criteria is shit (Cellpose)')
+        if (self.selection_method is not None) and (np.max(evaluated_metric_for_masks) > 0):
             selected_conditions = self.optimization_parameter[np.argmax(evaluated_metric_for_masks)]
             selected_masks = \
             self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True, flow_threshold=selected_conditions,
@@ -198,10 +142,75 @@ class Cellpose():
             else:
                 selected_masks = np.zeros_like(self.image[:, :])
         # If no GPU is available, the segmentation is performed with a single threshold.
-        if self.selection_method == None:
+        if self.selection_method is None:
             selected_masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
                                         flow_threshold=self.default_flow_threshold, diameter=self.diameter,
                                         min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
             selected_masks = Utilities().remove_artifacts_from_mask_image(selected_masks,
                                                                           minimal_mask_area_size=self.MINIMUM_CELL_AREA)
         return selected_masks
+
+    def cellpose_max_area(self, optimization_parameter):
+        try:
+            masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
+                               flow_threshold=optimization_parameter, diameter=self.diameter,
+                               min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
+            # removing artifacts.
+            masks = Utilities().remove_artifacts_from_mask_image(masks,
+                                                                 minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+        except:
+            masks = 0
+        n_masks = np.max(masks)
+        if n_masks > 1:  # detecting if more than 1 mask are detected per cell
+            size_mask = []
+            for nm in range(1,
+                            n_masks + 1):  # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                size_mask.append(np.sum(masks == nm))  # creating a list with the size of each mask
+            largest_mask = np.argmax(size_mask) + 1  # detecting the mask with the largest value
+            temp_mask = np.zeros_like(masks)  # making a copy of the image
+            selected_mask = temp_mask + (
+                        masks == largest_mask)  # Selecting a single mask and making this mask equal to one and the background equal to zero.
+            return np.sum(selected_mask)
+        else:  # do nothing if only a single mask is detected per image.
+            return np.sum(masks)
+
+    def cellpose_max_cells(self, optimization_parameter):
+        try:
+            masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
+                               flow_threshold=optimization_parameter, diameter=self.diameter,
+                               min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
+            # removing artifacts.
+            masks = Utilities().remove_artifacts_from_mask_image(masks,
+                                                                 minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+        except:
+            masks = 0
+        return np.max(masks)
+
+    def cellpose_max_cells_and_area(self, optimization_parameter):
+        try:
+            masks = self.model.eval(self.image, batch_size=self.BATCH_SIZE, normalize=True,
+                               flow_threshold=optimization_parameter, diameter=self.diameter,
+                               min_size=self.MINIMUM_CELL_AREA, channels=self.channels, progress=None)[0]
+            # removing artifacts.
+            masks = Utilities().remove_artifacts_from_mask_image(masks,
+                                                                 minimal_mask_area_size=self.MINIMUM_CELL_AREA)
+        except:
+            print('Bull shit is happening: 111')
+            masks = 0
+        print(masks)
+        number_masks = np.max(masks)
+        if number_masks > 1:  # detecting if more than 1 mask are detected per cell
+            size_mask = []
+            for nm in range(1, number_masks + 1):
+                # iterating for each mask in a given cell. The mask has values from 0 for background, to int n, where n is the number of detected masks.
+                approximated_radius = np.sqrt(np.sum(masks == nm) / np.pi)  # a=  pi r2
+                size_mask.append(
+                    approximated_radius)  # np.sum(masks == nm)) # creating a list with the size of each mask
+            size_masks_array = np.array(size_mask)
+            metric = np.mean(size_masks_array).astype(int) * number_masks
+        elif number_masks == 1:  # do nothing if only a single mask is detected per image.
+            approximated_radius = np.sqrt(np.sum(masks == 1) / np.pi)
+            metric = approximated_radius.astype(int)
+        else:  # return zero if no mask are detected
+            metric = 0
+        return metric
