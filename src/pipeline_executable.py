@@ -47,8 +47,8 @@ diameter_nucleus = int(sys.argv[3])                      # Approximate nucleus s
 diameter_cytosol = int(sys.argv[4])                      # Approximate cytosol size in pixels
 voxel_size_z  = int(sys.argv[5])                         # Microscope conversion px to nanometers in the z axis.
 voxel_size_yx  = int(sys.argv[6])                        # Microscope conversion px to nanometers in the xy axis.
-psf_z = int(sys.argv[7])                                 # Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.
-psf_yx = int(sys.argv[8])                                # Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.
+mRNA_radius_z = int(sys.argv[7])                                 # Theoretical size of the mRNA_radius emitted by a [rna] spot in the z plan, in nanometers.
+mRNA_radius_yx = int(sys.argv[8])                                # Theoretical size of the mRNA_radius emitted by a [rna] spot in the yx plan, in nanometers.
 # Segmentation Channels
 if sys.argv[9] in tuple_none:
     channels_with_nucleus = None
@@ -155,8 +155,8 @@ dataframe_FISH,_,_,_,output_identification_string = fa.PipelineFISH(local_data_d
                                                                     masks_dir = masks_dir,  
                                                                     voxel_size_z = voxel_size_z,
                                                                     voxel_size_yx = voxel_size_yx, 
-                                                                    psf_z = psf_z,
-                                                                    psf_yx = psf_yx, 
+                                                                    mRNA_radius_z = mRNA_radius_z,
+                                                                    mRNA_radius_yx = mRNA_radius_yx, 
                                                                     show_plots = show_plots,  
                                                                     file_name_str = data_folder_path.name, 
                                                                     optimization_segmentation_method = optimization_segmentation_method,

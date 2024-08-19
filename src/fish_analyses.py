@@ -1195,10 +1195,10 @@ class BigFISH():
         Height of a voxel, along the z axis, in nanometers. The default is 300.
     voxel_size_yx : int, optional
         Size of a voxel on the yx plan in nanometers. The default is 150.
-    psf_z : int, optional
-        Theoretical size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
-    psf_yx : int, optional
-        Theoretical size of the PSF emitted by a spot in the yx plan in nanometers.
+    mRNA_radius_z : int, optional
+        Theoretical size of the mRNA_radius emitted by a spot in the z plan, in nanometers. The default is 350.
+    mRNA_radius_yx : int, optional
+        Theoretical size of the mRNA_radius emitted by a spot in the yx plan in nanometers.
     cluster_radius : int, optional
         Maximum distance between two samples for one to be considered as in the neighborhood of the other. Radius expressed in nanometer.
     minimum_spots_cluster : int, optional
@@ -1216,15 +1216,15 @@ class BigFISH():
     threshold_for_spot_detection: scalar or None.
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     '''
-    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,psf_z = 350, psf_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
+    def __init__(self,image, FISH_channel , voxel_size_z = 300,voxel_size_yx = 103,mRNA_radius_z = 350, mRNA_radius_yx = 150, cluster_radius = 350,minimum_spots_cluster = 4,  show_plots =False,image_name=None,save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
         if len(image.shape)<4:
             image= np.expand_dims(image,axis =0)
         self.image = image
         self.FISH_channel = FISH_channel
         self.voxel_size_z = voxel_size_z
         self.voxel_size_yx = voxel_size_yx
-        self.psf_z = psf_z
-        self.psf_yx = psf_yx
+        self.mRNA_radius_z = mRNA_radius_z
+        self.mRNA_radius_yx = mRNA_radius_yx
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
@@ -1249,10 +1249,10 @@ class BigFISH():
         # Setting the colormap
         mpl.rc('image', cmap='viridis')
         rna=self.image[:,:,:,self.FISH_channel]
-        # Calculating Sigma with  the parameters for the PSF.
+        # Calculating Sigma with  the parameters for the mRNA_radius.
         spot_radius_px = detection.get_object_radius_pixel(
                         voxel_size_nm=(self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-                        object_radius_nm=(self.psf_z, self.psf_yx, self.psf_yx), ndim=3)
+                        object_radius_nm=(self.mRNA_radius_z, self.mRNA_radius_yx, self.mRNA_radius_yx), ndim=3)
         sigma = spot_radius_px
         #print('sigma_value (z,y,x) =', sigma)
         ## SPOT DETECTION
@@ -1260,7 +1260,7 @@ class BigFISH():
             try:
                 rna_filtered = stack.log_filter(rna, sigma) # LoG filter
             except ValueError:
-                print('Error during the log filter calculation, try using larger parameters values for the psf')
+                print('Error during the log filter calculation, try using larger parameters values for the mRNA_radius')
                 rna_filtered = stack.remove_background_gaussian(rna, sigma)
         else:
             rna_filtered = stack.remove_background_gaussian(rna, sigma)
@@ -1278,7 +1278,7 @@ class BigFISH():
                 spots_post_decomposition, _, _ = detection.decompose_dense(image=rna, 
                                                                         spots=spots, 
                                                                         voxel_size = (self.voxel_size_z, self.voxel_size_yx, self.voxel_size_yx), 
-                                                                        spot_radius = (self.psf_z, self.psf_yx, self.psf_yx),
+                                                                        spot_radius = (self.mRNA_radius_z, self.mRNA_radius_yx, self.mRNA_radius_yx),
                                                                         alpha=0.9,   # alpha impacts the number of spots per candidate region
                                                                         beta=1,      # beta impacts the number of candidate regions to decompose
                                                                         gamma=5)     # gamma the filtering step to denoise the image
@@ -1306,7 +1306,7 @@ class BigFISH():
                     path_output_elbow= str(self.image_name) +'__elbow_'+ '_ch_' + str(self.FISH_channel) + '.png'
                     plot.plot_elbow(rna, 
                                     voxel_size=(self.voxel_size_z, self.voxel_size_yx,self.voxel_size_yx), 
-                                    spot_radius= (self.psf_z, self.psf_yx, self.psf_yx),
+                                    spot_radius= (self.mRNA_radius_z, self.mRNA_radius_yx, self.mRNA_radius_yx),
                                     path_output = path_output_elbow, show=bool(self.show_plots) )
                     if self.show_plots ==True:
                         plt.show()
@@ -1882,10 +1882,10 @@ class SpotDetection():
         list with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
         voxel_size_z is the height of a voxel, along the z axis, in nanometers. The default is 300.
         voxel_size_yx is the size of a voxel on the yx plan in nanometers. The default is 150.
-    list_psfs : List of tuples or None
-        List with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
-        psf_z is the size of the PSF emitted by a spot in the z plan, in nanometers. The default is 350.
-        psf_yx is the size of the PSF emitted by a spot in the yx plan in nanometers.
+    list_mRNA_radius : List of tuples or None
+        List with a tuple with two elements (mRNA_radius_z, mRNA_radius_yx ) for each FISH channel.
+        mRNA_radius_z is the size of the mRNA_radius emitted by a spot in the z plan, in nanometers. The default is 350.
+        mRNA_radius_yx is the size of the mRNA_radius emitted by a spot in the yx plan in nanometers.
     show_plots : bool, optional
         If True, it shows a 2D maximum projection of the image and the detected spots. The default is False.
     image_name : str or None.
@@ -1900,7 +1900,7 @@ class SpotDetection():
         Indicates the intensity threshold used for spot detection, the default is None, and indicates that the threshold is calculated automatically.
     
     '''
-    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=500, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_psfs=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
+    def __init__(self,image,  FISH_channels ,channels_with_cytosol,channels_with_nucleus, cluster_radius=500, minimum_spots_cluster=4, masks_complete_cells = None, masks_nuclei  = None, masks_cytosol_no_nuclei = None, dataframe=None, image_counter=0, list_voxels=[[500,160]], list_mRNA_radius=[[350,160]], show_plots=True,image_name=None,save_all_images=True,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=None,save_files=True):
         if len(image.shape)<4:
             image= np.expand_dims(image,axis =0)
         self.image = image
@@ -1930,10 +1930,10 @@ class SpotDetection():
             self.list_voxels = [list_voxels]
         else:
             self.list_voxels = list_voxels
-        if type(list_psfs[0]) != list:
-            self.list_psfs = [list_psfs]
+        if type(list_mRNA_radius[0]) != list:
+            self.list_mRNA_radius = [list_mRNA_radius]
         else:
-            self.list_psfs = list_psfs
+            self.list_mRNA_radius = list_mRNA_radius
         # converting FISH channels to a list
         if not (type(FISH_channels) is list):
             self.list_FISH_channels = [FISH_channels]
@@ -1957,15 +1957,15 @@ class SpotDetection():
                 reset_cell_counter = False
             voxel_size_z = self.list_voxels[i][0]
             voxel_size_yx = self.list_voxels[i][1]
-            psf_z = self.list_psfs[i][0] 
-            psf_yx = self.list_psfs[i][1]
-            [spotDetectionCSV, clusterDetectionCSV], image_filtered, threshold = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, psf_z = psf_z, psf_yx = psf_yx, 
+            mRNA_radius_z = self.list_mRNA_radius[i][0] 
+            mRNA_radius_yx = self.list_mRNA_radius[i][1]
+            [spotDetectionCSV, clusterDetectionCSV], image_filtered, threshold = BigFISH(self.image, self.list_FISH_channels[i], voxel_size_z = voxel_size_z,voxel_size_yx = voxel_size_yx, mRNA_radius_z = mRNA_radius_z, mRNA_radius_yx = mRNA_radius_yx, 
                                                                                 cluster_radius=self.cluster_radius,minimum_spots_cluster=self.minimum_spots_cluster, show_plots=self.show_plots,image_name=self.image_name,
                                                                                 save_all_images=self.save_all_images,display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,
                                                                                 threshold_for_spot_detection=self.threshold_for_spot_detection[i],save_files=self.save_files).detect()
             list_thresholds_spot_detection.append(threshold)
-            # converting the psf to pixles
-            yx_spot_size_in_px = np.max((1,int(voxel_size_yx / psf_yx))).astype('int')
+            # converting the mRNA_radius to pixles
+            yx_spot_size_in_px = np.max((1,int(voxel_size_yx / mRNA_radius_yx))).astype('int')
             
             dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.image, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus,
                                             yx_spot_size_in_px=yx_spot_size_in_px, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i,number_color_channels=self.number_color_channels ).get_dataframe()
@@ -1998,8 +1998,8 @@ class Metadata():
         Number of spots in a neighborhood for a point to be considered as a core point (from which a cluster is expanded). This includes the point itself.
     list_voxels : List of lists or None
         List with a tuple with two elements (voxel_size_z,voxel_size_yx ) for each FISH channel.
-    list_psfs : List of lists or None
-        List with a tuple with two elements (psf_z, psf_yx ) for each FISH channel.
+    list_mRNA_radius : List of lists or None
+        List with a tuple with two elements (mRNA_radius_z, mRNA_radius_yx ) for each FISH channel.
     file_name_str : str
         Name used for the metadata file. The final name has the format metadata_<<file_name_str>>.txt
     list_counter_cell_id : str
@@ -2007,7 +2007,7 @@ class Metadata():
     threshold_for_spot_detection : int
         Threshold value used to discriminate background noise from mRNA spots in the image.
     '''
-    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_psfs=None, file_name_str=None,list_segmentation_successful=True,list_counter_image_id=[],threshold_for_spot_detection=[],number_of_images_to_process=None,remove_z_slices_borders=False,NUMBER_Z_SLICES_TO_TRIM=0,CLUSTER_RADIUS=0,list_thresholds_spot_detection=[None],list_average_spots_per_cell=[None],list_number_detected_cells=[None],list_is_image_sharp=[None],list_metric_sharpeness_images=[None],remove_out_of_focus_images=False,sharpness_threshold=None):
+    def __init__(self,data_dir, channels_with_cytosol, channels_with_nucleus, channels_with_FISH, diameter_nucleus, diameter_cytosol, minimum_spots_cluster, list_voxels=None, list_mRNA_radius=None, file_name_str=None,list_segmentation_successful=True,list_counter_image_id=[],threshold_for_spot_detection=[],number_of_images_to_process=None,remove_z_slices_borders=False,NUMBER_Z_SLICES_TO_TRIM=0,CLUSTER_RADIUS=0,list_thresholds_spot_detection=[None],list_average_spots_per_cell=[None],list_number_detected_cells=[None],list_is_image_sharp=[None],list_metric_sharpeness_images=[None],remove_out_of_focus_images=False,sharpness_threshold=None):
         
         self.list_images, self.path_files, self.list_files_names, self.number_images = ReadImages(data_dir,number_of_images_to_process).read()
         self.channels_with_cytosol = channels_with_cytosol
@@ -2019,7 +2019,7 @@ class Metadata():
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
         self.list_voxels = list_voxels
-        self.list_psfs = list_psfs
+        self.list_mRNA_radius = list_mRNA_radius
         self.file_name_str=file_name_str
         self.minimum_spots_cluster = minimum_spots_cluster
         self.threshold_for_spot_detection=threshold_for_spot_detection
@@ -2081,8 +2081,8 @@ class Metadata():
                     fd.write('\n      For Channel ' + str(self.channels_with_FISH[k]) )
                     fd.write('\n        voxel_size_z: ' + str(self.list_voxels[k][0]) )
                     fd.write('\n        voxel_size_yx: ' + str(self.list_voxels[k][1]) )
-                    fd.write('\n        psf_z: ' + str(self.list_psfs[k][0]) )
-                    fd.write('\n        psf_yx: ' + str(self.list_psfs[k][1]) )
+                    fd.write('\n        mRNA_radius_z: ' + str(self.list_mRNA_radius[k][0]) )
+                    fd.write('\n        mRNA_radius_yx: ' + str(self.list_mRNA_radius[k][1]) )
                     if not(self.threshold_for_spot_detection in (None, [None]) ):
                         fd.write('\n        threshold_spot_detection: ' + str(self.threshold_for_spot_detection[k]) )
                     else:
@@ -2320,10 +2320,10 @@ class PipelineFISH():
         Microscope conversion px to nanometers in the z axis. The default is 500.
     voxel_size_yx : int, optional
         Microscope conversion px to nanometers in the xy axis.   The default is 160.
-    psf_z : int, optional
-        Theoretical size of the PSF emitted by a [rna] spot in the z plan, in nanometers.  The default is 350.
-    psf_yx: int, optional
-        Theoretical size of the PSF emitted by a [rna] spot in the yx plan, in nanometers.  The default is 160.
+    mRNA_radius_z : int, optional
+        Theoretical size of the mRNA_radius emitted by a [rna] spot in the z plan, in nanometers.  The default is 350.
+    mRNA_radius_yx: int, optional
+        Theoretical size of the mRNA_radius emitted by a [rna] spot in the yx plan, in nanometers.  The default is 160.
     list_masks : List of Numpy or None.
         list of Numpy arrays where each array has values from 0 to n where n is the number of masks in  the image.
     save_all_images : Bool, optional.
@@ -2341,7 +2341,7 @@ class PipelineFISH():
         This flag indicates the removal of the two first and last 2 z-slices from the segmentation and quantification. This needed to avoid processing images out of focus. The default is True.
     '''
 
-    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,psf_z=350,psf_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.05,save_pdf_report=False,folder_name='temp',save_files=True,model_nuc_segmentation='nuclei',model_cyto_segmentation='cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
+    def __init__(self,data_folder_path=None, channels_with_cytosol=None, channels_with_nucleus=None, channels_with_FISH=None,diameter_nucleus=100, diameter_cytosol=200, minimum_spots_cluster=5,  image=None, masks_dir=None, show_plots=True, voxel_size_z=500, voxel_size_yx=160 ,mRNA_radius_z=350,mRNA_radius_yx=160,file_name_str =None,optimization_segmentation_method='default',save_all_images=False,display_spots_on_multiple_z_planes=False,use_log_filter_for_spot_detection=True,threshold_for_spot_detection=[None],NUMBER_OF_CORES=1,list_selected_z_slices=None,save_filtered_images=False,number_of_images_to_process=None,remove_z_slices_borders=False,remove_out_of_focus_images = False,sharpness_threshold =1.05,save_pdf_report=False,folder_name='temp',save_files=True,model_nuc_segmentation='nuclei',model_cyto_segmentation='cyto',pretrained_model_nuc_segmentation=None, pretrained_model_cyto_segmentation=None):
         
         if type(data_folder_path)== pathlib.PosixPath or isinstance(data_folder_path, str) or type(data_folder_path)== pathlib.WindowsPath:
             list_images, _ , self.list_files_names, self.number_images = ReadImages(data_folder_path,number_of_images_to_process).read()
@@ -2390,19 +2390,19 @@ class PipelineFISH():
         self.channels_with_FISH = channels_with_FISH
         self.diameter_nucleus = diameter_nucleus
         self.diameter_cytosol = diameter_cytosol
-        self.psf_z = psf_z
-        self.psf_yx = psf_yx
-        # Lists for voxels and psfs
+        self.mRNA_radius_z = mRNA_radius_z
+        self.mRNA_radius_yx = mRNA_radius_yx
+        # Lists for voxels and mRNA_radius
         list_voxels = []
-        list_psfs = []
+        list_mRNA_radius = []
         for i in range (len(channels_with_FISH)):
             list_voxels.append([voxel_size_z,voxel_size_yx])
-            list_psfs.append([psf_z, psf_yx])
+            list_mRNA_radius.append([mRNA_radius_z, mRNA_radius_yx])
         self.list_voxels = list_voxels
-        self.list_psfs = list_psfs
+        self.list_mRNA_radius = list_mRNA_radius
         self.minimum_spots_cluster = minimum_spots_cluster
         self.show_plots = show_plots
-        CLUSTER_RADIUS = 600 #int(psf_yx*1.5)
+        CLUSTER_RADIUS = mRNA_radius_yx * 2
         self.CLUSTER_RADIUS = CLUSTER_RADIUS 
         
         if not(data_folder_path is None):
@@ -2455,15 +2455,15 @@ class PipelineFISH():
                 list_thresholds=[]
                 voxel_size_z = list_voxels[i][0]
                 voxel_size_yx = list_voxels[i][1]
-                psf_z = list_psfs[i][0] 
-                psf_yx = list_psfs[i][1]
+                mRNA_radius_z = list_mRNA_radius[i][0] 
+                mRNA_radius_yx = list_mRNA_radius[i][1]
                 for _, image_selected in enumerate(sub_section_images_to_test):
                     threshold = BigFISH(image_selected,
                                         channels_with_FISH[i], 
                                         voxel_size_z = voxel_size_z,
                                         voxel_size_yx = voxel_size_yx, 
-                                        psf_z = psf_z, 
-                                        psf_yx = psf_yx, 
+                                        mRNA_radius_z = mRNA_radius_z, 
+                                        mRNA_radius_yx = mRNA_radius_yx, 
                                         cluster_radius=CLUSTER_RADIUS,
                                         minimum_spots_cluster=self.minimum_spots_cluster, 
                                         use_log_filter_for_spot_detection =self.use_log_filter_for_spot_detection,
@@ -2491,7 +2491,7 @@ class PipelineFISH():
     def run(self):
         # Creating folder to store outputs.
         if self.save_files == True:
-            output_identification_string = Utilities().create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.psf_z, self.psf_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
+            output_identification_string = Utilities().create_output_folders(self.data_folder_path, self.diameter_nucleus, self.diameter_cytosol, self.mRNA_radius_z, self.mRNA_radius_yx, self.threshold_for_spot_detection, self.channels_with_FISH, self.threshold_for_spot_detection)
         else:
             output_identification_string = ''
         MINIMAL_NUMBER_OF_PIXELS_IN_MASK = 1000
@@ -2644,7 +2644,7 @@ class PipelineFISH():
                                                                                             dataframe=dataframe,
                                                                                             image_counter=counter, 
                                                                                             list_voxels=self.list_voxels,
-                                                                                            list_psfs=self.list_psfs, 
+                                                                                            list_mRNA_radius=self.list_mRNA_radius, 
                                                                                             show_plots=self.show_plots,
                                                                                             image_name = temp_detection_img_name,
                                                                                             save_all_images=self.save_all_images,
@@ -2745,7 +2745,7 @@ class PipelineFISH():
                 self.diameter_cytosol, 
                 self.minimum_spots_cluster,
                 list_voxels=self.list_voxels, 
-                list_psfs=self.list_psfs,
+                list_mRNA_radius=self.list_mRNA_radius,
                 file_name_str=self.name_for_files,
                 list_segmentation_successful=list_segmentation_successful,
                 list_counter_image_id=list_counter_image_id,
@@ -2799,12 +2799,12 @@ class ColocalizationDistance():
         If true, it shows a spots on the plane below and above the selected plane. The default is False.
     voxel_size_z, voxel_size_yx: float, optional.
         These values indicate the microscope voxel size. These parameters are optional and should be included only if a normalization to the z-axis is needed to calculate distance.
-    psf_z, psf_yx: float, optional.
+    mRNA_radius_z, mRNA_radius_yx: float, optional.
         These values indicate the microscope point spread function value. These parameters are optional and should be included only if a normalization to the z-axis is needed to calculate distance.
     report_codetected_spots_in_both_channels : bool, optional
         This option report the number of co-detected spots in channel both channels. Notice that this represents the total number of codetected spots in ch0 and ch1. The default is True.
     '''
-    def __init__(self, df,list_spot_type_to_compare =[0,1], time_point=0,threshold_intensity_0=0,threshold_intensity_1=0,threshold_distance=2,show_plots = False,voxel_size_z=None,psf_z=None,voxel_size_yx=None,psf_yx=None,report_codetected_spots_in_both_channels=False):
+    def __init__(self, df,list_spot_type_to_compare =[0,1], time_point=0,threshold_intensity_0=0,threshold_intensity_1=0,threshold_distance=2,show_plots = False,voxel_size_z=None,mRNA_radius_z=None,voxel_size_yx=None,mRNA_radius_yx=None,report_codetected_spots_in_both_channels=False):
         self.df = df
         self.time_point= time_point
         self.threshold_intensity_0 = threshold_intensity_0
@@ -2813,7 +2813,7 @@ class ColocalizationDistance():
         self.show_plots = show_plots
         self.list_spot_type_to_compare = list_spot_type_to_compare
         if not (voxel_size_z is None):
-            self.scale = np.array ([ voxel_size_z/psf_z, voxel_size_yx/psf_yx, voxel_size_yx/psf_yx ])
+            self.scale = np.array ([ voxel_size_z/mRNA_radius_z, voxel_size_yx/mRNA_radius_yx, voxel_size_yx/mRNA_radius_yx ])
         else:
             self.scale = 1
         self.report_codetected_spots_in_both_channels = report_codetected_spots_in_both_channels
@@ -3468,7 +3468,7 @@ class Utilities():
         masks_dir = None
         return destination_folder,masks_dir, list_files_names, list_images_all_fov, list_images_standard_format
     
-    def create_output_folders(self,data_folder_path,diameter_nucleus,diameter_cytosol,psf_z,psf_yx,threshold_for_spot_detection,channels_with_FISH,list_threshold_for_spot_detection):
+    def create_output_folders(self,data_folder_path,diameter_nucleus,diameter_cytosol,mRNA_radius_z,mRNA_radius_yx,threshold_for_spot_detection,channels_with_FISH,list_threshold_for_spot_detection):
         # testing if the images were merged.
         if data_folder_path.name == 'merged':
             data_folder_path = data_folder_path.parents[0]
@@ -3479,9 +3479,9 @@ class Utilities():
             original_folder_name= data_folder_path.name
         # Creating the output_identification_string
         if (threshold_for_spot_detection is None):
-            output_identification_string = original_folder_name+'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts_auto'
+            output_identification_string = original_folder_name+'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__mRNA_radius_z_' + str(mRNA_radius_z) +'__mRNA_radius_yx_' + str(mRNA_radius_yx)+'__ts_auto'
         else:
-            output_identification_string = original_folder_name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__psfz_' + str(psf_z) +'__psfyx_' + str(psf_yx)+'__ts'
+            output_identification_string = original_folder_name +'___nuc_' + str(diameter_nucleus) +'__cyto_' + str(diameter_cytosol) +'__mRNA_radius_z_' + str(mRNA_radius_z) +'__mRNA_radius_yx_' + str(mRNA_radius_yx)+'__ts'
             for i in range (len(channels_with_FISH)):
                 output_identification_string+='_'+ str(list_threshold_for_spot_detection[i])
                 print ('\n Output folder name : ' , output_identification_string)
