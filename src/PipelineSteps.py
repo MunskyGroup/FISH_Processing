@@ -93,13 +93,13 @@ from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
 # _____________ Cell Segmentation Steps _____________
 class CellSegmentationOutput(StepOutputsClass):
-    def __init__(self, masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei, segmentation_successful,
+    def __init__(self, masks_complete_cells, masks_nuclei, masks_cytosol, segmentation_successful,
                  number_detected_cells, id):
         super().__init__()
         self.step_name = 'CellSegmentation'
         self.masks_complete_cells = [masks_complete_cells]
         self.masks_nuclei = [masks_nuclei]
-        self.masks_cytosol_no_nuclei = [masks_cytosol_no_nuclei]
+        self.masks_cytosol = [masks_cytosol]
         self.segmentation_successful = [segmentation_successful]
         self.number_detected_cells = [number_detected_cells]
         self.img_id = [id]
@@ -107,7 +107,7 @@ class CellSegmentationOutput(StepOutputsClass):
     def append(self, newOutputs):
         self.masks_complete_cells = self.masks_complete_cells + newOutputs.masks_complete_cells
         self.masks_nuclei = self.masks_nuclei + newOutputs.masks_nuclei
-        self.masks_cytosol_no_nuclei = self.masks_cytosol_no_nuclei + newOutputs.masks_cytosol_no_nuclei
+        self.masks_cytosol = self.masks_cytosol + newOutputs.masks_cytosol
         self.segmentation_successful = self.segmentation_successful + newOutputs.segmentation_successful
         self.number_detected_cells = self.number_detected_cells + newOutputs.number_detected_cells
         self.img_id = self.img_id + newOutputs.img_id
@@ -116,124 +116,93 @@ class CellSegmentationOutput(StepOutputsClass):
 class CellSegmentationStepClass(PipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
-        self.segmentation_successful = None
-        self.number_detected_cells = None
-        self.masks_cytosol_no_nuclei = None
-        self.masks_nuclei = None
-        self.masks_complete_cells = None
-        self.is_image_sharp = None
-        self.sharpness_metric = None
-        self.img = None
-        self.temp_folder_name = None
-        self.file_name = None
-        self.name_for_files = None
-        self.NUMBER_Z_SLICES_TO_TRIM = None
-        self.remove_z_slices_borders = None
-        self.pretrained_model_cyto_segmentation = None
-        self.pretrained_model_nuc_segmentation = None
-        self.model_cyto_segmentation = None
-        self.model_nuc_segmentation = None
-        self.NUMBER_OF_CORES = None
-        self.optimization_segmentation_method = None
-        self.show_plots = None
-        self.diameter_nucleus = None
-        self.diameter_cytosol = None
-        self.save_files = None
-        self.masks_folder_name = None
-        self.MINIMAL_NUMBER_OF_PIXELS_IN_MASK = None
-        self.channels_with_nucleus = None
-        self.channels_with_cytosol = None
-        self.masks_dir = None
         self.save_masks_as_file = None
+        self.nucChannel = None
+        self.cytoChannel = None
+        self.temp_file_name = None
+        self.number_detected_cells = None
+        self.segmentation_successful = None
+        self.masks_cytosol_no_nuclei = None
+        self.ModifyPipelineData = True
 
-    def load_in_attributes(self, id: int):
-        # Pipeline Settings
-        self.save_masks_as_file = self.pipelineSettings.save_masks_as_file
-        self.save_files = self.pipelineSettings.save_files
-        self.diameter_cytosol = self.pipelineSettings.diameter_cytosol
-        self.diameter_nucleus = self.pipelineSettings.diameter_nucleus
-        self.show_plots = self.pipelineSettings.show_plots
-        self.optimization_segmentation_method = self.pipelineSettings.optimization_segmentation_method
-        self.NUMBER_OF_CORES = self.pipelineSettings.NUMBER_OF_CORES
-        self.model_nuc_segmentation = self.pipelineSettings.model_nuc_segmentation
-        self.model_cyto_segmentation = self.pipelineSettings.model_cyto_segmentation
-        self.pretrained_model_nuc_segmentation = self.pipelineSettings.pretrained_model_nuc_segmentation
-        self.pretrained_model_cyto_segmentation = self.pipelineSettings.pretrained_model_cyto_segmentation
-        self.MINIMAL_NUMBER_OF_PIXELS_IN_MASK = self.pipelineSettings.MINIMAL_NUMBER_OF_PIXELS_IN_MASK
-        self.remove_z_slices_borders = self.pipelineSettings.remove_z_slices_borders
-        self.NUMBER_Z_SLICES_TO_TRIM = self.pipelineSettings.NUMBER_Z_SLICES_TO_TRIM
+    def main(self,
+             save_masks_as_file, save_files, diameter_cytosol, diameter_nucleus, show_plots,
+             optimization_segmentation_method, NUMBER_OF_CORES, model_nuc_segmentation, model_cyto_segmentation,
+             pretrained_model_nuc_segmentation, pretrained_model_cyto_segmentation, MINIMAL_NUMBER_OF_PIXELS_IN_MASK,
+             remove_z_slices_borders, NUMBER_Z_SLICES_TO_TRIM, initial_data_location, cytoChannel, nucChannel, list_image_names,
+             temp_folder_name, list_images, local_mask_folder, list_metric_sharpness_images, list_is_image_sharp,
+             id: int = None, **kwargs,
+             ) -> CellSegmentationOutput:
 
-        # Experiment Params
-        self.name_for_files = self.experiment.initial_data_location.name
-        self.channels_with_cytosol = self.experiment.cytoChannel
-        self.channels_with_nucleus = self.experiment.nucChannel
+        name_for_files = initial_data_location.name
+        file_name = list_image_names[id]
+        img = list_images[id]
+        self.MINIMAL_NUMBER_OF_PIXELS_IN_MASK = MINIMAL_NUMBER_OF_PIXELS_IN_MASK
+        self.local_mask_folder = local_mask_folder
+        self.cytoChannel = cytoChannel
+        self.nucChannel = nucChannel
+        self.save_masks_as_file = save_masks_as_file
+        self.save_files = save_files
 
-        # PipelineData
-        self.file_name = self.pipelineData.list_image_names[id]
-        self.temp_folder_name = self.pipelineData.temp_folder_name
-        self.img = self.pipelineData.list_images[id]
-        self.masks_dir = self.pipelineData.local_mask_folder
 
-        # Output from other steps
         try: # from sharpness calc
-            self.sharpness_metric = \
-                self.pipelineData.prePipelineOutputs.CalculateSharpnessOutput.list_metric_sharpness_images[id]
-            self.is_image_sharp = self.pipelineData.prePipelineOutputs.CalculateSharpnessOutput.list_is_image_sharp[id]
+            sharpness_metric = list_metric_sharpness_images[id]
+            is_image_sharp = list_is_image_sharp[id]
         except AttributeError:
             print('Skipping Sharpness Filtering')
 
-    def main(self, id: int = None) -> CellSegmentationOutput:
-        if self.save_masks_as_file and self.save_files:
-            self.masks_folder_name = str('masks_' + self.name_for_files)
+
+        if save_masks_as_file and save_files:
+            self.masks_folder_name = str('masks_' + name_for_files)
             if not os.path.exists(self.masks_folder_name):
                 os.makedirs(self.masks_folder_name)
 
         # slicing the name of the file. Removing after finding '.' in the string.
-        self.temp_file_name = self.file_name[:self.file_name.rfind('.')]
-        self.temp_original_img_name = pathlib.Path().absolute().joinpath(self.temp_folder_name,
+        self.temp_file_name = file_name[:file_name.rfind('.')]
+        temp_original_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
                                                                          'ori_' + self.temp_file_name + '.png')
 
-        if self.save_files:
-            Plots().plot_images(self.img, figsize=(15, 10), image_name=self.temp_original_img_name,
-                                show_plots=self.show_plots)
+        if save_files:
+            Plots().plot_images(img, figsize=(15, 10), image_name=temp_original_img_name,
+                                show_plots=show_plots)
 
-        self.segmentation_successful = None
+        segmentation_successful = None
 
-        if not self.is_image_sharp and self.is_image_sharp is not None:
+        if not is_image_sharp and is_image_sharp is not None:
             print('    Image out of focus.')
-            self.segmentation_successful = False
+            segmentation_successful = False
 
-        if not self.segmentation_successful and self.segmentation_successful is not None:
+        if not segmentation_successful and segmentation_successful is not None:
             raise Exception('Segmentation Pre-Emptively Failed')
         else:
             # Cell segmentation
-            temp_segmentation_img_name = pathlib.Path().absolute().joinpath(self.temp_folder_name,
+            temp_segmentation_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
                                                                             'seg_' + self.temp_file_name + '.png')
             # print('- CELL SEGMENTATION')
-            if self.masks_dir is None:
+            if local_mask_folder is None:
                 self.masks_complete_cells, self.masks_nuclei, self.masks_cytosol_no_nuclei = (
-                    CellSegmentation(self.img,
-                                     self.channels_with_cytosol,
-                                     self.channels_with_nucleus,
-                                     diameter_cytosol=self.diameter_cytosol,
-                                     diameter_nucleus=self.diameter_nucleus,
-                                     show_plots=self.show_plots,
-                                     optimization_segmentation_method=self.optimization_segmentation_method,
+                    CellSegmentation(img,
+                                     cytoChannel,
+                                     nucChannel,
+                                     diameter_cytosol=diameter_cytosol,
+                                     diameter_nucleus=diameter_nucleus,
+                                     show_plots=show_plots,
+                                     optimization_segmentation_method=optimization_segmentation_method,
                                      image_name=temp_segmentation_img_name,
-                                     NUMBER_OF_CORES=self.NUMBER_OF_CORES,
+                                     NUMBER_OF_CORES=NUMBER_OF_CORES,
                                      running_in_pipeline=True,
-                                     model_nuc_segmentation=self.model_nuc_segmentation,
-                                     model_cyto_segmentation=self.model_cyto_segmentation,
-                                     pretrained_model_nuc_segmentation=self.pretrained_model_nuc_segmentation,
-                                     pretrained_model_cyto_segmentation=self.pretrained_model_cyto_segmentation).calculate_masks())
+                                     model_nuc_segmentation=model_nuc_segmentation,
+                                     model_cyto_segmentation=model_cyto_segmentation,
+                                     pretrained_model_nuc_segmentation=pretrained_model_nuc_segmentation,
+                                     pretrained_model_cyto_segmentation=pretrained_model_cyto_segmentation).calculate_masks())
 
             else:
                 self.load_in_already_made_masks()
 
-            self.segmentation_successful, self.number_detected_cells = self.test_segementation()
+            segmentation_successful, number_detected_cells = self.test_segementation()
 
-            if not self.segmentation_successful:
-                self.number_detected_cells = 0
+            if not segmentation_successful:
+                number_detected_cells = 0
 
             self.save_img_results()
 
@@ -241,8 +210,8 @@ class CellSegmentationStepClass(PipelineStepsClass):
             single_image_cell_segmentation_output = (
                 CellSegmentationOutput(masks_complete_cells=self.masks_complete_cells,
                                        masks_nuclei=self.masks_nuclei,
-                                       masks_cytosol_no_nuclei=self.masks_cytosol_no_nuclei,
-                                       segmentation_successful=self.segmentation_successful,
+                                       masks_cytosol=self.masks_cytosol_no_nuclei,
+                                       segmentation_successful=segmentation_successful,
                                        number_detected_cells=self.number_detected_cells,
                                        id=id))
 
@@ -250,14 +219,13 @@ class CellSegmentationStepClass(PipelineStepsClass):
 
     def test_segementation(self):
         # test if segmentation was successful
-        if Utilities().is_None(self.channels_with_cytosol):  #(self.channels_with_cytosol is None):
+        if self.cytoChannel is None:
             detected_mask_pixels = np.count_nonzero([self.masks_nuclei.flatten()])
             self.number_detected_cells = np.max(self.masks_nuclei)
-        if Utilities().is_None(self.channels_with_nucleus):  #(self.channels_with_nucleus  is None):
+        if self.nucChannel is None:
             detected_mask_pixels = np.count_nonzero([self.masks_complete_cells.flatten()])
             self.number_detected_cells = np.max(self.masks_complete_cells)
-        if (not Utilities().is_None(self.channels_with_nucleus)) and (not Utilities().is_None(
-                self.channels_with_cytosol)):  #not (self.channels_with_nucleus  is None) and not(self.channels_with_cytosol  is None):
+        if self.nucChannel is not None and self.cytoChannel is not None:
             detected_mask_pixels = np.count_nonzero([self.masks_complete_cells.flatten(), self.masks_nuclei.flatten(),
                                                      self.masks_cytosol_no_nuclei.flatten()])
             self.number_detected_cells = np.max(self.masks_complete_cells)
@@ -272,27 +240,26 @@ class CellSegmentationStepClass(PipelineStepsClass):
 
     def save_img_results(self):
         # saving masks
-        if (self.save_masks_as_file == True) and (self.segmentation_successful == True) and (self.save_files == True):
+        if self.save_masks_as_file and self.segmentation_successful and self.save_files:
             self.number_detected_cells = np.max(self.masks_complete_cells)
             print('    Number of detected cells:                ', self.number_detected_cells)
-            if Utilities().is_None(self.channels_with_nucleus) == False:  #not (self.channels_with_nucleus is None):
+            if self.nucChannel is not None:
                 mask_nuc_path = pathlib.Path().absolute().joinpath(self.masks_folder_name,
                                                                    'masks_nuclei_' + self.temp_file_name + '.tif')
                 tifffile.imwrite(mask_nuc_path, self.masks_nuclei)
-            if Utilities().is_None(self.channels_with_cytosol) == False:  #not (self.channels_with_cytosol is None):
+            if self.cytoChannel is not None:
                 mask_cyto_path = pathlib.Path().absolute().joinpath(self.masks_folder_name,
                                                                     'masks_cyto_' + self.temp_file_name + '.tif')
                 tifffile.imwrite(mask_cyto_path, self.masks_complete_cells)
-            if (Utilities().is_None(self.channels_with_nucleus) == False) and (Utilities().is_None(
-                    self.channels_with_cytosol) == False):  #not (self.channels_with_cytosol is None) and not (self.channels_with_nucleus is None):
+            if self.cytoChannel is not None and self.nucChannel is not None:
                 mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath(self.masks_folder_name,
                                                                               'masks_cyto_no_nuclei_' + self.temp_file_name + '.tif')
                 tifffile.imwrite(mask_cyto_no_nuclei_path, self.masks_cytosol_no_nuclei)
 
     def load_in_already_made_masks(self):
         # Paths to masks
-        if not Utilities().is_None(self.channels_with_nucleus):
-            mask_nuc_path = self.masks_dir.absolute().joinpath('masks_nuclei_' + self.temp_file_name + '.tif')
+        if not Utilities().is_None(self.nucChannel):
+            mask_nuc_path = self.local_mask_folder.absolute().joinpath('masks_nuclei_' + self.temp_file_name + '.tif')
             try:
                 self.masks_nuclei = imread(str(mask_nuc_path))
                 self.segmentation_successful = True
@@ -300,8 +267,8 @@ class CellSegmentationStepClass(PipelineStepsClass):
             except:
                 self.segmentation_successful = False
                 print('    Segmentation was not successful. Due to missing nuc masks')
-        if not Utilities().is_None(self.channels_with_cytosol):
-            mask_cyto_path = self.masks_dir.absolute().joinpath('masks_cyto_' + self.temp_file_name + '.tif')
+        if not Utilities().is_None(self.cytoChannel):
+            mask_cyto_path = self.local_mask_folder.absolute().joinpath('masks_cyto_' + self.temp_file_name + '.tif')
             try:
                 self.masks_complete_cells = imread(str(mask_cyto_path))
                 self.segmentation_successful = True
@@ -309,9 +276,9 @@ class CellSegmentationStepClass(PipelineStepsClass):
             except:
                 self.segmentation_successful = False
                 print('    Segmentation was not successful. Due to missing cyto masks.')
-        if ((not Utilities().is_None(self.channels_with_nucleus)) and
-                (not Utilities().is_None(self.channels_with_cytosol))):
-            self.mask_cyto_no_nuclei_path = self.masks_dir.absolute().joinpath(
+        if ((not Utilities().is_None(self.nucChannel)) and
+                (not Utilities().is_None(self.cytoChannel))):
+            self.mask_cyto_no_nuclei_path = self.local_mask_folder.absolute().joinpath(
                 'masks_cyto_no_nuclei_' + self.temp_file_name + '.tif')
             try:
                 self.masks_cytosol_no_nuclei = imread(str(self.mask_cyto_no_nuclei_path))
@@ -327,24 +294,6 @@ class CellSegmentationStepClass(PipelineStepsClass):
             self.masks_cytosol_no_nuclei = None
 
 
-class CellposeSegmentation(PipelineStepsClass):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def main(self, id: int, pipelineData, pipelineSettings, experiment, terminatorScope) -> CellSegmentationOutput:
-        img = pipelineData.list_images[id]
-        self.channels_with_cytosol = experiment.cytoChannel
-        self.channels_with_nucleus = experiment.nucChannel
-
-        if not self.channels_with_cytosol is None:
-            cytoImgs = img[:, :, :, self.channels_with_cytosol]
-
-        if not self.channels_with_nucleus is None:
-            nucImgs = img[:, :, :, self.channels_with_nucleus]
-
-        # Cellpose segmentation
-
-
 # _____________ Spot Detection Steps _____________
 class SpotDetectionStepOutputClass(StepOutputsClass):
     def __init__(self, id, threshold_spot_detection, avg_number_of_spots_per_cell_each_ch, dfFISH):
@@ -357,7 +306,7 @@ class SpotDetectionStepOutputClass(StepOutputsClass):
         self.thresholds_spot_detection = self.thresholds_spot_detection + newOutputs.thresholds_spot_detection
         self.img_id = self.img_id + newOutputs.img_id
         self.avg_number_of_spots_per_cell_each_ch = self.avg_number_of_spots_per_cell_each_ch + newOutputs.avg_number_of_spots_per_cell_each_ch
-        self.dfFISH = newOutputs.dfFISH  # I beleive it does this in place :(
+        self.dfFISH = newOutputs.dfFISH  # I believe it does this in place :(
 
 
 class SpotDetectionStepClass(PipelineStepsClass):
@@ -377,7 +326,7 @@ class SpotDetectionStepClass(PipelineStepsClass):
         self.img = self.pipelineData.list_images[id]
         self.masks_complete_cells = self.pipelineData.pipelineOutputs.CellSegmentationOutput.masks_complete_cells[id]
         self.masks_nuclei = self.pipelineData.pipelineOutputs.CellSegmentationOutput.masks_nuclei[id]
-        self.masks_cytosol_no_nuclei = self.pipelineData.pipelineOutputs.CellSegmentationOutput.masks_cytosol_no_nuclei[
+        self.masks_cytosol_no_nuclei = self.pipelineData.pipelineOutputs.CellSegmentationOutput.masks_cytosol[
             id]
 
         self.list_voxels = [self.experiment.voxel_size_z, self.terminatorScope.voxel_size_yx]
@@ -393,7 +342,7 @@ class SpotDetectionStepClass(PipelineStepsClass):
         if self.save_all_images:
             self.filtered_folder_name = self.pipelineData.filtered_folder_name
 
-    def main(self, id: int) -> SpotDetectionStepOutputClass:
+    def main(self, cytoChannel, nucChannel,  id: int) -> SpotDetectionStepOutputClass:
         temp_file_name = self.file_name[:self.file_name.rfind(
             '.')]  # slicing the name of the file. Removing after finding '.' in the string.
         temp_original_img_name = pathlib.Path().absolute().joinpath(self.temp_folder_name,

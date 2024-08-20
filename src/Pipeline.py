@@ -1,6 +1,6 @@
 import os
 
-from . import PipelineSettings, ScopeClass, Experiment, PipelineDataClass, PipelineOutputsClass, PrePipelineOutputsClass
+from . import PipelineSettings, ScopeClass, Experiment, PipelineDataClass, PipelineOutputsClass, PrePipelineOutputsClass, StepOutputsClass
 
 
 # from .GeneralOutputClasses import PipelineOutputsClass
@@ -26,6 +26,8 @@ class Pipeline:
         self.prePipelineSteps = prePipelineSteps
         self.postPipelineSteps = postPipelineSteps
         self.pipelineSteps = pipelineSteps
+        self.pipelineData.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
+                                              self.experiment.number_of_images_to_process)
 
         self.pipelineData.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
         if not os.path.exists(self.pipelineData.temp_folder_name) and self.pipelineSettings.save_files:
@@ -51,10 +53,12 @@ class Pipeline:
         They can modify the pipelineData, they may also create new properties in pipelineData. they will also have the option to freeze the pipelineData in place
 
         '''
-        self.pipelineData.prePipelineOutputs = PrePipelineOutputsClass()
         for step in self.prePipelineSteps:
             print(step)
-            stepOutput = step.run(pipelineData=self.pipelineData, pipelineSettings=self.pipelineSettings, terminatorScope=self.terminatorScope, experiment=self.experiment)
+            stepOutput = step.run(pipelineData=self.pipelineData,
+                                  pipelineSettings=self.pipelineSettings,
+                                  terminatorScope=self.terminatorScope,
+                                  experiment=self.experiment)
             if stepOutput is None:
                 raise ValueError(f'{step} did not return a value')
             if hasattr(stepOutput, 'ModifyPipelineData'):
@@ -71,12 +75,10 @@ class Pipeline:
                             # remove that attribute from the stepOutput
                             delattr(stepOutput, attr)
                 # append the attributes to prePipelineOutputs
-            self.pipelineData.prePipelineOutputs.append(stepOutput)
+            self.pipelineData.append(stepOutput)
 
     def run_pipeline_steps(self):
-        self.pipelineData.pipelineOutputs = PipelineOutputsClass()
-        for img_index in range(min(self.pipelineSettings.user_select_number_of_images_to_run,
-                                   self.experiment.number_of_images_to_process)):
+        for img_index in range(self.pipelineData.num_img_2_run):
             print('')
             print(' ###################### ')
             print('        IMAGE : ' + str(img_index))
@@ -92,7 +94,8 @@ class Pipeline:
                 print('    Trimmed z_slices at each border :        ', self.pipelineSettings.NUMBER_Z_SLICES_TO_TRIM)
             else:
                 print('    Original Image Shape :                   ', img_shape)
-                print('    Image sharpness metric :                 ', self.prePipelineOutputs.CalculateSharpnessOutput.list_is_image_sharp[id])
+                print('    Image sharpness metric :                 ',
+                      self.pipelineData.CalculateSharpnessOutput.list_is_image_sharp[id])
             
             for step in self.pipelineSteps:
                 singleImageSingleStepOutputs = step.run(id=img_index, pipelineData=self.pipelineData,
@@ -101,9 +104,12 @@ class Pipeline:
                                                         experiment=self.experiment)
                 if singleImageSingleStepOutputs is None:
                     raise ValueError(f'{step} did not return a value')
-                self.pipelineData.pipelineOutputs.append(singleImageSingleStepOutputs)
+                self.pipelineData.append(singleImageSingleStepOutputs)
 
     def run_post_pipeline_steps(self):
-        postPipelineOutputs = []
         for step in self.postPipelineSteps:
-            postPipelineOutputs.append(step.run(pipelineData=self.pipelineData, pipelineSettings=self.pipelineSettings, terminatorScope=self.terminatorScope, experiment=self.experiment))
+            self.pipelineData.append(step.run(pipelineData=self.pipelineData,
+                                              pipelineSettings=self.pipelineSettings,
+                                              terminatorScope=self.terminatorScope,
+                                              experiment=self.experiment))
+

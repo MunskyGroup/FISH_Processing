@@ -14,7 +14,7 @@ from src.Util.Utilities import Utilities
 # from Util.Intensity import Intensity
 
 
-class DataProcessing():
+class DataProcessing:
     '''
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
     This class contains parameter descriptions obtained from `Big-FISH <https://github.com/fish-quant/big-fish>`_ Copyright © 2020, Arthur Imbert. For a complete description of the parameters used check the `Big-FISH documentation <https://big-fish.readthedocs.io/en/stable/>`_ .

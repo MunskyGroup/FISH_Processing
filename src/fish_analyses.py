@@ -1320,20 +1320,20 @@ class BigFISH():
         else:
             range_plot_images = range(central_slice,central_slice+1)      
         for i in range_plot_images:
-            if (i==central_slice) and (self.show_plots ==True):
+            if (i == central_slice) and self.show_plots:
                 print('Z-Slice: ', str(i))
             image_2D = rna_filtered[i,:,:]
             if i > 1 and i<rna.shape[0]-1:
-                if self.display_spots_on_multiple_z_planes == True:
+                if self.display_spots_on_multiple_z_planes:
                     # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane-1
                     clusters_to_plot = clusters[(clusters[:,0]>=i-1) & (clusters[:,0]<=i+2) ] 
-                    spots_to_plot =  spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ]
+                    spots_to_plot = spots_post_decomposition [(spots_post_decomposition[:,0]>=i-1) & (spots_post_decomposition[:,0]<=i+1) ]
                 else:
                     clusters_to_plot = clusters[clusters[:,0]==i]
-                    spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                    spots_to_plot = spots_post_decomposition [spots_post_decomposition[:,0]==i ]
             else:
                 clusters_to_plot = clusters[clusters[:,0]==i]
-                spots_to_plot =  spots_post_decomposition [spots_post_decomposition[:,0]==i ]
+                spots_to_plot = spots_post_decomposition [spots_post_decomposition[:,0]==i ]
             if self.save_all_images:
                 path_output= str(self.image_name) + '_ch_' + str(self.FISH_channel) +'_slice_'+ str(i) +'.png'
             else:
@@ -1480,6 +1480,10 @@ class DataProcessing():
         def data_to_df(df, spotDetectionCSV, clusterDetectionCSV, mask_nuc = None, mask_cytosol_only=None,masks_complete_cells=None, nuc_area = 0, cyto_area =0, cell_area=0,
                         nuc_centroid_y=0, nuc_centroid_x=0, cyto_centroid_y=0, cyto_centroid_x=0, image_counter=0, is_cell_in_border = 0, spot_type=0, cell_counter =0,
                         nuc_int=None, cyto_int = None, complete_cell_int=None,pseudo_cyto_int=None,nucleus_cytosol_intensity_ratio=None,nucleus_pseudo_cytosol_intensity_ratio=None):
+            # TODO: Clusters are not being counted properly
+            # TODO: Fix how this data is passed down to subsequent steps
+
+
             # spotDetectionCSV      nrna x  [Z,Y,X,idx_foci]
             # clusterDetectionCSV   nc   x  [Z,Y,X,size,idx_foci]
             # Removing TS from the image and calculating RNA in nucleus

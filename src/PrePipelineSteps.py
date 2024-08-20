@@ -28,25 +28,22 @@ class ConsolidateImageShapes(prePipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
         self.ModifyPipelineData = True
-        self.list_images = None
 
-    def load_in_attributes(self):
-        self.list_images = self.pipelineData.list_images
-
-    def main(self):
+    def main(self,
+             list_images, **kwargs):
         # Luis's code
-        if len(self.list_images[0].shape) < 3:
-            list_images_extended = [np.expand_dims(img, axis=0) for img in self.list_images ]
-            self.list_images = list_images_extended
+        if len(list_images[0].shape) < 3:
+            list_images_extended = [np.expand_dims(img, axis=0) for img in list_images]
+            list_images = list_images_extended
             
-        if len(self.list_images[0].shape) < 4:
-            list_images_extended = [np.expand_dims(img, axis=0) for img in self.pipelineData.list_images ]
-            self.list_images = list_images_extended
+        if len(list_images[0].shape) < 4:
+            list_images_extended = [np.expand_dims(img, axis=0) for img in list_images]
+            list_images = list_images_extended
         else:
-            self.list_images = self.list_images
+            list_images = list_images
 
         # outputs
-        output = ConsolidateImageShapesOutput(list_images=self.list_images)
+        output = ConsolidateImageShapesOutput(list_images=list_images)
         return output
 
 
@@ -83,32 +80,23 @@ class CalculateSharpness(prePipelineStepsClass):
     """
     def __init__(self) -> None:
         super().__init__()
-        self.channels_with_FISH = None
-        self.sharpness_threshold = None
-        self.list_images = None
-        self.remove_out_of_focus_images = None
-        self.ModifyPipelineData = True
 
-    def load_in_attributes(self):
-        # Required Inputs:
-        self.remove_out_of_focus_images = self.pipelineSettings.remove_out_of_focus_images
-        self.sharpness_threshold = self.pipelineSettings.sharpness_threshold
-        self.list_images = self.pipelineData.list_images
-        self.channels_with_FISH = self.experiment.FISHChannel
-
-
-    def main(self):
+    def main(self,
+             list_images,
+             FISHChannel,
+             sharpness_threshold,
+             remove_out_of_focus_images, **kwargs):
         # Modified Luis's Code
         # this can be rewritten to be more efficient, calculate sharpness is ran either way, we just change the outputs
-        if self.remove_out_of_focus_images:
+        if remove_out_of_focus_images:
             list_metric_sharpness_images, list_is_image_sharp, list_sharp_images = Utilities().calculate_sharpness(
-                self.list_images, channels_with_FISH=self.channels_with_FISH,threshold=self.sharpness_threshold)
+                list_images, channels_with_FISH=FISHChannel,threshold=sharpness_threshold)
         else:
-            list_is_image_sharp = np.ones(len(self.list_images))
+            list_is_image_sharp = np.ones(len(list_images))
             list_is_image_sharp = [bool(x) for x in list_is_image_sharp]
-            list_metric_sharpness_images = Utilities().calculate_sharpness(self.list_images,
-                                                                           channels_with_FISH=self.channels_with_FISH,
-                                                                           threshold=self.sharpness_threshold)[0]
+            list_metric_sharpness_images = Utilities().calculate_sharpness(list_images,
+                                                                           channels_with_FISH=FISHChannel,
+                                                                           threshold=sharpness_threshold)[0]
             list_sharp_images = None
 
         # outputs
@@ -157,55 +145,38 @@ class AutomaticSpotDetection(prePipelineStepsClass):
     """
     def __init__(self) -> None:
         super().__init__()
-        self.use_log_filter_for_spot_detection = None
-        self.minimum_spots_cluster = None
-        self.CLUSTER_RADIUS = None
-        self.threshold_for_spot_detection = None
-        self.channels_with_FISH = None
-        self.psf_yx = None
-        self.psf_z = None
-        self.voxel_size_yx = None
-        self.voxel_size_z = None
-        self.list_sharp_images = None
-        self.MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = None
-        self.MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = None
-        self.ModifyPipelineData = False
 
-    def load_in_attributes(self):
-        self.MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = (
-            self.pipelineSettings.MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD)
-        self.MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD = (
-            self.pipelineSettings.MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD)
-        self.list_sharp_images = self.pipelineData.list_images
-        self.voxel_size_z = self.experiment.voxel_size_z
-        self.voxel_size_yx = self.terminatorScope.voxel_size_yx
-        self.psf_z = self.terminatorScope.psf_z
-        self.psf_yx = self.terminatorScope.psf_yx
-        self.channels_with_FISH = self.experiment.FISHChannel
-        self.threshold_for_spot_detection = self.pipelineSettings.threshold_for_spot_detection
-        self.CLUSTER_RADIUS = self.pipelineSettings.CLUSTER_RADIUS
-        self.minimum_spots_cluster = self.pipelineSettings.minimum_spots_cluster
-        self.use_log_filter_for_spot_detection = self.pipelineSettings.use_log_filter_for_spot_detection
+    def main(self, list_images,
+             voxel_size_z,
+             voxel_size_yx,
+             psf_z,
+             psf_yx,
+             FISHChannel,
+             threshold_for_spot_detection,
+             CLUSTER_RADIUS,
+             minimum_spots_cluster,
+             use_log_filter_for_spot_detection,
+             MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD,
+             MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD,
+             **kwargs):
 
-
-    def main(self):
         # Luis's Code
-        if (self.threshold_for_spot_detection is None) and (len(self.list_sharp_images) > self.MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD):
-            number_images_to_test = np.min((self.MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, len(self.list_sharp_images)))
-            sub_section_images_to_test = self.list_sharp_images[:number_images_to_test]
+        if (threshold_for_spot_detection is None) and (len(list_images) > MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD):
+            number_images_to_test = np.min((MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, len(list_images)))
+            sub_section_images_to_test = list_images[:number_images_to_test]
             threshold_for_spot_detection = []
-            for i in range(len(self.channels_with_FISH)):
+            for i in range(len(FISHChannel)):
                 list_thresholds = []
                 for _, image_selected in enumerate(sub_section_images_to_test):
                     threshold = BigFISH(image_selected,
-                                        self.channels_with_FISH[i],
-                                        voxel_size_z=self.voxel_size_z,
-                                        voxel_size_yx=self.voxel_size_yx,
-                                        psf_z=self.psf_z,
-                                        psf_yx=self.psf_yx,
-                                        cluster_radius=self.CLUSTER_RADIUS,
-                                        minimum_spots_cluster=self.minimum_spots_cluster,
-                                        use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,
+                                        FISHChannel[i],
+                                        voxel_size_z=voxel_size_z,
+                                        voxel_size_yx=voxel_size_yx,
+                                        psf_z=psf_z,
+                                        psf_yx=psf_yx,
+                                        cluster_radius=CLUSTER_RADIUS,
+                                        minimum_spots_cluster=minimum_spots_cluster,
+                                        use_log_filter_for_spot_detection=use_log_filter_for_spot_detection,
                                         threshold_for_spot_detection=None).detect()[2]
                     list_thresholds.append(threshold)
                 # calculating the average threshold for all images removing min and max values.
@@ -215,9 +186,11 @@ class AutomaticSpotDetection(prePipelineStepsClass):
                 mask_ts = (array_threshold_spot_detection != min_val) & (array_threshold_spot_detection != max_val)
                 average_threshold_spot_detection = int(np.mean(array_threshold_spot_detection[mask_ts]))
                 threshold_for_spot_detection.append(average_threshold_spot_detection)
-            print('Most images are noisy. An average threshold value for spot detection has been calculated using all images:', threshold_for_spot_detection)
+            print(
+                'Most images are noisy. An average threshold value for spot detection has been calculated using all images:',
+                threshold_for_spot_detection)
         else:
-            threshold_for_spot_detection = Utilities().create_list_thresholds_FISH(self.channels_with_FISH, self.threshold_for_spot_detection)
+            threshold_for_spot_detection = Utilities().create_list_thresholds_FISH(FISHChannel, threshold_for_spot_detection)
 
         # outputs
         output = AutomaticThresholdingOutput(threshold_for_spot_detection=threshold_for_spot_detection)
@@ -258,40 +231,33 @@ class TrimZSlices(prePipelineStepsClass):
         super().__init__()
         self.ModifyPipelineData = True
 
-    def load_in_attributes(self):
-        self.MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE = self.pipelineSettings.MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE # This constant is only used to remove the extre z-slices on the original image.
-        self.num_z_slices = self.experiment.number_of_Z
-        self.list_images = self.pipelineData.list_images
-        self.NUMBER_Z_SLICES_TO_TRIM = self.pipelineSettings.NUMBER_Z_SLICES_TO_TRIM # This constant indicates the number of z_slices to remove from the border.
-        self.number_images = self.experiment.number_of_images_to_process
 
-    def main(self):
-        # this is stupid but whatever
-        if self.pipelineSettings.remove_z_slices_borders:
-            self.remove_z_slices_borders = True
-        else:
-            print('Trim Z Slices will not be ran as the flag is not set')
-        
-        if hasattr(self.pipelineData, 'list_z_slices_per_image'):
-            list_selected_z_slices = self.pipelineData.list_z_slices_per_image
-        else:
-            list_selected_z_slices = None
+    def main(self,
+             list_images,
+             NUMBER_Z_SLICES_TO_TRIM,
+             number_of_Z,
+             num_img_2_run,
+             MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE,
+             remove_z_slices_borders: bool = True,
+             list_z_slices_per_image = None,
+             list_selected_z_slices = None,
+             **kwargs):
 
-        if self.remove_z_slices_borders:
+        if remove_z_slices_borders:
             list_images_trimmed = []
-            if (self.remove_z_slices_borders and (list_selected_z_slices is None) and
-                    (self.num_z_slices >= self.MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE)):
-                list_selected_z_slices = np.arange(self.NUMBER_Z_SLICES_TO_TRIM, self.num_z_slices - self.NUMBER_Z_SLICES_TO_TRIM, 1)
-                self.remove_z_slices_borders = True
+            if (remove_z_slices_borders and (list_selected_z_slices is None) and
+                    (number_of_Z >= MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE)):
+                list_selected_z_slices = np.arange(NUMBER_Z_SLICES_TO_TRIM, number_of_Z - NUMBER_Z_SLICES_TO_TRIM, 1)
             else:
-                self.NUMBER_Z_SLICES_TO_TRIM = 0
-                self.remove_z_slices_borders = False
-            self.NUMBER_Z_SLICES_TO_TRIM = self.NUMBER_Z_SLICES_TO_TRIM
-            if not (list_selected_z_slices is None):
-                for i in range(self.number_images):
-                    if len(list_selected_z_slices) > self.list_images[i].shape[0]:
+                NUMBER_Z_SLICES_TO_TRIM = 0
+                remove_z_slices_borders = False
+
+            NUMBER_Z_SLICES_TO_TRIM = NUMBER_Z_SLICES_TO_TRIM
+            if list_selected_z_slices is not None:
+                for i in range(num_img_2_run):
+                    if len(list_selected_z_slices) > list_images[i].shape[0]:
                         raise ValueError("Error: You are selecting z-slices that are outside the size of your image. In PipelineFISH, please use this option list_selected_z_slices=None ")
-                    list_images_trimmed.append(self.list_images[i][list_selected_z_slices,:,:,:])
+                    list_images_trimmed.append(list_images[i][list_selected_z_slices, :, :, :])
             # outputs
             output = TrimZSlicesOutput(list_images=list_images_trimmed, list_z_slices_per_image=list_selected_z_slices)
             return output
