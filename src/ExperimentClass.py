@@ -13,7 +13,7 @@ class Experiment():
     """
     def __init__(self, 
                 initial_data_location: str,
-                number_of_images_to_process: int = None, # This will be all images to process and will be the product of the number of tp and number of FOVs
+                number_of_images_to_process: int = None,  # This will be all images to process and will be the product of the number of tp and number of FOVs
                 number_of_channels: int = None,
                 number_of_timepoints: int = None,
                 number_of_Z: int = None,

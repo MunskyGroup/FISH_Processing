@@ -107,10 +107,10 @@ class CalculateSharpness(prePipelineStepsClass):
 
 
 class AutomaticThresholdingOutput(StepOutputsClass):
-    def __init__(self, threshold_for_spot_detection) -> None:
+    def __init__(self, automatic_spot_detection_threshold) -> None:
         super().__init__()
         self.ModifyPipelineData = False
-        self.threshold_for_spot_detection = threshold_for_spot_detection
+        self.automatic_spot_detection_threshold = automatic_spot_detection_threshold
 
 
 class AutomaticSpotDetection(prePipelineStepsClass):
@@ -146,7 +146,8 @@ class AutomaticSpotDetection(prePipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
 
-    def main(self, list_images,
+    def main(self,
+             list_images,
              voxel_size_z,
              voxel_size_yx,
              psf_z,
@@ -193,7 +194,7 @@ class AutomaticSpotDetection(prePipelineStepsClass):
             threshold_for_spot_detection = Utilities().create_list_thresholds_FISH(FISHChannel, threshold_for_spot_detection)
 
         # outputs
-        output = AutomaticThresholdingOutput(threshold_for_spot_detection=threshold_for_spot_detection)
+        output = AutomaticThresholdingOutput(automatic_spot_detection_threshold=threshold_for_spot_detection)
         return output
 
 
