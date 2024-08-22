@@ -1,17 +1,12 @@
 import numpy as np  # For numerical operations with arrays
 
-# from . import Utilities, DataProcessing, BigFISH
 from src.Util.BigFish import BigFISH
 from src.Util.DataProcessing import DataProcessing
 from src.Util.Utilities import Utilities
 
 
-# from Util.BigFish import BigFISH             # For spot detection using Big-FISH
-# from Utilities import Utilities         # Assuming a utility class for mask separation
-# from Util.DataProcessing import DataProcessing  # Assuming a class for processing data
 
-
-class SpotDetection():
+class SpotDetection:
     '''
     This class is intended to detect spots in FISH images using `Big-FISH <https://github.com/fish-quant/big-fish>`_. The format of the image must be  [Z, Y, X, C].
     This class is intended to extract data from the class SpotDetection and return the data as a dataframe. 
@@ -71,25 +66,33 @@ class SpotDetection():
                  image_name=None, save_all_images=True, display_spots_on_multiple_z_planes=False,
                  use_log_filter_for_spot_detection=True, threshold_for_spot_detection=None, save_files=True, **kwargs):
 
-        if len(image.shape)<4:
-            image= np.expand_dims(image,axis =0)
+        if len(image.shape) < 4:
+            image = np.expand_dims(image, axis=0)
         self.image = image
         self.number_color_channels = image.shape[-1]
-        self.channels_with_cytosol=channels_with_cytosol
-        self.channels_with_nucleus=channels_with_nucleus
-        if  masks_complete_cells is not None:
+        self.channels_with_cytosol = channels_with_cytosol
+        self.channels_with_nucleus = channels_with_nucleus
+
+        # whole cell masks
+        if masks_complete_cells is not None:
             self.list_masks_complete_cells = Utilities().separate_masks(masks_complete_cells)
         elif masks_complete_cells is None and masks_nuclei is not None:
-            self.list_masks_complete_cells = Utilities().separate_masks(masks_nuclei)            
-        if not (masks_nuclei is None):    
+            self.list_masks_complete_cells = Utilities().separate_masks(masks_nuclei)
+        else:
+            self.list_masks_complete_cells = masks_complete_cells
+
+        # nuclei masks
+        if not (masks_nuclei is None):
             self.list_masks_nuclei = Utilities().separate_masks(masks_nuclei)
         else:
             self.list_masks_nuclei = None
-        
+
+        # cytosol mask
         if not (masks_complete_cells is None) and not (masks_nuclei is None):
             self.list_masks_cytosol_no_nuclei = Utilities().separate_masks(masks_cytosol_no_nuclei)
         else:
             self.list_masks_cytosol_no_nuclei = None
+
         self.FISH_channels = FISH_channels
         self.cluster_radius = cluster_radius
         self.minimum_spots_cluster = minimum_spots_cluster
@@ -110,25 +113,26 @@ class SpotDetection():
         else:
             self.list_FISH_channels = FISH_channels
         self.image_name = image_name
-        self.save_all_images = save_all_images                                  # Displays all the z-planes
+        self.save_all_images = save_all_images  # Displays all the z-planes
         self.display_spots_on_multiple_z_planes = display_spots_on_multiple_z_planes  # Displays the ith-z_plane and the detected spots in the planes ith-z_plane+1 and ith-z_plane
-        self.use_log_filter_for_spot_detection =use_log_filter_for_spot_detection
+        self.use_log_filter_for_spot_detection = use_log_filter_for_spot_detection
         if not isinstance(threshold_for_spot_detection, list):
-            threshold_for_spot_detection=[threshold_for_spot_detection]
-        self.threshold_for_spot_detection=threshold_for_spot_detection
+            threshold_for_spot_detection = [threshold_for_spot_detection]
+        self.threshold_for_spot_detection = threshold_for_spot_detection
         self.save_files = save_files
         self.kwargs = kwargs
+
     def get_dataframe(self):
         list_fish_images = []
         list_thresholds_spot_detection = []
-        for i in range(0,len(self.list_FISH_channels)):
-            #print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
-            if (i ==0):
-                dataframe_FISH = self.dataframe 
+        for i in range(0, len(self.list_FISH_channels)):
+            # print('Spot Detection for Channel :', str(self.list_FISH_channels[i]) )
+            if (i == 0):
+                dataframe_FISH = self.dataframe
                 reset_cell_counter = False
             voxel_size_z = self.list_voxels[i][0]
             voxel_size_yx = self.list_voxels[i][1]
-            psf_z = self.list_psfs[i][0] 
+            psf_z = self.list_psfs[i][0]
             psf_yx = self.list_psfs[i][1]
             [spotDetectionCSV, clusterDetectionCSV], image_filtered, threshold = BigFISH(self.image,
                                                                                          self.list_FISH_channels[i],
@@ -143,18 +147,24 @@ class SpotDetection():
                                                                                          display_spots_on_multiple_z_planes=self.display_spots_on_multiple_z_planes,
                                                                                          use_log_filter_for_spot_detection=self.use_log_filter_for_spot_detection,
                                                                                          threshold_for_spot_detection=
-                                                                                         self.threshold_for_spot_detection[i],
+                                                                                         self.threshold_for_spot_detection[
+                                                                                             i],
                                                                                          save_files=self.save_files,
                                                                                          **self.kwargs).detect()
             list_thresholds_spot_detection.append(threshold)
             # converting the psf to pixles
-            yx_spot_size_in_px = np.max((1,int(voxel_size_yx / psf_yx))).astype('int')
-            
-            dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.image, self.list_masks_complete_cells, self.list_masks_nuclei, self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,self.channels_with_nucleus,
-                                            yx_spot_size_in_px=yx_spot_size_in_px, dataframe =dataframe_FISH,reset_cell_counter=reset_cell_counter,image_counter = self.image_counter ,spot_type=i,number_color_channels=self.number_color_channels ).get_dataframe()
+            yx_spot_size_in_px = np.max((1, int(voxel_size_yx / psf_yx))).astype('int')
+
+            dataframe_FISH = DataProcessing(spotDetectionCSV, clusterDetectionCSV, self.image,
+                                            self.list_masks_complete_cells, self.list_masks_nuclei,
+                                            self.list_masks_cytosol_no_nuclei, self.channels_with_cytosol,
+                                            self.channels_with_nucleus,
+                                            yx_spot_size_in_px=yx_spot_size_in_px, dataframe=dataframe_FISH,
+                                            reset_cell_counter=reset_cell_counter, image_counter=self.image_counter,
+                                            spot_type=i,
+                                            number_color_channels=self.number_color_channels).get_dataframe()
             # reset counter for image and cell number
-            #if i >0:
+            # if i >0:
             reset_cell_counter = True
             list_fish_images.append(image_filtered)
         return dataframe_FISH, list_fish_images, list_thresholds_spot_detection
-

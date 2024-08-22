@@ -1,5 +1,6 @@
 import numpy as np
 from skimage.io import imread
+import pandas as pd
 import tifffile
 import os
 import warnings
@@ -298,6 +299,7 @@ class SpotDetectionStepOutputClass(StepOutputsClass):
 class SpotDetectionStepClass(PipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
+        self.dataframe = None
 
     def main(self,
              id: int,
@@ -308,31 +310,45 @@ class SpotDetectionStepClass(PipelineStepsClass):
              list_image_names: list,
              temp_folder_name: str | pathlib.Path,
              threshold_for_spot_detection: float,
-             segmentation_successful: list[bool],
              CLUSTER_RADIUS: float,
              minimum_spots_cluster: float,
              masks_complete_cells: list[np.array],
-             masks_nuclei: list[np.array],
-             masks_cytosol: list[np.array],
              voxel_size_z: float,
              voxel_size_yx: float,
              psf_z: float,
              psf_yx: float,
              save_all_images: bool,
              filtered_folder_name: str | pathlib.Path,
+             masks_nuclei: list[np.array] = None,
+             masks_cytosol: list[np.array] = None,
+             segmentation_successful: list[bool] = None,
              show_plots: bool = True,
              display_spots_on_multiple_z_planes: bool = False,
              use_log_filter_for_spot_detection: bool = False,
              save_files: bool = True,
+             dataframe: pd.DataFrame = None,
              **kwargs) -> SpotDetectionStepOutputClass:
 
         img = list_images[id]
-        masks_complete_cells = masks_complete_cells[id]
-        masks_nuclei = masks_nuclei[id]
-        masks_cytosol = masks_cytosol[id]
+
+        self.dataframe = dataframe
+
+        # allows lack of mask to fail open
+        if masks_complete_cells is not None:
+            masks_complete_cells = masks_complete_cells[id]
+        if masks_nuclei is not None:
+            masks_nuclei = masks_nuclei[id]
+        if masks_cytosol is not None:
+            masks_cytosol = masks_cytosol[id]
+
         file_name = list_image_names[id]
         temp_folder_name = temp_folder_name
-        segmentation_successful = segmentation_successful[id]
+
+        if segmentation_successful is None:  # fail open
+            segmentation_successful = True
+        else:
+            segmentation_successful = segmentation_successful[id]
+
         list_voxels = [voxel_size_z, voxel_size_yx]
         list_psfs = [psf_z, psf_yx]
 
@@ -379,18 +395,19 @@ class SpotDetectionStepClass(PipelineStepsClass):
             # Saving the average number of spots per cell
             list_number_of_spots_per_cell_for_each_spot_type = []
             list_max_number_of_spots_per_cell_for_each_spot_type = []
-            for sp in range(len(FISHChannel)):
-                detected_spots = np.asarray([len(self.dataframe.loc[(self.dataframe['cell_id'] == cell_id_test) & (
-                        self.dataframe['spot_type'] == sp) & (self.dataframe['is_cell_fragmented'] != -1)].spot_id)
-                                             for i, cell_id_test in enumerate(test_cells_ids)])
-                average_number_of_spots_per_cell = int(np.mean(detected_spots))
-                max_number_of_spots_per_cell = int(np.max(detected_spots))
-                list_number_of_spots_per_cell_for_each_spot_type.append(average_number_of_spots_per_cell)
-                list_max_number_of_spots_per_cell_for_each_spot_type.append(max_number_of_spots_per_cell)
-            print('    Average detected spots per cell :        ', list_number_of_spots_per_cell_for_each_spot_type)
-            print('    Maximum detected spots per cell :        ', list_max_number_of_spots_per_cell_for_each_spot_type)
-            #list_average_spots_per_cell.append(list_number_of_spots_per_cell_for_each_spot_type)
-            # saving FISH images
+            if masks_complete_cells is not None and masks_nuclei is not None and masks_cytosol is not None:
+                for sp in range(len(FISHChannel)):
+                    detected_spots = np.asarray([len(self.dataframe.loc[(self.dataframe['cell_id'] == cell_id_test) & (
+                            self.dataframe['spot_type'] == sp) & (self.dataframe['is_cell_fragmented'] != -1)].spot_id)
+                                                 for i, cell_id_test in enumerate(test_cells_ids)])
+                    average_number_of_spots_per_cell = int(np.mean(detected_spots))
+                    max_number_of_spots_per_cell = int(np.max(detected_spots))
+                    list_number_of_spots_per_cell_for_each_spot_type.append(average_number_of_spots_per_cell)
+                    list_max_number_of_spots_per_cell_for_each_spot_type.append(max_number_of_spots_per_cell)
+                print('    Average detected spots per cell :        ', list_number_of_spots_per_cell_for_each_spot_type)
+                print('    Maximum detected spots per cell :        ', list_max_number_of_spots_per_cell_for_each_spot_type)
+                #list_average_spots_per_cell.append(list_number_of_spots_per_cell_for_each_spot_type)
+                # saving FISH images
             if save_all_images:
                 for j in range(len(FISHChannel)):
                     filtered_image_path = pathlib.Path().absolute().joinpath(filtered_folder_name, 'filter_Ch_' + str(
@@ -400,7 +417,7 @@ class SpotDetectionStepClass(PipelineStepsClass):
             df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == id]
             df_labels = df_subset.drop_duplicates(subset=['cell_id'])
             # Plotting cells 
-            if save_files:
+            if save_files and (masks_cytosol is not None or masks_nuclei is not None or masks_nuclei is not None):
                 Plots().plotting_masks_and_original_image(image=img,
                                                           masks_complete_cells=masks_complete_cells,
                                                           masks_nuclei=masks_nuclei,
