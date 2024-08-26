@@ -16,7 +16,6 @@ import math
 from cellpose import models
 import os;
 import warnings
-
 warnings.filterwarnings('ignore')
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -25,7 +24,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import matplotlib as mpl
-
 mpl.rc('image', cmap='viridis')
 plt.style.use('ggplot')  # ggplot  #default
 import socket
@@ -42,11 +40,10 @@ warnings.filterwarnings('ignore', category=matplotlib.MatplotlibDeprecationWarni
 # Selecting the GPU. This is used in case multiple scripts run in parallel.
 try:
     import torch
-
-    number_gpus = len([torch.cuda.device(i) for i in range(torch.cuda.device_count())])
-    if number_gpus > 1:  # number_gpus
+    number_gpus = len ( [torch.cuda.device(i) for i in range(torch.cuda.device_count())] )
+    if number_gpus >1 : # number_gpus
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(np.random.randint(0, number_gpus, 1)[0])
+        os.environ["CUDA_VISIBLE_DEVICES"] =  str(np.random.randint(0,number_gpus,1)[0])
 except:
     print('No GPUs are detected on this computer. Please follow the instructions for the correct installation.')
 import zipfile
@@ -489,4 +486,9 @@ class CellSegmentation:
         return masks_complete_cells, masks_nuclei, masks_cytosol_no_nuclei
 
 
+
 from src.Util.Utilities import Utilities
+
+
+
+

@@ -47,7 +47,7 @@ class BigFISH:
     def __init__(self, image, FISH_channel, voxel_size_z=300, voxel_size_yx=103, psf_z=350, psf_yx=150,
                  cluster_radius=350, minimum_spots_cluster=4, show_plots=False, image_name=None, save_all_images=False,
                  display_spots_on_multiple_z_planes=False, use_log_filter_for_spot_detection=True,
-                 threshold_for_spot_detection=None, save_files=True, bigfish_alpha: float = 0.5,
+                 threshold_for_spot_detection=None, save_files=True, bigfish_alpha: float = 0.9,
                  bigfish_beta: float = 1, bigfish_gamma: float = 5,
                  **kwargs):
         if len(image.shape) < 4:
