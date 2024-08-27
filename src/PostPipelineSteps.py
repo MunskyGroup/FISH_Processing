@@ -5,6 +5,7 @@ from src import PipelineSettings, Experiment, ScopeClass, PipelineDataClass, pos
 from src.Util.Plots import Plots
 from src.Util.Metadata import Metadata
 from src.Util.ReportPDF import ReportPDF
+from src.Util.Utilities import Utilities
 
 
 # from GeneralStepClasses import postPipelineStepsClass
@@ -19,15 +20,16 @@ class SavePDFReport(postPipelineStepsClass):
         super().__init__()
 
     def main(self, initial_data_location, num_img_2_run, list_images,
-        list_image_names, segmentation_successful, list_is_image_sharp, save_files, show_plots,
-        temp_folder_name, dfFISH, FISHChannel, cytoChannel, nucChannel, masks_complete_cells, masks_nuclei,
-        diameter_cytosol, diameter_nucleus, minimum_spots_cluster, CLUSTER_RADIUS, voxel_size_z,
-        voxel_size_yx, psf_yx, psf_z, threshold_for_spot_detection, avg_number_of_spots_per_cell_each_ch,
-        number_detected_cells,
-        list_metric_sharpness_images,
-        remove_out_of_focus_images, sharpness_threshold, remove_z_slices_borders,NUMBER_Z_SLICES_TO_TRIM, img_id,
-        number_of_images_to_process, automatic_spot_detection_threshold, individual_threshold_spot_detection, save_pdf_report, list_z_slices_per_image,
-        save_all_images, **kwargs):
+             list_image_names, segmentation_successful, list_is_image_sharp, save_files, show_plots,
+             temp_folder_name, dfFISH, FISHChannel, cytoChannel, nucChannel, masks_complete_cells, masks_nuclei,
+             diameter_cytosol, diameter_nucleus, minimum_spots_cluster, CLUSTER_RADIUS, voxel_size_z,
+             voxel_size_yx, psf_yx, psf_z, threshold_for_spot_detection, avg_number_of_spots_per_cell_each_ch,
+             number_detected_cells,
+             list_metric_sharpness_images,
+             remove_out_of_focus_images, sharpness_threshold, remove_z_slices_borders, NUMBER_Z_SLICES_TO_TRIM, img_id,
+             number_of_images_to_process, automatic_spot_detection_threshold, individual_threshold_spot_detection,
+             save_pdf_report, list_z_slices_per_image,
+             save_all_images, **kwargs):
 
         name_for_files = initial_data_location.name
         list_images = list_images[:num_img_2_run]
@@ -121,9 +123,78 @@ class SavePDFReport(postPipelineStepsClass):
                       list_segmentation_successful=list_processing_successful).create_report()
 
 
-class AddTPs2FISHDataFrame(postPipelineStepsClass):
-    def __init__(self) -> None:
+# TODO: Complete the lower postPipelineSteps
+class Luis_Additional_Plots(postPipelineStepsClass):
+    def __init__(self):
         super().__init__()
 
     def main(self):
-        pass
+
+        list_files_distributions = Plots().plot_all_distributions(dataframe_FISH, channels_with_cytosol,
+                                                                     channels_with_nucleus, channels_with_FISH,
+                                                                     minimum_spots_cluster,
+                                                                     output_identification_string)
+        
+        file_plots_bleed_thru = Plots().plot_scatter_bleed_thru(dataframe_FISH, channels_with_cytosol,
+                                                                   channels_with_nucleus, output_identification_string)
+
+        # plots
+        if not Utilities().is_None(channels_with_cytosol):
+            file_plots_int_ratio = Plots().plot_nuc_cyto_int_ratio_distributions(dataframe_FISH,
+                                                                                    output_identification_string=None,
+                                                                                    plot_for_pseudo_cytosol=False)
+        else:
+            file_plots_int_ratio = None
+        file_plots_int_pseudo_ratio = Plots().plot_nuc_cyto_int_ratio_distributions(dataframe_FISH,
+                                                                                       output_identification_string=None,
+                                                                                       plot_for_pseudo_cytosol=True)
+
+        ######################################
+        ######################################
+        # Saving data and plots, and sending data to NAS
+        Utilities().save_output_to_folder(output_identification_string,
+                                             data_folder_path,
+                                             list_files_distributions=list_files_distributions,
+                                             file_plots_bleed_thru=file_plots_bleed_thru,
+                                             file_plots_int_ratio=file_plots_int_ratio,
+                                             file_plots_int_pseudo_ratio=file_plots_int_pseudo_ratio,
+                                             channels_with_FISH=channels_with_FISH,
+                                             save_pdf_report=save_pdf_report)
+
+
+class Send_Data_To_Nas(postPipelineStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, output_identification_string,
+              data_folder_path,
+              path_to_config_file,
+              path_to_masks_dir,
+              diameter_nucleus,
+              diameter_cytosol,
+              send_data_to_NAS, 
+              masks_dir):
+        # sending data to NAS
+        analysis_folder_name, mask_dir_complete_name = Utilities().sending_data_to_NAS(output_identification_string,
+                                                                                          data_folder_path,
+                                                                                          path_to_config_file,
+                                                                                          path_to_masks_dir,
+                                                                                          diameter_nucleus,
+                                                                                          diameter_cytosol,
+                                                                                          send_data_to_NAS, 
+                                                                                          masks_dir)
+
+
+class Move_Results_To_Analysis_Folder(postPipelineStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, output_identification_string,
+             data_folder_path,
+             mask_dir_complete_name,
+             path_to_masks_dir,
+             save_filtered_images,
+             download_data_from_NAS):
+        Utilities().move_results_to_analyses_folder(output_identification_string, data_folder_path,
+                                                       mask_dir_complete_name, path_to_masks_dir, save_filtered_images,
+                                                       download_data_from_NAS)
