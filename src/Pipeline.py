@@ -1,6 +1,8 @@
 import os
 
-from . import PipelineSettings, ScopeClass, Experiment, PipelineDataClass, PipelineOutputsClass, PrePipelineOutputsClass, StepOutputsClass
+from . import PipelineSettings, ScopeClass, Experiment, PipelineDataClass, PipelineOutputsClass, \
+    PrePipelineOutputsClass, StepOutputsClass
+from .Util.Utilities import Utilities
 
 
 # from .GeneralOutputClasses import PipelineOutputsClass
@@ -10,7 +12,7 @@ from . import PipelineSettings, ScopeClass, Experiment, PipelineDataClass, Pipel
 # from .PipelineDataClass import PipelineDataClass
 
 class Pipeline:
-    def __init__(self, 
+    def __init__(self,
                  pipelineSettings: PipelineSettings,
                  terminatorScope: ScopeClass,
                  experiment: Experiment,
@@ -34,7 +36,8 @@ class Pipeline:
             os.makedirs(self.pipelineData.temp_folder_name)
 
         if self.pipelineSettings.save_all_images:
-            self.pipelineData.filtered_folder_name = str('filtered_images_' + self.experiment.initial_data_location.name)
+            self.pipelineData.filtered_folder_name = str(
+                'filtered_images_' + self.experiment.initial_data_location.name)
             if not os.path.exists(self.pipelineData.filtered_folder_name):
                 os.makedirs(self.pipelineData.filtered_folder_name)
 
@@ -96,7 +99,7 @@ class Pipeline:
                 print('    Original Image Shape :                   ', img_shape)
                 print('    Image sharpness metric :                 ',
                       self.pipelineData.CalculateSharpnessOutput.list_is_image_sharp[id])
-            
+
             for step in self.pipelineSteps:
                 singleImageSingleStepOutputs = step.run(id=img_index, pipelineData=self.pipelineData,
                                                         pipelineSettings=self.pipelineSettings,
@@ -108,8 +111,8 @@ class Pipeline:
 
     def run_post_pipeline_steps(self):
         for step in self.postPipelineSteps:
-            self.pipelineData.append(step.run(pipelineData=self.pipelineData,
-                                              pipelineSettings=self.pipelineSettings,
-                                              terminatorScope=self.terminatorScope,
-                                              experiment=self.experiment))
-
+            print(step)
+            step.run(pipelineData=self.pipelineData,
+                     pipelineSettings=self.pipelineSettings,
+                     terminatorScope=self.terminatorScope,
+                     experiment=self.experiment)

@@ -14,7 +14,7 @@ class PipelineSettings:
     remove_out_of_focus_images: int = 1
     save_pdf_report: int = 1
     MINIMAL_NUMBER_OF_Z_SLICES_TO_CONSIDER_A_3D_IMAGE: int = 5
-    NUMBER_Z_SLICES_TO_TRIM: int = None
+    NUMBER_Z_SLICES_TO_TRIM: int = 0
     user_select_number_of_images_to_run: int = 100_000  # TODO: This is bad but I want it to select all and am too lazy
                                                         # to deal with it rn
     minimum_spots_cluster: int = 5

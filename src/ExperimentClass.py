@@ -23,7 +23,7 @@ class Experiment:
     nucChannel: list[int] = None
     cytoChannel: list[int] = None
     FISHChannel: list[int] = None
-    voxel_size_z: int = 500
+    voxel_size_z: int = 300  # This is voxel
 
 
     def __post_init__(self):

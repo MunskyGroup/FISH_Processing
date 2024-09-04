@@ -1,5 +1,8 @@
 import pathlib
 import numpy as np
+import shutil
+from fpdf import FPDF
+import os
 
 from src import PipelineSettings, Experiment, ScopeClass, PipelineDataClass, postPipelineStepsClass
 from src.Util.Plots import Plots
@@ -15,6 +18,72 @@ from src.Util.Utilities import Utilities
 # from PipelineDataClass import PipelineDataClass
 # from Util import Plots, Metadata, ReportPDF
 
+#%% Jack
+class BuildPDFReport(postPipelineStepsClass):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def main(self, output_location, analysis_location, **kwargs):
+        
+        self.pdf = FPDF()
+        WIDTH = 210
+        HEIGHT = 297
+        self.pdf.set_font('Arial', 'B', 14)
+
+        steps = os.listdir(output_location)
+
+        for step in steps:
+            self.pdf.add_page()
+            self.pdf.cell(w=0, h=0, txt=f'__________{step}__________', ln=2, align='C')
+            files = os.listdir(os.path.join(output_location,step))
+            file_types = []
+            img_names = []
+            for file in files:
+                file_type = file.split('_')[0]
+                img_names.append('_'.join(file.split('_')[1:]))
+                file_types.append(file_type)
+            file_types = list(set(file_types))
+            img_names = list(set(img_names))
+
+            for img_name in img_names:
+                for file_type in file_types:
+                    for file in files:
+                        if img_name in file and file_type in file:
+                            self.pdf.cell(w=0, h=10, txt=f'{file_type}: {img_name}', ln=1, align='L')
+                            self.pdf.image(str(os.path.join(output_location, step, file)), x=0, y=20, w=WIDTH-30)
+                self.pdf.add_page()
+            
+
+        self.pdf.output(os.path.join(analysis_location, 'pdf_pipeline_summary.pdf'))
+
+
+class SaveSpotDetectionResults(postPipelineStepsClass):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def main(self, analysis_location, df_cellresults, df_spotresults, df_clusterresults, **kwargs):
+
+        df_cellresults.to_csv(os.path.join(analysis_location, 'cell_results.csv'))
+        df_spotresults.to_csv(os.path.join(analysis_location, 'spot_results.csv'))
+        df_clusterresults.to_csv(os.path.join(analysis_location, 'cluster_results.csv'))
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%% Luis
 class SavePDFReport(postPipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
@@ -23,7 +92,7 @@ class SavePDFReport(postPipelineStepsClass):
              list_image_names, segmentation_successful, list_is_image_sharp, save_files, show_plots,
              temp_folder_name, dfFISH, FISHChannel, cytoChannel, nucChannel, masks_complete_cells, masks_nuclei,
              diameter_cytosol, diameter_nucleus, minimum_spots_cluster, CLUSTER_RADIUS, voxel_size_z,
-             voxel_size_yx, psf_yx, psf_z, threshold_for_spot_detection, avg_number_of_spots_per_cell_each_ch,
+             voxel_size_yx, spot_yx, spot_z, threshold_for_spot_detection, avg_number_of_spots_per_cell_each_ch,
              number_detected_cells,
              list_metric_sharpness_images,
              remove_out_of_focus_images, sharpness_threshold, remove_z_slices_borders, NUMBER_Z_SLICES_TO_TRIM, img_id,
@@ -38,10 +107,10 @@ class SavePDFReport(postPipelineStepsClass):
         list_is_image_sharp = list_is_image_sharp[:num_img_2_run]
 
         list_voxels = []
-        list_psfs = []
+        list_spots = []
         for i in range(len(FISHChannel)):
             list_voxels.append([voxel_size_z, voxel_size_yx])
-            list_psfs.append([psf_z, psf_yx])
+            list_spots.append([spot_z, spot_yx])
 
         list_processing_successful = [a and b for a, b in zip(list_segmentation_successful, list_is_image_sharp)]
 
@@ -94,7 +163,7 @@ class SavePDFReport(postPipelineStepsClass):
                      diameter_cytosol,
                      minimum_spots_cluster,
                      list_voxels=list_voxels,
-                     list_psfs=list_psfs,
+                     list_spots=list_spots,
                      file_name_str=name_for_files,
                      list_segmentation_successful=list_segmentation_successful,
                      list_counter_image_id=img_id,
@@ -128,38 +197,40 @@ class Luis_Additional_Plots(postPipelineStepsClass):
     def __init__(self):
         super().__init__()
 
-    def main(self):
+    def main(self, initial_data_location,
+             dfFISH, cytoChannel, nucChannel, FISHChannel, minimum_spots_cluster, output_identification_string,
+             plot_for_pseudo_cytosol=False, save_pdf_report=True, **kwargs):
 
-        list_files_distributions = Plots().plot_all_distributions(dataframe_FISH, channels_with_cytosol,
-                                                                     channels_with_nucleus, channels_with_FISH,
-                                                                     minimum_spots_cluster,
-                                                                     output_identification_string)
-        
-        file_plots_bleed_thru = Plots().plot_scatter_bleed_thru(dataframe_FISH, channels_with_cytosol,
-                                                                   channels_with_nucleus, output_identification_string)
+        list_files_distributions = Plots().plot_all_distributions(dfFISH, cytoChannel,
+                                                                  nucChannel, FISHChannel,
+                                                                  minimum_spots_cluster,
+                                                                  output_identification_string)
+
+        file_plots_bleed_thru = Plots().plot_scatter_bleed_thru(dfFISH, cytoChannel,
+                                                                nucChannel, output_identification_string)
 
         # plots
-        if not Utilities().is_None(channels_with_cytosol):
-            file_plots_int_ratio = Plots().plot_nuc_cyto_int_ratio_distributions(dataframe_FISH,
-                                                                                    output_identification_string=None,
-                                                                                    plot_for_pseudo_cytosol=False)
+        if not Utilities().is_None(cytoChannel):
+            file_plots_int_ratio = Plots().plot_nuc_cyto_int_ratio_distributions(dfFISH,
+                                                                                 output_identification_string=None,
+                                                                                 plot_for_pseudo_cytosol=False)
         else:
             file_plots_int_ratio = None
-        file_plots_int_pseudo_ratio = Plots().plot_nuc_cyto_int_ratio_distributions(dataframe_FISH,
-                                                                                       output_identification_string=None,
-                                                                                       plot_for_pseudo_cytosol=True)
+        file_plots_int_pseudo_ratio = Plots().plot_nuc_cyto_int_ratio_distributions(dfFISH,
+                                                                                    output_identification_string=None,
+                                                                                    plot_for_pseudo_cytosol=True)
 
         ######################################
         ######################################
         # Saving data and plots, and sending data to NAS
         Utilities().save_output_to_folder(output_identification_string,
-                                             data_folder_path,
-                                             list_files_distributions=list_files_distributions,
-                                             file_plots_bleed_thru=file_plots_bleed_thru,
-                                             file_plots_int_ratio=file_plots_int_ratio,
-                                             file_plots_int_pseudo_ratio=file_plots_int_pseudo_ratio,
-                                             channels_with_FISH=channels_with_FISH,
-                                             save_pdf_report=save_pdf_report)
+                                          initial_data_location,
+                                          list_files_distributions=list_files_distributions,
+                                          file_plots_bleed_thru=file_plots_bleed_thru,
+                                          file_plots_int_ratio=file_plots_int_ratio,
+                                          file_plots_int_pseudo_ratio=file_plots_int_pseudo_ratio,
+                                          channels_with_FISH=FISHChannel,
+                                          save_pdf_report=save_pdf_report)
 
 
 class Send_Data_To_Nas(postPipelineStepsClass):
@@ -167,22 +238,22 @@ class Send_Data_To_Nas(postPipelineStepsClass):
         super().__init__()
 
     def main(self, output_identification_string,
-              data_folder_path,
-              path_to_config_file,
-              path_to_masks_dir,
-              diameter_nucleus,
-              diameter_cytosol,
-              send_data_to_NAS, 
-              masks_dir):
+             initial_data_location,
+             path_to_config_file,
+             path_to_masks_dir,
+             diameter_nucleus,
+             diameter_cytosol,
+             send_data_to_NAS,
+             masks_dir, **kwargs):
         # sending data to NAS
         analysis_folder_name, mask_dir_complete_name = Utilities().sending_data_to_NAS(output_identification_string,
-                                                                                          data_folder_path,
-                                                                                          path_to_config_file,
-                                                                                          path_to_masks_dir,
-                                                                                          diameter_nucleus,
-                                                                                          diameter_cytosol,
-                                                                                          send_data_to_NAS, 
-                                                                                          masks_dir)
+                                                                                       initial_data_location,
+                                                                                       path_to_config_file,
+                                                                                       path_to_masks_dir,
+                                                                                       diameter_nucleus,
+                                                                                       diameter_cytosol,
+                                                                                       send_data_to_NAS,
+                                                                                       masks_dir)
 
 
 class Move_Results_To_Analysis_Folder(postPipelineStepsClass):
@@ -190,11 +261,26 @@ class Move_Results_To_Analysis_Folder(postPipelineStepsClass):
         super().__init__()
 
     def main(self, output_identification_string,
-             data_folder_path,
-             mask_dir_complete_name,
-             path_to_masks_dir,
+             initial_data_location,
              save_filtered_images,
-             download_data_from_NAS):
-        Utilities().move_results_to_analyses_folder(output_identification_string, data_folder_path,
-                                                       mask_dir_complete_name, path_to_masks_dir, save_filtered_images,
-                                                       download_data_from_NAS)
+             diameter_nucleus,
+             diameter_cytosol,
+             local_or_NAS,
+             save_masks_as_file:bool = False,
+             save_files: bool = False,
+             masks_dir=None, path_to_masks_dir=None, **kwargs):
+
+        if path_to_masks_dir is None and save_masks_as_file and save_files:
+            mask_folder_created_by_pipeline = 'masks_' + initial_data_location.name  # default name by pipeline
+            name_final_masks = initial_data_location.name + '___nuc_' + str(diameter_nucleus) + '__cyto_' + str(
+                diameter_cytosol)
+            mask_dir_complete_name = 'masks_' + name_final_masks  # final name for masks dir
+            shutil.move(mask_folder_created_by_pipeline, mask_dir_complete_name)  # remaing the masks dir
+        elif masks_dir is None:
+            mask_dir_complete_name = None
+        else:
+            mask_dir_complete_name = masks_dir.name
+
+        Utilities().move_results_to_analyses_folder(output_identification_string, initial_data_location,
+                                                    mask_dir_complete_name, path_to_masks_dir, save_filtered_images,
+                                                    local_or_NAS, save_masks_as_file)

@@ -76,13 +76,19 @@ class ReportPDF():
                             for j in range(0, 11):
                                 pdf.cell(w=0, h=10, txt='',ln =1,align = 'L')
                             # Plotting the image
-                            pdf.cell(w=0, h=0, txt='FISH Ch_ ' + str(channel) + '_slice_'+ str(z_slice) +': '+ temp_file_name,ln =2,align = 'L') 
-                            pdf.image(str(temp_seg_name), x=0, y=HEIGHT//2, w=WIDTH-80)
-                            pdf.add_page()
+                            try:
+                                pdf.cell(w=0, h=0, txt='FISH Ch_ ' + str(channel) + '_slice_'+ str(z_slice) +': '+ temp_file_name,ln =2,align = 'L')
+                                pdf.image(str(temp_seg_name), x=0, y=HEIGHT//2, w=WIDTH-80)
+                                pdf.add_page()
+                            except:
+                                pass
                         # plotting top image
                         else:
-                            pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + '_slice_'+ str(z_slice) +': '+ temp_file_name,ln =2,align = 'L') 
-                            pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-80)
+                            try:
+                                pdf.cell(w=0, h=10, txt='FISH Ch_ ' + str(channel) + '_slice_'+ str(z_slice) +': '+ temp_file_name,ln =2,align = 'L')
+                                pdf.image(str(temp_seg_name), x=0, y=20, w=WIDTH-80)
+                            except:
+                                pass
                         counter=counter+1
                     pdf.add_page()
                     try:

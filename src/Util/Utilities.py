@@ -674,7 +674,7 @@ class Utilities():
             os.remove(pathlib.Path().absolute().joinpath(mask_dir_complete_name+'.zip'))
         return analysis_folder_name, mask_dir_complete_name
     
-    def move_results_to_analyses_folder(self, output_identification_string,  data_folder_path,mask_dir_complete_name,path_to_masks_dir, save_filtered_images = False, download_data_from_NAS = False):
+    def move_results_to_analyses_folder(self, output_identification_string,  data_folder_path,mask_dir_complete_name,path_to_masks_dir, save_filtered_images = False, download_data_from_NAS = False, save_masks_as_file = False):
         # Moving all results to "analyses" folder
         if not os.path.exists(str('analyses')):
             os.makedirs(str('analyses'))
@@ -687,7 +687,7 @@ class Utilities():
         # Moving results to a subdirectory in 'analyses' folder
         pathlib.Path().absolute().joinpath(analysis_folder_name).rename(final_dir_name )
         # Moving masks to a subdirectory in 'analyses' folder
-        if (download_data_from_NAS == True) or (path_to_masks_dir == None):
+        if (download_data_from_NAS == True or path_to_masks_dir is None) and save_masks_as_file:
             final_mask_dir_name = pathlib.Path().absolute().joinpath('analyses', mask_dir_complete_name)
             if os.path.exists(str(final_mask_dir_name)):
                 shutil.rmtree(str(final_mask_dir_name))

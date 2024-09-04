@@ -719,7 +719,7 @@ class Plots():
             index_string = output_identification_string.index('__')
             if index_string >=0:
                 title_string = output_identification_string[0:index_string]
-            else :
+            else:
                 title_string = ''
         else:
             title_string = ''
@@ -731,32 +731,34 @@ class Plots():
             match = re.match(pattern, string)
             if match:
                 number_color_channels += 1
-        # Calculating the number of combination of color channels
-        combinations_channels = list(itertools.combinations(range(number_color_channels), 2))
-        _, axes = plt.subplots(nrows = 1, ncols = len(combinations_channels), figsize = (20, 10))
-        for i in range(len(combinations_channels)):
-            if len(combinations_channels) == 1:
-                axis_index = axes
-            else:
-                axis_index = axes[i]
-            title_plot=title_string
-            file_name  = 'bleed_thru_'+title_string+'.pdf'
-            if not channels_with_cytosol in (None, 'None', 'none',['None'],['none'],[None]):
-                x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
-                y = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
-            if not channels_with_nucleus in (None, 'None', 'none',['None'],['none'],[None]):
-                x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell') 
-                y = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell') 
-            _,fig_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='intensity_Ch_'+str(combinations_channels[i][0]), y_lable_scatter = 'intensity_Ch_'+str(combinations_channels[i][1]),temporal_figure=True)
-            axis_index.imshow(plt.imread(fig_temp_name))
-            axis_index.grid(False)
-            axis_index.set_xticks([])
-            axis_index.set_yticks([])
-            del x, y 
-            os.remove(fig_temp_name)
-        plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
-        plt.show()
-        return file_name
+        if number_color_channels > 1:
+            # Calculating the number of combination of color channels
+            combinations_channels = list(itertools.combinations(range(number_color_channels), 2))
+            _, axes = plt.subplots(nrows = 1, ncols = len(combinations_channels), figsize = (20, 10))
+            for i in range(len(combinations_channels)):
+                if len(combinations_channels) == 1:
+                    axis_index = axes
+                else:
+                    axis_index = axes[i]
+                title_plot=title_string
+                file_name  = 'bleed_thru_'+title_string+'.pdf'
+                if not channels_with_cytosol in (None, 'None', 'none',['None'],['none'],[None]):
+                    x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell')
+                    y = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='cyto_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell')
+                if not channels_with_nucleus in (None, 'None', 'none',['None'],['none'],[None]):
+                    x = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][0]), extraction_type='values_per_cell')
+                    y = Utilities().function_get_df_columns_as_array(df=dataframe, colum_to_extract='nuc_int_ch_'+str(combinations_channels[i][1]), extraction_type='values_per_cell')
+                _,fig_temp_name = Plots().plot_scatter_and_distributions(x,y,title_plot,x_label_scatter='intensity_Ch_'+str(combinations_channels[i][0]), y_lable_scatter = 'intensity_Ch_'+str(combinations_channels[i][1]),temporal_figure=True)
+                axis_index.imshow(plt.imread(fig_temp_name))
+                axis_index.grid(False)
+                axis_index.set_xticks([])
+                axis_index.set_yticks([])
+                del x, y
+                os.remove(fig_temp_name)
+            plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+            plt.show()
+            return file_name
+        return None
     
     def plot_interpretation_distributions (self, df_all, df_cyto, df_nuc, destination_folder, plot_title_suffix='',y_lim_values_all_spots=None, y_lim_values_cyto=None,y_lim_values_nuc=None):
         if (df_cyto.dropna().any().any() == True) and (df_nuc.dropna().any().any() == True):  # removing nans from df and then testing if any element is non zero. If this is true, the plot is generated
@@ -850,16 +852,29 @@ class Plots():
         file_name = title_plot +'_'+title_string+'.pdf'
         colors = ['r','g','b','m']
         number_cells = dataframe['cell_id'].nunique()
-        for i in range (0,number_color_channels ):
+        if number_color_channels > 1:
+            for i in range (0,number_color_channels ):
+                colum_to_extract = prefix_column_to_extract+str(i)
+                int_ratio = np.asarray( [  dataframe.loc[(dataframe['cell_id']==i)][colum_to_extract].values[0]  for i in range(0, number_cells)] )
+                if remove_outliers:
+                    int_ratio =Utilities().remove_outliers( int_ratio,min_percentile=1,max_percentile=99)
+                ax[i].hist(x=int_ratio, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
+                ax[i].set_xlabel(prefix_x_label+str(i) )
+                ax[i].set_ylabel('probability' )
+            plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+            plt.show()
+        elif number_color_channels == 1:
+            i = 0
             colum_to_extract = prefix_column_to_extract+str(i)
-            int_ratio = np.asarray( [  dataframe.loc[(dataframe['cell_id']==i)][colum_to_extract].values[0]  for i in range(0, number_cells)] )
-            if remove_outliers ==True:
+            int_ratio = np.asarray( [dataframe.loc[(dataframe['cell_id']==i)][colum_to_extract].values[0]  for i in range(0, number_cells)] )
+            if remove_outliers:
                 int_ratio =Utilities().remove_outliers( int_ratio,min_percentile=1,max_percentile=99)
-            ax[i].hist(x=int_ratio, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
-            ax[i].set_xlabel(prefix_x_label+str(i) )
-            ax[i].set_ylabel('probability' )
-        plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
-        plt.show()
+            ax.hist(x=int_ratio, bins=30, density = True, histtype ='bar',color = colors[i],label = 'spots')
+            ax.set_xlabel(prefix_x_label+str(i) )
+            ax.set_ylabel('probability' )
+            plt.savefig(file_name, transparent=False,dpi=360, bbox_inches = 'tight', format='pdf')
+            plt.show()
+
         return file_name
         
     def plot_all_distributions (self, dataframe,channels_with_cytosol, channels_with_nucleus,channels_with_FISH,minimum_spots_cluster,output_identification_string ):

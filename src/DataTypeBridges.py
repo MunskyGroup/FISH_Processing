@@ -17,8 +17,8 @@ class Pycromanager2NativeDataType:
         self.terminatorScope = terminatorScope
 
         (self.local_data_dir, self.masks_dir, self.list_files_names, self.list_images_all_fov, self.list_images, \
-            self.number_of_fov, self.number_color_channels, self.number_z_slices, self.number_of_timepoints,
-         self.list_tps, self.list_nZ, self.number_of_imgs) = self.convert_to_standard_format(
+         self.number_of_fov, self.number_color_channels, self.number_z_slices, self.number_of_timepoints,
+         self.list_tps, self.list_nZ, self.number_of_imgs, self.map_id_imgprops) = self.convert_to_standard_format(
             data_folder_path=pathlib.Path(experiment.initial_data_location),
             path_to_config_file=connection_config_location,
             download_data_from_NAS=pipelineSettings.local_or_NAS,
@@ -34,6 +34,7 @@ class Pycromanager2NativeDataType:
         experiment.number_of_images_to_process = experiment.number_of_FOVs * experiment.number_of_timepoints
         experiment.list_initial_z_slices_per_image = self.list_nZ
         experiment.list_timepoints = self.list_tps
+        experiment.map_id_imgprops = self.map_id_imgprops
 
     def convert_to_standard_format(self, data_folder_path, path_to_config_file, download_data_from_NAS, use_metadata,
                                    is_format_FOV_Z_Y_X_C):
@@ -48,7 +49,7 @@ class Pycromanager2NativeDataType:
 
         local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(
             path_to_config_file, data_folder_path, path_to_masks_dir, download_data_from_NAS)
-        if download_data_from_NAS == False:
+        if not download_data_from_NAS:
             local_data_dir = data_folder_path
         # Downloading data
         if use_metadata == True:
@@ -72,6 +73,7 @@ class Pycromanager2NativeDataType:
             list_files_names = []
             list_tps = []
             list_zs = []
+            map_id_imgprops = {}
             number_of_imgs = number_of_fov * number_of_tp
             number_of_files = len(list_files_names_all_fov)
             number_of_X = None
@@ -98,6 +100,9 @@ class Pycromanager2NativeDataType:
                             list_files_names_all_fov[i].split(".")[0] + '_tp_' + str(tp) + '_fov_' + str(fov) + '.tif')
                         tifffile.imsave(str(destination_folder.joinpath(list_files_names[-1])),
                                         list_images_standard_format[-1])
+                        map_id_imgprops[counter] = {'fov_num': fov, 'tp_num': tp}
                         counter += 1
         masks_dir = None
-        return destination_folder, masks_dir, list_files_names, list_images_all_fov, list_images_standard_format, number_of_fov, number_color_channels, number_z_slices, number_of_tp, list_tps, list_zs, number_of_imgs
+        return (destination_folder, masks_dir, list_files_names, list_images_all_fov, list_images_standard_format,
+                number_of_fov, number_color_channels, number_z_slices, number_of_tp, list_tps, list_zs, number_of_imgs,
+                map_id_imgprops)
