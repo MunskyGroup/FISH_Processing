@@ -19,7 +19,7 @@ class PipelineSettings:
                                                         # to deal with it rn
     minimum_spots_cluster: int = 5
     show_plots: int = 1
-    CLUSTER_RADIUS: float = 600  # int(psf_yx*1.5)
+    CLUSTER_RADIUS: float = 750  # int(psf_yx*1.5)
     save_all_images: int = 1
     display_spots_on_multiple_z_planes: int = 0
     use_log_filter_for_spot_detection: int = 0
@@ -36,6 +36,8 @@ class PipelineSettings:
     MINIMAL_NUMBER_OF_PIXELS_IN_MASK: int = 1000
     MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD: int = 20
     MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD: int = 3
+    connection_config_location: str = r"C:\Users\Jack\Desktop\config.yml"
+    share_name: str = 'share'
 
 
         

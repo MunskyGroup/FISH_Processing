@@ -28,8 +28,6 @@ class Pipeline:
         self.prePipelineSteps = prePipelineSteps
         self.postPipelineSteps = postPipelineSteps
         self.pipelineSteps = pipelineSteps
-        self.pipelineData.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
-                                              self.experiment.number_of_images_to_process)
 
         self.pipelineData.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
         if not os.path.exists(self.pipelineData.temp_folder_name) and self.pipelineSettings.save_files:
@@ -63,7 +61,7 @@ class Pipeline:
                                   terminatorScope=self.terminatorScope,
                                   experiment=self.experiment)
             if stepOutput is None:
-                raise ValueError(f'{step} did not return a value')
+                print(f'{step} did not return a value')
             if hasattr(stepOutput, 'ModifyPipelineData'):
                 if stepOutput.ModifyPipelineData:
                     # find the attribute that both the pipelineData and stepOutput share

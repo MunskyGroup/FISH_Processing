@@ -3,12 +3,15 @@ import numpy as np
 import shutil
 from fpdf import FPDF
 import os
+import pickle
 
 from src import PipelineSettings, Experiment, ScopeClass, PipelineDataClass, postPipelineStepsClass
 from src.Util.Plots import Plots
 from src.Util.Metadata import Metadata
 from src.Util.ReportPDF import ReportPDF
 from src.Util.Utilities import Utilities
+from src.Util.NASConnection import NASConnection
+
 
 
 # from GeneralStepClasses import postPipelineStepsClass
@@ -34,7 +37,7 @@ class BuildPDFReport(postPipelineStepsClass):
 
         for step in steps:
             self.pdf.add_page()
-            self.pdf.cell(w=0, h=0, txt=f'__________{step}__________', ln=2, align='C')
+            self.pdf.cell(w=0, h=0, txt=f'-------------------------{step}-------------------------', ln=2, align='C')
             files = os.listdir(os.path.join(output_location,step))
             file_types = []
             img_names = []
@@ -51,7 +54,8 @@ class BuildPDFReport(postPipelineStepsClass):
                         if img_name in file and file_type in file:
                             self.pdf.cell(w=0, h=10, txt=f'{file_type}: {img_name}', ln=1, align='L')
                             self.pdf.image(str(os.path.join(output_location, step, file)), x=0, y=20, w=WIDTH-30)
-                self.pdf.add_page()
+                            self.pdf.add_page()
+
             
 
         self.pdf.output(os.path.join(analysis_location, 'pdf_pipeline_summary.pdf'))
@@ -67,10 +71,56 @@ class SaveSpotDetectionResults(postPipelineStepsClass):
         df_spotresults.to_csv(os.path.join(analysis_location, 'spot_results.csv'))
         df_clusterresults.to_csv(os.path.join(analysis_location, 'cluster_results.csv'))
 
-        
+class SaveMasksToAnalysis(postPipelineStepsClass):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def main(self, analysis_location, masks_nuclei:list[np.array] = None, masks_cytosol:list[np.array] = None, 
+             masks_complete_cells:list[np.array] = None, map_id_imgprops:dict = None, **kwargs):
+
+        if masks_nuclei is not None:
+            with open(os.path.join(analysis_location, 'masks_nuclei.pkl'), 'wb') as f:
+                pickle.dump(masks_nuclei, f)
+        if masks_cytosol is not None:
+            with open(os.path.join(analysis_location, 'masks_cytosol.pkl'), 'wb') as f:
+                pickle.dump(masks_cytosol, f)
+        if masks_complete_cells is not None:
+            with open(os.path.join(analysis_location, 'masks_complete_cells.pkl'), 'wb') as f:
+                pickle.dump(masks_complete_cells, f)
+        if map_id_imgprops is not None:
+            with open(os.path.join(analysis_location, 'map_id_imgprops.pkl'), 'wb') as f:
+                pickle.dump(map_id_imgprops, f)
 
 
+class SendAnalysisToNAS(postPipelineStepsClass):
+    def __init__(self) -> None:
+        super().__init__()
 
+    def main(self, analysis_location, initial_data_location, connection_config_location, share_name,   **kwargs):
+        # where_to_send = str(os.path.dirname(initial_data_location))
+        # print(where_to_send)
+        # NASConnection(str(connection_config_location), share_name=str(share_name)).write_files_to_NAS(str(analysis_location), where_to_send)
+
+        shutil.make_archive(analysis_location,'zip', pathlib.Path().absolute().joinpath(analysis_location))
+        local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(analysis_location+'.zip')
+        NASConnection(connection_config_location,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, initial_data_location)
+        os.remove(pathlib.Path().absolute().joinpath(analysis_location+'.zip'))
+
+
+class TrackPyAnlaysis(postPipelineStepsClass):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def main(self):
+        pass
+
+
+class DeleteTempFiles(postPipelineStepsClass):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def main(self, output_location, **kwargs):
+        shutil.rmtree(output_location)
 
 
 

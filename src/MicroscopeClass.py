@@ -15,6 +15,6 @@ class ScopeClass:
     """
     voxel_size_yx: int = 130
     spot_z: int = 500
-    spot_yx: int = 300
+    spot_yx: int = 360
     microscope_saving_format: str = 'pycromanager'
 

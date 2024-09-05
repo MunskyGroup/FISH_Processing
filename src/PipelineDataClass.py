@@ -3,7 +3,7 @@ import numpy as np
 
 class PipelineDataClass():
     def __init__(self,
-                 local_data_folder: pathlib.Path,
+                 local_data_folder: pathlib.Path = None,
                  local_mask_folder: pathlib.Path = None,
                  total_num_imgs: int = None,  # this is the same as the experiment.number_of_images_to_process
                  list_image_names: list[str] = None,

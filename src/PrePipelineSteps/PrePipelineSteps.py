@@ -4,7 +4,7 @@ import numpy as np
 
 from bigfish import detection, plot
 
-from . import PipelineDataClass, PipelineSettings, Experiment, ScopeClass, prePipelineStepsClass, StepOutputsClass
+from .. import PipelineDataClass, PipelineSettings, Experiment, ScopeClass, prePipelineStepsClass, StepOutputsClass
 
 from src.Util.Utilities import Utilities
 from src.Util.BigFish import BigFISH

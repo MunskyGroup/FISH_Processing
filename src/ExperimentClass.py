@@ -1,5 +1,5 @@
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Experiment:
 
 
     """
-    initial_data_location: str
+    initial_data_location: str = field(default=None, repr=False)
     number_of_images_to_process: int = None  # This will be all images to process and will be the product of the number of tp and number of FOVs
     number_of_channels: int = None
     number_of_timepoints: int = None
@@ -27,6 +27,18 @@ class Experiment:
 
 
     def __post_init__(self):
-        self.initial_data_location = pathlib.Path(self.initial_data_location)
+        if self._initial_data_location  is not None:
+            self._initial_data_location  = pathlib.Path(self._initial_data_location )
+
+    @property
+    def initial_data_location(self):
+        return self._initial_data_location
+    
+    @initial_data_location.setter
+    def initial_data_location(self, value):
+        if value is isinstance(value, (str, pathlib.Path)):
+            self._initial_data_location = pathlib.Path(value)
+        else:
+            self._initial_data_location = None
 
 

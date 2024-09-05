@@ -6,15 +6,23 @@ import numpy as np
 
 from src.Util.Utilities import Utilities
 # from .Util import Utilities
-from . import Experiment, PipelineSettings, ScopeClass
+from .. import Experiment, PipelineSettings, ScopeClass
 
 
 class Pycromanager2NativeDataType:
-    def __init__(self, experiment: Experiment, pipelineSettings: PipelineSettings, terminatorScope: ScopeClass,
-                 connection_config_location):
+    def __init__(self):
+        self.experiment = None
+        self.pipelineSettings = None
+        self.terminatorScope = None
+        self.pipelineData = None
+
+    def run(self, pipelineData, pipelineSettings, terminatorScope, experiment):
+
+        connection_config_location = pipelineSettings.connection_config_location
         self.experiment = experiment
         self.pipelineSettings = pipelineSettings
         self.terminatorScope = terminatorScope
+        self.pipelineData = pipelineData
 
         (self.local_data_dir, self.masks_dir, self.list_files_names, self.list_images_all_fov, self.list_images, \
          self.number_of_fov, self.number_color_channels, self.number_z_slices, self.number_of_timepoints,
@@ -35,6 +43,17 @@ class Pycromanager2NativeDataType:
         experiment.list_initial_z_slices_per_image = self.list_nZ
         experiment.list_timepoints = self.list_tps
         experiment.map_id_imgprops = self.map_id_imgprops
+
+        # PipelineData 
+        pipelineData.local_data_folder = self.local_data_dir
+        pipelineData.total_num_imgs = experiment.number_of_images_to_process
+        pipelineData.list_image_names = self.list_files_names
+        pipelineData.list_images = self.list_images
+        pipelineData.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
+                                        self.experiment.number_of_images_to_process)
+
+
+
 
     def convert_to_standard_format(self, data_folder_path, path_to_config_file, download_data_from_NAS, use_metadata,
                                    is_format_FOV_Z_Y_X_C):

@@ -47,15 +47,15 @@ class StepClass:
             try:
                 kwargs_IDspecific['cell_mask'] = self.pipelineData.masks_complete_cells[id]
             except TypeError:
-                pass
+                kwargs_IDspecific['cell_mask'] = None
             try:
                 kwargs_IDspecific['nuc_mask'] = self.pipelineData.masks_nuclei[id]
             except TypeError:
-                pass
+                kwargs_IDspecific['nuc_mask'] = None
             try:
                 kwargs_IDspecific['cyto_mask'] = self.pipelineData.masks_cytosol[id]
             except TypeError:
-                pass
+                kwargs_IDspecific['cyto_mask'] = None
         
             kwargs = {**kwargs_pipelineData, **kwargs_experiment, **kwargs_terminatorScope, **kwargs_pipelineSettings, **kwargs_IDspecific}
 
@@ -106,7 +106,7 @@ class PipelineStepsClass(StepClass):
         if id is None:  # allows for pipelineSteps to be run a pre or postPipeline
             for img_index in range(min(self.pipelineSettings.user_select_number_of_images_to_run,
                                        self.experiment.number_of_images_to_process)):
-                kwargs = self.load_in_attributes()
+                kwargs = self.load_in_attributes(id)
                 self.on_first_run(img_index)
                 single_step_output = self.main(id=img_index, **kwargs)
                 if img_index == 0:

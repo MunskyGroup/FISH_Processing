@@ -716,8 +716,8 @@ class CellSegmentationStepClass_JF(PipelineStepsClass):
              list_image_names,
              list_images,
              local_mask_folder,
-             list_metric_sharpness_images,
-             list_is_image_sharp,
+             list_metric_sharpness_images: list[float] = None,
+             list_is_image_sharp: list[bool] = None,
              id: int = None, **kwargs,
              ) -> CellSegmentationOutput:
 
@@ -736,8 +736,9 @@ class CellSegmentationStepClass_JF(PipelineStepsClass):
         try: # from sharpness calc
             sharpness_metric = list_metric_sharpness_images[id]
             is_image_sharp = list_is_image_sharp[id]
-        except AttributeError:
+        except TypeError:
             print('Skipping Sharpness Filtering')
+            is_image_sharp = None
 
         if save_masks_as_file and save_files:
             self.masks_folder_name = str('masks_' + name_for_files)
@@ -822,15 +823,15 @@ class CellSegmentationStepClass_JF(PipelineStepsClass):
             self.number_detected_cells = np.max(self.masks_complete_cells)
             print('    Number of detected cells:                ', self.number_detected_cells)
             if self.nucChannel is not None:
-                mask_nuc_path = pathlib.Path().absolute().joinpath(self.step_output_dir,
+                mask_nuc_path = os.path.join(self.step_output_dir,
                                                                    'masksNuclei_' + self.temp_file_name + '.tif')
                 tifffile.imwrite(mask_nuc_path, self.masks_nuclei)
             if self.cytoChannel is not None:
-                mask_cyto_path = pathlib.Path().absolute().joinpath(self.step_output_dir,
+                mask_cyto_path = os.path.join(self.step_output_dir,
                                                                     'masksCyto_' + self.temp_file_name + '.tif')
                 tifffile.imwrite(mask_cyto_path, self.masks_complete_cells)
             if self.cytoChannel is not None and self.nucChannel is not None:
-                mask_cyto_no_nuclei_path = pathlib.Path().absolute().joinpath(self.step_output_dir,
+                mask_cyto_no_nuclei_path = os.path.join(self.step_output_dir,
                                                                               'masksCytoNoNuclei_' + self.temp_file_name + '.tif')
                 tifffile.imwrite(mask_cyto_no_nuclei_path, self.masks_cytosol_no_nuclei)
 
