@@ -35,9 +35,12 @@ class PipelineSettings:
     save_masks_as_file: int = 0
     MINIMAL_NUMBER_OF_PIXELS_IN_MASK: int = 1000
     MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD: int = 20
-    MINUMUM_NUMBER_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD: int = 3
+    MINUMUM_NUMBERs_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD: int = 3
     connection_config_location: str = r"C:\Users\Jack\Desktop\config.yml"
     share_name: str = 'share'
+
+    def pipeline_init(self):
+        pass
 
 
         
