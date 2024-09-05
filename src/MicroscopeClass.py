@@ -18,3 +18,7 @@ class ScopeClass:
     spot_yx: int = 360
     microscope_saving_format: str = 'pycromanager'
 
+    def pipeline_init():
+        pass
+    
+

@@ -25,20 +25,7 @@ class Experiment:
     FISHChannel: list[int] = None
     voxel_size_z: int = 300  # This is voxel
 
-
-    def __post_init__(self):
-        if self._initial_data_location  is not None:
-            self._initial_data_location  = pathlib.Path(self._initial_data_location )
-
-    @property
-    def initial_data_location(self):
-        return self._initial_data_location
-    
-    @initial_data_location.setter
-    def initial_data_location(self, value):
-        if value is isinstance(value, (str, pathlib.Path)):
-            self._initial_data_location = pathlib.Path(value)
-        else:
-            self._initial_data_location = None
+    def pipeline_init(self):
+        self.initial_data_location = pathlib.Path(self.initial_data_location)
 
 

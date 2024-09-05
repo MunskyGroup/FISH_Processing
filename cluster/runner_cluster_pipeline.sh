@@ -24,14 +24,13 @@ NUMBER_OF_CORES=4
 
 # ###################  PATHS TO CODE FILES  ############################
 path_to_config_file="$HOME/FISH_Processing/config.yml"
-path_to_executable="${PWD%/*}/src/pipeline_executable.py" 
+path_to_executable="${PWD%/*}/pipeline_executable.py" 
 
-pipeline_package_path=$1
+pipeline_package_path="$1"
 
 # ########### PYTHON PROGRAM #############################
-
 output_names=""output__"${pipeline_package_path////__}"".txt"
-~/.conda/envs/FISH_processing/bin/python "$path_to_executable" "$pipeline_package_path"  >> "$output_names" &
+/home/formanj/miniconda3/envs/FISH_processing/bin/python "$path_to_executable" "$pipeline_package_path"  >> "$output_names" &
 wait
 
 

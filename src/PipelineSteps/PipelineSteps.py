@@ -31,7 +31,7 @@ import pandas as pd
 
 import torch
 import warnings
-import tensorflow as tf
+# import tensorflow as tf
 
 import bigfish
 import bigfish.stack as stack
