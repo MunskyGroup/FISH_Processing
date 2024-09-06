@@ -15,9 +15,6 @@ start_time=$(date +%s)
 
 # If needed, use this to change file permissions -> chmod 755 <<script_name.sh>
 
-#list_test=('smFISH_images/Eric_smFISH_images/20220131/DUSP1_Dex_75min')
-list_test=('smFISH_images/Eric_smFISH_images/20230306/DUSP1_0nM_Dex_0min_012623')
-
 # ########### PROGRAM ARGUMENTS #############################
 # If the program requieres positional arguments. 
 # Read them in the python file using: sys.argv. This return a list of strings. 
