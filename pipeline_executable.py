@@ -37,9 +37,9 @@ shutil.unpack_archive(pipeline_package_location, extract_dir=extract_location, f
 extract_location = os.path.join(extract_location, os.path.splitext(os.path.basename(pipeline_package_location))[0])
 
 # Loading the pickle files
-settings = load_dict_from_file(os.path.join(extract_location, 'settings.json'))
-scope = load_dict_from_file(os.path.join(extract_location, 'scope.json'))
-experiment = load_dict_from_file(os.path.join(extract_location, 'experiment.json'))
+settings = load_dict_from_file(os.path.join(extract_location, 'settings.txt'))
+scope = load_dict_from_file(os.path.join(extract_location, 'scope.txt'))
+experiment = load_dict_from_file(os.path.join(extract_location, 'experiment.txt'))
 # settings = np.load(os.path.join(extract_location, 'settings.npy')).item()
 # scope = np.load(os.path.join(extract_location, 'scope.npy')).item()
 # experiment = np.load(os.path.join(extract_location, 'experiment.npy')).item()
