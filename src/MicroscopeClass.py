@@ -20,5 +20,8 @@ class ScopeClass:
 
     def pipeline_init(self):
         pass
+
+    def to_dict(self):
+        return self.__dict__
     
 

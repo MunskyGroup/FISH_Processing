@@ -17,10 +17,16 @@ import json
 import pickle
 import shutil 
 import os
+import numpy as np
 warnings.filterwarnings("ignore")
-from src import Pipeline
+from src import Pipeline, PipelineSettings, ScopeClass, Experiment
 ######################################
 ######################################
+def load_dict_from_file(location):
+    f = open(location,'r')
+    data=f.read()
+    f.close()
+    return eval(data)
 
 # Zipped pickle files
 pipeline_package_location = os.path.normpath(sys.argv[1])
@@ -31,14 +37,23 @@ shutil.unpack_archive(pipeline_package_location, extract_dir=extract_location, f
 extract_location = os.path.join(extract_location, os.path.splitext(os.path.basename(pipeline_package_location))[0])
 
 # Loading the pickle files
-Settings = pickle.load(open(os.path.join(extract_location, 'settings.pkl'), 'rb'))
-Scope = pickle.load(open(os.path.join(extract_location, 'scope.pkl'), 'rb'))
-Experiment = pickle.load(open(os.path.join(extract_location, 'experiment.pkl'), 'rb'))
+settings = load_dict_from_file(os.path.join(extract_location, 'settings.json'))
+scope = load_dict_from_file(os.path.join(extract_location, 'scope.json'))
+experiment = load_dict_from_file(os.path.join(extract_location, 'experiment.json'))
+# settings = np.load(os.path.join(extract_location, 'settings.npy')).item()
+# scope = np.load(os.path.join(extract_location, 'scope.npy')).item()
+# experiment = np.load(os.path.join(extract_location, 'experiment.npy')).item()
+# Settings = pickle.load(open(os.path.join(extract_location, 'settings.pkl'), 'rb'))
+# Scope = pickle.load(open(os.path.join(extract_location, 'scope.pkl'), 'rb'))
+# Experiment = pickle.load(open(os.path.join(extract_location, 'experiment.pkl'), 'rb'))
 Data = pickle.load(open(os.path.join(extract_location, 'data.pkl'), 'rb'))
 PrePipelineSteps = pickle.load(open(os.path.join(extract_location, 'prepipeline_steps.pkl'), 'rb'))
 PostPipelineSteps = pickle.load(open(os.path.join(extract_location, 'postpipeline_steps.pkl'), 'rb'))
 PipelineSteps = pickle.load(open(os.path.join(extract_location, 'pipeline_steps.pkl'), 'rb'))
 
+Settings = PipelineSettings(**settings)
+Scope = ScopeClass(**scope)
+Experiment = Experiment(**experiment)
 
 # Running the pipeline
 pipeline = Pipeline(Settings, Scope, Experiment, Data, PrePipelineSteps, PostPipelineSteps, PipelineSteps)

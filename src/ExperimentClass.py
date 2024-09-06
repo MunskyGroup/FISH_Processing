@@ -28,4 +28,7 @@ class Experiment:
     def pipeline_init(self):
         self.initial_data_location = pathlib.Path(self.initial_data_location)
 
+    def to_dict(self):
+        return self.__dict__
+
 
