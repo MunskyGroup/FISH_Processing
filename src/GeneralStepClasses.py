@@ -46,15 +46,15 @@ class StepClass:
             }
             try:
                 kwargs_IDspecific['cell_mask'] = self.pipelineData.masks_complete_cells[id]
-            except TypeError:
+            except AttributeError:
                 kwargs_IDspecific['cell_mask'] = None
             try:
                 kwargs_IDspecific['nuc_mask'] = self.pipelineData.masks_nuclei[id]
-            except TypeError:
+            except AttributeError:
                 kwargs_IDspecific['nuc_mask'] = None
             try:
                 kwargs_IDspecific['cyto_mask'] = self.pipelineData.masks_cytosol[id]
-            except TypeError:
+            except AttributeError:
                 kwargs_IDspecific['cyto_mask'] = None
         
             kwargs = {**kwargs_pipelineData, **kwargs_experiment, **kwargs_terminatorScope, **kwargs_pipelineSettings, **kwargs_IDspecific}

@@ -77,6 +77,7 @@ def display_pipeline_steps():
 
 def display_object_attributes(obj):
     # Get a list of all attributes of the object
+    print("Attributes of the object:" + obj.__class__.__name__)
     attributes = vars(obj)
     # Iterate over the attributes and print them
     attr_list = []
@@ -92,6 +93,9 @@ def display_object_attributes(obj):
                 attr_name = attr_list[attr_index]
                 new_value = input(f"Enter the new value for attribute {attr_name}: ")
                 setattr(obj, attr_name, new_value)
+                print("Updated attributes:")
+                for i, (attr, value) in enumerate(attributes.items()):
+                    print(f'{i}: {attr}: {value}')
             else:
                 print("Invalid index! Please enter a valid index.")
         except ValueError:

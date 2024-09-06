@@ -29,15 +29,10 @@ class Pipeline:
         self.postPipelineSteps = postPipelineSteps
         self.pipelineSteps = pipelineSteps
 
-        self.pipelineData.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
-        if not os.path.exists(self.pipelineData.temp_folder_name) and self.pipelineSettings.save_files:
-            os.makedirs(self.pipelineData.temp_folder_name)
-
-        if self.pipelineSettings.save_all_images:
-            self.pipelineData.filtered_folder_name = str(
-                'filtered_images_' + self.experiment.initial_data_location.name)
-            if not os.path.exists(self.pipelineData.filtered_folder_name):
-                os.makedirs(self.pipelineData.filtered_folder_name)
+        self.experiment.pipeline_init()
+        self.pipelineData.pipeline_init()
+        self.pipelineSettings.pipeline_init()
+        self.terminatorScope.pipeline_init()
 
         self.override_bad_settings()
 
@@ -114,3 +109,14 @@ class Pipeline:
                      pipelineSettings=self.pipelineSettings,
                      terminatorScope=self.terminatorScope,
                      experiment=self.experiment)
+
+    def __post_init__(self):
+        self.pipelineData.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
+        if not os.path.exists(self.pipelineData.temp_folder_name) and self.pipelineSettings.save_files:
+            os.makedirs(self.pipelineData.temp_folder_name)
+
+        if self.pipelineSettings.save_all_images:
+            self.pipelineData.filtered_folder_name = str(
+                'filtered_images_' + self.experiment.initial_data_location.name)
+            if not os.path.exists(self.pipelineData.filtered_folder_name):
+                os.makedirs(self.pipelineData.filtered_folder_name)

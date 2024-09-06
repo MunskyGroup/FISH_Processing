@@ -15,9 +15,6 @@ class PipelineDataClass:
     mask_cytosol: list[np.ndarray] = None
     num_img_2_run: int = None
 
-
-        
-
     def pipeline_init(self):
         if self.num_img_2_run is None:
             self.num_img_2_run = self.total_num_imgs
@@ -27,7 +24,6 @@ class PipelineDataClass:
             self.save_masks_as_file = True
         else:
             self.save_masks_as_file = False
-
 
     def _check_params(self):
         pass

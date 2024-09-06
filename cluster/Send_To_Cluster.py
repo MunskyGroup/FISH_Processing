@@ -41,25 +41,25 @@ def update_package_for_sending(pipelines_location):
     Settings = pickle.load(open(os.path.join(selected_pipeline_location, 'settings.pkl'), 'rb'))
     Scope = pickle.load(open(os.path.join(selected_pipeline_location, 'scope.pkl'), 'rb'))
     Experiment = pickle.load(open(os.path.join(selected_pipeline_location, 'experiment.pkl'), 'rb'))
-    Data = pickle.load(open(os.path.join(selected_pipeline_location, 'data.pkl'), 'rb'))
+    # Data = pickle.load(open(os.path.join(selected_pipeline_location, 'data.pkl'), 'rb'))
 
     # Update the dataclass
     Settings = display_object_attributes(Settings)
     Scope = display_object_attributes(Scope)
     Experiment = display_object_attributes(Experiment)
-    Data = display_object_attributes(Data)
+    # Data = display_object_attributes(Data)
 
     # Copy the class to cluster directory
     copy_pipeline_location = os.path.join(os.getcwd(), 'cluster', os.path.basename(selected_pipeline_location))
     if os.path.exists(copy_pipeline_location):
         shutil.rmtree(copy_pipeline_location)
-        shutil.copytree(selected_pipeline_location, copy_pipeline_location)
+    shutil.copytree(selected_pipeline_location, copy_pipeline_location)
 
     # Rewrite the pickle files
     pickle.dump(Settings, open(os.path.join(copy_pipeline_location, 'settings.pkl'), 'wb'))
     pickle.dump(Scope, open(os.path.join(copy_pipeline_location, 'scope.pkl'), 'wb'))
     pickle.dump(Experiment, open(os.path.join(copy_pipeline_location, 'experiment.pkl'), 'wb'))
-    pickle.dump(Data, open(os.path.join(copy_pipeline_location, 'data.pkl'), 'wb'))
+    # pickle.dump(Data, open(os.path.join(copy_pipeline_location, 'data.pkl'), 'wb'))
 
     # Zip the package
     print( os.path.join(os.getcwd(), 'cluster'))
@@ -76,8 +76,8 @@ def run_on_cluster(path_to_config_file: str, local_file: str):
     remote_address = str(conf['user']['remote_address'])
     port = 22
 
-    remote_path = '/home/formanj/FISH_Processing/cluster'  # Path where you want to store directories_list.txt on the cluster
-    remote_script = '/home/formanj/FISH_Processing/cluster/runner_cluster_TerminatorBridge.sh'
+    remote_path = '/home/formanj/FISH_Processing_JF/FISH_Processing/cluster'  # Path where you want to store directories_list.txt on the cluster
+    # remote_script = '/home/formanj/FISH_Processing/cluster/runner_cluster_TerminatorBridge.sh'
 
     # Create SSH client
     ssh = paramiko.SSHClient()
@@ -99,7 +99,7 @@ def run_on_cluster(path_to_config_file: str, local_file: str):
 
     # Execute the command on the cluster
     # Combine commands to change directory and execute the batch script
-    combined_command = f'cd FISH_Processing/cluster; {sbatch_command}'
+    combined_command = f'cd {remote_path}; {sbatch_command}'
 
     stdin, stdout, stderr = ssh.exec_command(combined_command)
     stdout.channel.recv_exit_status()  # Wait for the command to complete
@@ -117,8 +117,8 @@ if __name__ == "__main__":
     # Define connection parameters
     path_to_config_file = r"C:\Users\Jack\Desktop\config_keck.yml"
     pipeline_location = r'C:\Users\Jack\Documents\GitHub\FISH_Processing\Pipelines'
-    # zipped_pipeline_location = update_package_for_sending(pipeline_location)
-    zipped_pipeline_location = r'C:\Users\Jack\Documents\GitHub\FISH_Processing\cluster\Standard_Pipeline.zip'
+    zipped_pipeline_location = update_package_for_sending(pipeline_location)
+    # zipped_pipeline_location = r'C:\Users\Jack\Documents\GitHub\FISH_Processing\cluster\Standard_Pipeline.zip'
     run_on_cluster(path_to_config_file, zipped_pipeline_location)
 
 

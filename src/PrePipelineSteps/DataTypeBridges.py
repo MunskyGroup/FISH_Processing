@@ -67,9 +67,12 @@ class Pycromanager2NativeDataType:
             destination_folder.mkdir(parents=True, exist_ok=True)
 
         local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(
-            path_to_config_file, data_folder_path, path_to_masks_dir, download_data_from_NAS)
+            path_to_config_file=path_to_config_file, data_folder_path=data_folder_path, 
+            path_to_masks_dir=path_to_masks_dir, download_data_from_NAS=download_data_from_NAS)
+        
         if not download_data_from_NAS:
             local_data_dir = data_folder_path
+        
         # Downloading data
         if use_metadata == True:
             try:
