@@ -37,7 +37,8 @@ class ReadImages():
             The number of images in the folder.
         '''
         list_files_names_complete = sorted([f for f in listdir(self.directory) if isfile(join(self.directory, f)) and ('.tif') in f], key=str.lower)  # reading all tif files in the folder
-        list_files_names_complete.sort(key=lambda f: int(re.sub('\D', '', f)))  # sorting the index in numerical order
+        if len(list_files_names_complete) != 1: # this is kind of a dirty fix to avioid if you dont want numbers in you file names
+            list_files_names_complete.sort(key=lambda f: int(re.sub('\D', '', f)))  # sorting the index in numerical order
         path_files_complete = [ str(self.directory.joinpath(f).resolve()) for f in list_files_names_complete ] # creating the complete path for each file
         number_files = len(path_files_complete)
         list_images_complete = [imread(str(f)) for f in path_files_complete]
