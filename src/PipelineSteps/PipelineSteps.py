@@ -39,6 +39,8 @@ import bigfish.detection as detection
 import bigfish.multistack as multistack
 import bigfish.plot as plot
 
+from typing import Union
+
 warnings.filterwarnings('ignore', category=matplotlib.MatplotlibDeprecationWarning)
 
 # Selecting the GPU. This is used in case multiple scripts run in parallel.
@@ -316,7 +318,7 @@ class SpotDetectionStepClass(PipelineStepsClass):
              nucChannel: list[int],
              FISHChannel: list[int],
              list_image_names: list,
-             temp_folder_name: str | pathlib.Path,
+             temp_folder_name: Union[str, pathlib.Path],
              threshold_for_spot_detection: float,
              segmentation_successful: list[bool],
              CLUSTER_RADIUS: float,
@@ -329,7 +331,7 @@ class SpotDetectionStepClass(PipelineStepsClass):
              psf_z: float,
              psf_yx: float,
              save_all_images: bool,
-             filtered_folder_name: str | pathlib.Path,
+             filtered_folder_name: Union[str, pathlib.Path],
              show_plots: bool = True,
              display_spots_on_multiple_z_planes: bool = False,
              use_log_filter_for_spot_detection: bool = False,
