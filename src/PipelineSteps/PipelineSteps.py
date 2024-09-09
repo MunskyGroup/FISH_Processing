@@ -498,7 +498,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
     def main(self, id, list_images, masks_nuclei, masks_complete_cells, FISHChannel,  nucChannel,
              voxel_size_yx, voxel_size_z, image_name,
-             spot_yx, spot_z, map_id_imgprops, bigfish_mean_threshold:float = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1,
+             spot_yx, spot_z, map_id_imgprops, bigfish_mean_threshold:list[float] = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1,
              bigfish_gamma:float = 5, CLUSTER_RADIUS:float= 500,
              MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, verbose:bool = False, **kwargs):
         

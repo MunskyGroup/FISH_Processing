@@ -1,2 +1,2 @@
 from .PostPipelineSteps import SavePDFReport, Luis_Additional_Plots, Move_Results_To_Analysis_Folder, Send_Data_To_Nas, BuildPDFReport, SaveSpotDetectionResults,\
-                                SaveMasksToAnalysis, SendAnalysisToNAS
+                                SaveMasksToAnalysis, SendAnalysisToNAS, DeleteTempFiles
