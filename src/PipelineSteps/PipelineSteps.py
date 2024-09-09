@@ -616,7 +616,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                                          path_output=os.path.join(self.step_output_dir, f'referenceSpot_{self.image_name}'))
 
         spots_post_clustering, clusters = detection.detect_clusters(
-            spots=spots_post_decomposition,
+            spots=spots_post_decomposition.astype(np.float64, casting='same_kind'),
             voxel_size=voxel_size,
             radius=CLUSTER_RADIUS,
             nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
