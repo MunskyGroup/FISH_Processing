@@ -30,11 +30,11 @@ def load_dict_from_file(location):
 
 # Zipped pickle files
 pipeline_package_location = os.path.normpath(sys.argv[1])
-extract_location = os.path.join(os.getcwd(), 'pipeline_package')
+extract_location = os.path.join(os.getcwd(), 'pipeline_package', os.path.splitext(os.path.basename(pipeline_package_location))[0])
 
 # Unzipping the pickle files
 shutil.unpack_archive(pipeline_package_location, extract_dir=extract_location, format='zip')
-extract_location = os.path.join(extract_location, os.path.splitext(os.path.basename(pipeline_package_location))[0])
+# extract_location = os.path.join(extract_location, os.path.splitext(os.path.basename(pipeline_package_location))[0])
 
 # Loading the pickle files
 settings = load_dict_from_file(os.path.join(extract_location, 'settings.txt'))
