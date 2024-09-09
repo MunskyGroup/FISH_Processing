@@ -213,8 +213,8 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
     def main(self, list_images, FISHChannel: list[int], voxel_size_yx, voxel_size_z, spot_yx, spot_z, 
              list_image_names, MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD:int = 50,
               use_log_hook:bool =False, bigfish_min_threshold:float = 0, verbose:bool = False, **kwargs):
-        voxel_size = (voxel_size_z, voxel_size_yx, voxel_size_yx)
-        spot_size = (spot_z, spot_yx, spot_yx)
+        voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
+        spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
         output_dir = self.step_output_dir
         self.verbose = verbose
 

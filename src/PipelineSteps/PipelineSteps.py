@@ -543,8 +543,8 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
     def detect_spots(self, rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, alpha, beta, gamma,
                      CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose):
-        voxel_size = (voxel_size_z, voxel_size_yx, voxel_size_yx)
-        spot_size = (spot_z, spot_yx, spot_yx)
+        voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
+        spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
 
         if use_log_hook:
             spot_radius_px = detection.get_object_radius_pixel(
