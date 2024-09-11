@@ -212,11 +212,13 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
 
     def main(self, list_images, FISHChannel: list[int], voxel_size_yx, voxel_size_z, spot_yx, spot_z, 
              list_image_names, MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD:int = 50,
-              use_log_hook:bool =False, bigfish_min_threshold:float = 0, verbose:bool = False, **kwargs):
+              use_log_hook:bool =False, bigfish_min_threshold:float = 0, verbose:bool = False, 
+              display_plots: bool = False, **kwargs):
         voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
         spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
         output_dir = self.step_output_dir
         self.verbose = verbose
+        self.display_plots = display_plots
 
         min_thresholds = []
         max_thresholds = []
@@ -284,7 +286,7 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
                 print("\r shape: {0}".format(spots.shape))
                 print("\r threshold: {0}".format(threshold))
 
-            if self.step_output_dir is not None:
+            if self.display_plots:
                 plot.plot_elbow(
                     images=rna,
                     minimum_distance=spot_size,
@@ -305,7 +307,7 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
                 print("\r shape: {0}".format(spots.shape))
                 print("\r threshold: {0}".format(threshold))
 
-        if self.step_output_dir is not None:
+        if self.display_plots:
             plot.plot_elbow(
                 images=rna,
                 voxel_size=voxel_size,

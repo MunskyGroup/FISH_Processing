@@ -37,8 +37,10 @@ class BuildPDFReport(postPipelineStepsClass):
 
         for step in steps:
             self.pdf.add_page()
-            self.pdf.cell(w=0, h=0, txt=f'-------------------------{step}-------------------------', ln=2, align='C')
             files = os.listdir(os.path.join(output_location,step))
+            if len(files) == 0:
+                break
+            self.pdf.cell(w=0, h=0, txt=f'-------------------------{step}-------------------------', ln=2, align='C')
             file_types = []
             img_names = []
             for file in files:

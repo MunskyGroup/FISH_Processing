@@ -32,18 +32,14 @@ class StepClass:
             try:
                 step_dict = getattr(self.pipelineData, key).__dict__
                 kwargs_pipelineData = {**kwargs_pipelineData, **step_dict}
+                kwargs_pipelineData.pop(key)
             except AttributeError:
                 pass
-            
+        
+        kwargs_IDspecific = {'id': id}
         if id is not None:
-            kwargs_IDspecific = {
-                'image_index' : id,
-                'image' : self.pipelineData.list_images[id],
-                'image_name' : os.path.splitext(self.pipelineData.list_image_names[id])[0],
-                # 'cell_mask' : self.pipelineData.masks_complete_cells[id],
-                # 'nuc_mask' : self.pipelineData.masks_nuclei[id],
-                # 'cyto_mask' : self.pipelineData.masks_cytosol[id],
-            }
+            kwargs_IDspecific['image'] = self.pipelineData.list_images[id]
+            kwargs_IDspecific['image_name'] = os.path.splitext(self.pipelineData.list_image_names[id])[0]
             try:
                 kwargs_IDspecific['cell_mask'] = self.pipelineData.masks_complete_cells[id]
             except AttributeError:
@@ -57,10 +53,7 @@ class StepClass:
             except AttributeError:
                 kwargs_IDspecific['cyto_mask'] = None
         
-            kwargs = {**kwargs_pipelineData, **kwargs_experiment, **kwargs_terminatorScope, **kwargs_pipelineSettings, **kwargs_IDspecific}
-
-        else:
-            kwargs = {**kwargs_pipelineData, **kwargs_experiment, **kwargs_terminatorScope, **kwargs_pipelineSettings}
+        kwargs = {**kwargs_pipelineData, **kwargs_experiment, **kwargs_terminatorScope, **kwargs_pipelineSettings, **kwargs_IDspecific}
 
         return kwargs
     
@@ -118,9 +111,10 @@ class PipelineStepsClass(StepClass):
             kwargs = self.load_in_attributes(id)
             self.create_step_output_dir(**kwargs)
             self.on_first_run(id)
-            return self.main(id=id, **kwargs)
+            # print(kwargs)
+            return self.main(**kwargs)
 
-    def main(self, id, **kwargs):
+    def main(self, **kwargs):
         pass
 
     def on_first_run(self, id: int):

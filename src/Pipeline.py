@@ -91,7 +91,7 @@ class Pipeline:
             else:
                 print('    Original Image Shape :                   ', img_shape)
                 print('    Image sharpness metric :                 ',
-                      self.pipelineData.CalculateSharpnessOutput.list_is_image_sharp[id])
+                self.pipelineData.CalculateSharpnessOutput.list_is_image_sharp[id])
 
             for step in self.pipelineSteps:
                 singleImageSingleStepOutputs = step.run(id=img_index, pipelineData=self.pipelineData,

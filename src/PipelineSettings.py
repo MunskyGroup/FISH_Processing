@@ -38,6 +38,7 @@ class PipelineSettings:
     MINUMUM_NUMBERs_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD: int = 3
     connection_config_location: str = r"C:\Users\Jack\Desktop\config.yml" # r"/home/formanj/FISH_Processing_JF/FISH_Processing/config.yml"
     share_name: str = 'share'
+    display_plots: bool = True
 
     def pipeline_init(self):
         pass

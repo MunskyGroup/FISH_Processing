@@ -28,6 +28,9 @@ import gc
 import pickle
 import pycromanager as pycro
 import pandas as pd
+import cellpose
+from cellpose import models
+
 
 import torch
 import warnings
@@ -307,7 +310,7 @@ class SpotDetectionStepOutputClass(StepOutputsClass):
         self.dfFISH = newOutputs.dfFISH  # I believe it does this in place :(
 
 
-class SpotDetectionStepClass(PipelineStepsClass):
+class SpotDetectionStepClass_Luis(PipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -498,9 +501,11 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
     def main(self, id, list_images, masks_nuclei, masks_complete_cells, FISHChannel,  nucChannel,
              voxel_size_yx, voxel_size_z, image_name,
-             spot_yx, spot_z, map_id_imgprops, bigfish_mean_threshold:list[float] = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1,
-             bigfish_gamma:float = 5, CLUSTER_RADIUS:float= 500,
-             MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, verbose:bool = False, **kwargs):
+             spot_yx, spot_z, map_id_imgprops, 
+             bigfish_mean_threshold:list[float] = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1,
+             bigfish_gamma:float = 5, CLUSTER_RADIUS:float = 500,
+             MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
+             verbose:bool = False, display_plots: bool = False, **kwargs):
         
         nuc_label = masks_nuclei[id]
         cell_label = masks_complete_cells[id]
@@ -518,10 +523,13 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
             spots, dense_regions, reference_spot, clusters = self.detect_spots(
                 rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, bigfish_alpha,
-                bigfish_beta, bigfish_gamma, CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose
+                bigfish_beta, bigfish_gamma, CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, 
+                use_log_hook, verbose, 
+                display_plots
             )
 
-            df = self.extract_cell_level_results(spots, clusters, nuc_label, cell_label, rna, nuc, verbose)
+            df = self.extract_cell_level_results(spots, clusters, nuc_label, cell_label, rna, nuc, 
+                                                 verbose, display_plots)
 
             df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
             df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)
@@ -542,7 +550,8 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
 
     def detect_spots(self, rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, alpha, beta, gamma,
-                     CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose):
+                     CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose: bool = False, 
+                     display_plots: bool = False):
         voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
         spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
 
@@ -572,7 +581,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                     images=rna,
                     minimum_distance=spot_size,
                     log_kernel_size=spot_size, 
-                    path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}'))
+                    path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}') if self.step_output_dir is not None else None)
 
         else:
             spot_size = spot_size
@@ -586,15 +595,15 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 print("detected spots")
                 print("\r shape: {0}".format(spots.shape))
                 print("\r threshold: {0}".format(threshold))
-            if self.step_output_dir is not None:
+            if display_plots:
                 plot.plot_elbow(
                     images=rna,
                     voxel_size=voxel_size,
                     spot_radius=spot_size,
-                    path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}'))
-        if self.step_output_dir is not None:
+                    path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}')) # TODO: these should be changed so they arent saved if either is none
+        if display_plots:
             plot.plot_detection(np.max(rna, axis=0), spots, contrast=True, 
-                                path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}'))
+                                path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
 
         spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
             image=rna,
@@ -610,10 +619,10 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             print("detected spots after decomposition")
             print("\r shape: {0}".format(spots_post_decomposition.shape))
 
-        if self.step_output_dir is not None:
-            if self.step_output_dir is not None:
-                plot.plot_reference_spot(reference_spot, rescale=True, 
-                                         path_output=os.path.join(self.step_output_dir, f'referenceSpot_{self.image_name}'))
+        if display_plots:
+            plot.plot_reference_spot(reference_spot, rescale=True, 
+                                        path_output=os.path.join(self.step_output_dir, f'referenceSpot_{self.image_name}') if self.step_output_dir is not None else None
+                                        )
 
         spots_post_clustering, clusters = detection.detect_clusters(
             spots=spots_post_decomposition.astype(np.float64, casting='same_kind'),
@@ -628,7 +637,11 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
         return spots_post_clustering, dense_regions, reference_spot, clusters
 
-    def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose):
+    def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
+        if len(nuc_label.shape) != 2:
+            nuc_label = np.max(nuc_label, axis=0)
+        if len(cell_label.shape) != 2:
+            cell_label = np.max(cell_label, axis=0)
         spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
         if verbose:
             print("detected spots (without transcription sites)")
@@ -644,6 +657,9 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             print("\r shape: {0}".format(spots_out.shape))
             print("\r dtype: {0}".format(spots_out.dtype))
 
+        other_images = {}
+        other_images["dapi"] = np.max(nuc, axis=0) if nuc is not None else None
+
         fov_results = multistack.extract_cell(
             cell_label=cell_label,
             ndim=3,
@@ -651,7 +667,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             rna_coord=spots_no_ts,
             others_coord={"foci": foci, "transcription_site": ts},
             image=np.max(rna, axis=0),
-            others_image={"dapi": np.max(nuc, axis=0)},)
+            others_image=other_images,)
         if verbose:
             print("number of cells identified: {0}".format(len(fov_results)))
 
@@ -672,19 +688,17 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 print("\r number of transcription sites {0}".format(len(ts_coord)))
 
             # plot cell
-            if self.step_output_dir is not None:
+            if display_plots:
                 plot.plot_cell(
                     ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
                     rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
                     image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask,
-                    title="Cell {0}".format(i), path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}'))
+                    title="Cell {0}".format(i), 
+                    path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
 
         df = multistack.summarize_extraction_results(fov_results, ndim=3)
 
         return df
-
-    def standarize_output(self):
-        pass
 
 
 class CellSegmentationStepClass_JF(PipelineStepsClass):
@@ -874,3 +888,109 @@ class CellSegmentationStepClass_JF(PipelineStepsClass):
         if not 'masks_cytosol_no_nuclei' in locals():
             self.masks_cytosol_no_nuclei = None
 
+
+class SimpleCellposeSegmentaion(PipelineStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, image, image_name, cytoChannel, nucChannel, 
+             cellpose_model_type: str = 'cyto3', cellpose_diameter: float = 70, cellpose_channel_axis: int = 3,
+             cellpose_invert: bool = False, cellpose_normalize: bool = True, cellpose_do_3D: bool = False, 
+             cellpose_min_size: float = None, cellpose_flow_threshold: float = 0.3,
+             display_plots: bool = False,
+               **kwargs):
+        if cellpose_min_size is None:
+            cellpose_min_size = np.pi * (cellpose_diameter / 4) ** 2
+
+        if not cellpose_do_3D:
+            image = np.max(image, axis=0)
+        
+        nuc_channel = nucChannel[0] if nucChannel is not None else 0
+        cyto_channel = cytoChannel[0] if cytoChannel is not None else 0
+        channels = [[cyto_channel, nuc_channel]]
+
+        model = models.Cellpose(model_type=cellpose_model_type, gpu=True)
+        masks, flows, styles, diams = model.eval(image, channels=channels, diameter=cellpose_diameter, 
+                                                 invert=cellpose_invert, normalize=cellpose_normalize, 
+                                                 channel_axis=cellpose_channel_axis, do_3D=cellpose_do_3D,
+                                                 min_size=cellpose_min_size, flow_threshold=cellpose_flow_threshold)
+        
+        if nucChannel is not None and len(masks.shape) == cellpose_channel_axis+1:
+            nuc_mask = np.take(masks, nuc_channel, axis=cellpose_channel_axis) if len(masks.shape) == cellpose_channel_axis+1 and nucChannel is not None else masks
+        elif nucChannel is not None:
+            nuc_mask = masks
+        else:
+            nuc_mask = None
+
+        if cytoChannel is not None and len(masks.shape) == cellpose_channel_axis+1:
+            cell_mask = np.take(masks, cyto_channel, axis=cellpose_channel_axis) if len(masks.shape) == cellpose_channel_axis+1 and cytoChannel is not None else masks
+        elif cytoChannel is not None:
+            cell_mask = masks
+        else:
+            cell_mask = None
+
+        cyto_mask = cell_mask[nuc_mask>0] if cell_mask is not None and nuc_mask is not None else None
+
+        number_detected_cells = np.max(cell_mask)+1 if cell_mask is not None else np.max(nuc_mask)+1
+
+        if display_plots:
+            num_sub_plots = 1
+            if nuc_mask is not None:
+                num_sub_plots += 2
+            if cyto_mask is not None:
+                num_sub_plots += 2
+            fig, axs = plt.subplots(1, num_sub_plots, figsize=(12, 5))
+            i = 0
+            if nuc_mask is not None:
+                if cellpose_do_3D:
+                    axs[i].imshow(np.max(image,axis=0)[:, : nucChannel[0]], cmap='gray')
+                    axs[i].set_title('Nuclei')
+                    i += 1
+                    axs[i].imshow(np.max(nuc_mask,axis=0), cmap='tab20')
+                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                    i += 1
+                else:
+                    axs[i].imshow(image[:,:,nucChannel[0]], cmap='gray')
+                    axs[i].set_title('Nuclei')
+                    i += 1
+                    axs[i].imshow(nuc_mask, cmap='tab20')
+                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                    i += 1
+            if cell_mask is not None:
+                if cellpose_do_3D:
+                    axs[i].imshow(np.max(image,axis=0)[:, : cytoChannel[0]], cmap='gray')
+                    axs[i].set_title('Nuclei')
+                    i += 1
+                    axs[i].imshow(np.max(cell_mask, axis=0), cmap='tab20')
+                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                    i += 1
+                else:
+                    axs[i].imshow(image[:,:,cytoChannel[0]], cmap='gray')
+                    axs[i].set_title('Nuclei')
+                    i += 1
+                    axs[i].imshow(cell_mask, cmap='tab20')
+                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                    i += 1
+            axs[i].imshow(flows[0][image.shape[0]//2, :, :])
+            plt.tight_layout()
+            if self.step_output_dir is not None:
+                plt.savefig(os.path.join(self.step_output_dir, f'{image_name}_segmentation.png'))
+            plt.show()
+
+
+        return CellSegmentationOutput(masks_complete_cells=cell_mask,
+                                        masks_nuclei=nuc_mask,
+                                        masks_cytosol=cyto_mask,
+                                        segmentation_successful=1,
+                                        number_detected_cells=number_detected_cells,
+                                        id=0)
+
+        
+
+
+
+
+
+
+
+# %%
