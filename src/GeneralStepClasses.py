@@ -9,6 +9,7 @@ class StepClass:
         self.pipelineSettings = None
         self.terminatorScope = None
         self.experiment = None
+        self.step_output_dir = None
 
     def check_setting_requirements(self):
         pass
@@ -58,7 +59,6 @@ class StepClass:
         return kwargs
     
     def create_step_output_dir(self, output_location = None, **kwargs):
-
         if output_location is not None:
             self.step_output_dir = os.path.join(output_location, self.__class__.__name__)
             os.makedirs(self.step_output_dir, exist_ok=True)
@@ -85,6 +85,7 @@ class StepClass:
 
 class PipelineStepsClass(StepClass):
     def __init__(self):
+        super().__init__()
         self.freeze = False
         self.is_first_run = True
 
@@ -100,6 +101,7 @@ class PipelineStepsClass(StepClass):
             for img_index in range(min(self.pipelineSettings.user_select_number_of_images_to_run,
                                        self.experiment.number_of_images_to_process)):
                 kwargs = self.load_in_attributes(id)
+                self.create_step_output_dir(**kwargs)
                 self.on_first_run(img_index)
                 single_step_output = self.main(id=img_index, **kwargs)
                 if img_index == 0:

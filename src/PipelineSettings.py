@@ -39,6 +39,12 @@ class PipelineSettings:
     connection_config_location: str = r"C:\Users\Jack\Desktop\config.yml" # r"/home/formanj/FISH_Processing_JF/FISH_Processing/config.yml"
     share_name: str = 'share'
     display_plots: bool = True
+    kwargs: dict = None
+
+    def __post_init__(self):
+        if self.kwargs is not None:
+            for key, value in self.kwargs.items():
+                setattr(self, key, value)
 
     def pipeline_init(self):
         pass

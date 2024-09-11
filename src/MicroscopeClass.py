@@ -17,6 +17,12 @@ class ScopeClass:
     spot_z: int = 500
     spot_yx: int = 360
     microscope_saving_format: str = 'pycromanager'
+    kwargs: dict = None
+
+    def __post_init__(self):
+        if self.kwargs is not None:
+            for key, value in self.kwargs.items():
+                setattr(self, key, value)
 
     def pipeline_init(self):
         pass

@@ -499,16 +499,17 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
     def __init__(self):
         super().__init__()
 
-    def main(self, id, list_images, masks_nuclei, masks_complete_cells, FISHChannel,  nucChannel,
-             voxel_size_yx, voxel_size_z, image_name,
+    def main(self, id, list_images, FISHChannel,  nucChannel,
+             voxel_size_yx, voxel_size_z, 
              spot_yx, spot_z, map_id_imgprops, 
+             image_name: str = None, masks_nuclei: list[np.array] = None, masks_complete_cells: list[np.array] = None,
              bigfish_mean_threshold:list[float] = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1,
              bigfish_gamma:float = 5, CLUSTER_RADIUS:float = 500,
              MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False, **kwargs):
         
-        nuc_label = masks_nuclei[id]
-        cell_label = masks_complete_cells[id]
+        nuc_label = masks_nuclei[id] if masks_nuclei is not None else None
+        cell_label = masks_complete_cells[id] if masks_complete_cells is not None else None
         img = list_images[id]
         img = img.astype('uint16')
         self.image_name = image_name
@@ -527,13 +528,14 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 use_log_hook, verbose, 
                 display_plots
             )
+            if nuc_label is not None or cell_label is not None:
 
-            df = self.extract_cell_level_results(spots, clusters, nuc_label, cell_label, rna, nuc, 
+                df = self.extract_cell_level_results(spots, clusters, nuc_label, cell_label, rna, nuc, 
                                                  verbose, display_plots)
 
-            df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
-            df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)
-            df['FISH_Channel'] = [c]*len(df)
+                df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
+                df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)
+                df['FISH_Channel'] = [c]*len(df)
 
             df_spotresults = pd.DataFrame(spots, columns=['z', 'y', 'x', 'cluster_index'])
             df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
@@ -638,10 +640,11 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         return spots_post_clustering, dense_regions, reference_spot, clusters
 
     def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
-        if len(nuc_label.shape) != 2:
+        if len(nuc_label.shape) != 2 and nuc_label is not None:
             nuc_label = np.max(nuc_label, axis=0)
-        if len(cell_label.shape) != 2:
+        if len(cell_label.shape) != 2 and cell_label is not None:
             cell_label = np.max(cell_label, axis=0)
+
         spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
         if verbose:
             print("detected spots (without transcription sites)")
@@ -893,7 +896,7 @@ class SimpleCellposeSegmentaion(PipelineStepsClass):
     def __init__(self):
         super().__init__()
 
-    def main(self, image, image_name, cytoChannel, nucChannel, 
+    def main(self, image, cytoChannel, nucChannel, image_name: str = None,
              cellpose_model_type: str = 'cyto3', cellpose_diameter: float = 70, cellpose_channel_axis: int = 3,
              cellpose_invert: bool = False, cellpose_normalize: bool = True, cellpose_do_3D: bool = False, 
              cellpose_min_size: float = None, cellpose_flow_threshold: float = 0.3,
@@ -931,7 +934,7 @@ class SimpleCellposeSegmentaion(PipelineStepsClass):
 
         cyto_mask = cell_mask[nuc_mask>0] if cell_mask is not None and nuc_mask is not None else None
 
-        number_detected_cells = np.max(cell_mask)+1 if cell_mask is not None else np.max(nuc_mask)+1
+        number_detected_cells = np.max(cell_mask) if cell_mask is not None else np.max(nuc_mask)
 
         if display_plots:
             num_sub_plots = 1
@@ -971,7 +974,12 @@ class SimpleCellposeSegmentaion(PipelineStepsClass):
                     axs[i].imshow(cell_mask, cmap='tab20')
                     axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
-            axs[i].imshow(flows[0][image.shape[0]//2, :, :])
+                if cellpose_do_3D:
+                    axs[i].imshow(flows[0][image.shape[0]//2, :, :])
+                    axs[i].set_title('Flow')
+                else:
+                    axs[i].imshow(flows[0][:, :])
+                    axs[i].set_title('Flow')
             plt.tight_layout()
             if self.step_output_dir is not None:
                 plt.savefig(os.path.join(self.step_output_dir, f'{image_name}_segmentation.png'))

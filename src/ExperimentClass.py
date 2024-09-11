@@ -24,6 +24,12 @@ class Experiment:
     cytoChannel: list[int] = None
     FISHChannel: list[int] = None
     voxel_size_z: int = 300  # This is voxel
+    kwargs: dict = None
+
+    def __post_init__(self):
+        if self.kwargs is not None:
+            for key, value in self.kwargs.items():
+                setattr(self, key, value)
 
     def pipeline_init(self):
         self.initial_data_location = pathlib.Path(self.initial_data_location)
