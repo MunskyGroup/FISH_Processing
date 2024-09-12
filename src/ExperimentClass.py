@@ -1,5 +1,5 @@
 import pathlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, fields, field
 
 
 @dataclass
@@ -25,6 +25,12 @@ class Experiment:
     FISHChannel: list[int] = None
     voxel_size_z: int = 300  # This is voxel
     kwargs: dict = None
+
+    def __init__(self, **kwargs):
+        # Loop over all fields defined in the dataclass
+        for f in fields(self):
+            # Set the attribute with the value from kwargs, or the default if not provided
+            setattr(self, f.name, kwargs.get(f.name, f.default))
 
     def __post_init__(self):
         if self.kwargs is not None:

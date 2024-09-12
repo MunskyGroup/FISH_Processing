@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 
 @dataclass
@@ -40,6 +40,12 @@ class PipelineSettings:
     share_name: str = 'share'
     display_plots: bool = True
     kwargs: dict = None
+
+    def __init__(self, **kwargs):
+        # Loop over all fields defined in the dataclass
+        for f in fields(self):
+            # Set the attribute with the value from kwargs, or the default if not provided
+            setattr(self, f.name, kwargs.get(f.name, f.default))
 
     def __post_init__(self):
         if self.kwargs is not None:

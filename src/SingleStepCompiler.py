@@ -14,15 +14,22 @@ class SingleStepCompiler:
         self.kwargs = kwargs
 
         # convert dataset to list of images
-        self.list_images, self.map_id_imgprops, self.kwargs['voxel_size_z'] = self.convert_dataset_to_zxyc(dataset)
+        self.list_images, self.map_id_imgprops, zstep = self.convert_dataset_to_zxyc(dataset)
+        if np.isclose(zstep, 0):
+            zstep = 500   #  TODO: This might be a shity assumption but I am not sure how much depth a single slice is 
+        else:
+            zstep = zstep * 1000 # convert um to nm
+
+
 
         # compile into kwargs
         self.kwargs['list_images'] = self.list_images
         self.kwargs['map_id_imgprops'] = self.map_id_imgprops
         self.kwargs['verbose'] = True
         self.kwargs['display_plots'] = True
-
-        default_settings = {**Experiment().__dict__, **PipelineSettings().__dict__, **ScopeClass().__dict__}
+        self.kwargs['voxel_size_z'] = zstep
+        kwargs = self.kwargs
+        default_settings = {**Experiment(**kwargs).__dict__, **PipelineSettings(**kwargs).__dict__, **ScopeClass(**kwargs).__dict__}
         for key, value in default_settings.items():
             if key not in self.kwargs.keys():
                 self.kwargs[key] = value
@@ -33,6 +40,7 @@ class SingleStepCompiler:
         signature = inspect.signature(function.main)
         kwargs = self.kwargs
         overall_output = None
+        num_cells_ran = 0
         if any(k in signature.parameters.keys() for k in ['id', 'image']):
             for id, image in enumerate(self.list_images):
                 kwargs = self.kwargs
@@ -40,13 +48,16 @@ class SingleStepCompiler:
                 kwargs['image'] = image
                 kwargs['image_name'] = None
                 output = function.main(**kwargs)
+                num_cells_ran += 1
                 if overall_output is None:
                     overall_output = output
                 else:
-                    overall_output = overall_output.append(output)
+                    overall_output.append(output)
+                if num_cells_ran >= self.kwargs['user_select_number_of_images_to_run']:  # not the biggest fan of this but its cheap and easy
+                    break
         else:
             overall_output = function.main(**kwargs)
-
+        self.kwargs = {**self.kwargs, **overall_output.__dict__}
         return overall_output
     
     def convert_dataset_to_zxyc(self, dataset):

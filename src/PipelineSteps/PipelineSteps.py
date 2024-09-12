@@ -490,12 +490,48 @@ class BIGFISH_SpotOutputClass(StepOutputsClass):
 
     def append(self, newOutput):
         self.img_id = [*self.img_id, *newOutput.img_id]
-        self.df_cellresults = pd.concat([self.df_cellresults, newOutput.df_cellresults])
+    
+        if self.df_cellresults is None:
+            self.df_cellresults = newOutput.df_cellresults
+        else:
+            self.df_cellresults = pd.concat([self.df_cellresults, newOutput.df_cellresults])
+
         self.df_spotresults = pd.concat([self.df_spotresults, newOutput.df_spotresults])
         self.df_clusterresults = pd.concat([self.df_clusterresults, newOutput.df_clusterresults])
 
 
 class BIGFISH_SpotDetection(PipelineStepsClass):
+    """
+    A class for detecting RNA spots in FISH images using the BIGFISH library.
+    Methods
+    -------
+    __init__():
+        Initializes the BIGFISH_SpotDetection class.
+    main(id, list_images, FISHChannel, nucChannel, voxel_size_yx, voxel_size_z, spot_yx, spot_z, map_id_imgprops, image_name=None, masks_nuclei=None, masks_complete_cells=None, bigfish_mean_threshold=None, bigfish_alpha=0.7, bigfish_beta=1, bigfish_gamma=5, CLUSTER_RADIUS=500, MIN_NUM_SPOT_FOR_CLUSTER=4, use_log_hook=False, verbose=False, display_plots=False, **kwargs):
+        Main method to detect spots in FISH images and extract cell-level results.
+        Parameters:
+        - id (int): Identifier for the image.
+        - list_images (list): List of images.
+        - FISHChannel (list): List of FISH channels.
+        - nucChannel (list): List of nuclear channels.
+        - voxel_size_yx (float): Voxel size in the yx plane.
+        - voxel_size_z (float): Voxel size in the z plane.
+        - spot_yx (float): Spot size in the yx plane.
+        - spot_z (float): Spot size in the z plane.
+        - map_id_imgprops (dict): Mapping of image properties.
+        - image_name (str, optional): Name of the image.
+        - masks_nuclei (list[np.array], optional): List of nuclear masks.
+        - masks_complete_cells (list[np.array], optional): List of complete cell masks.
+        - bigfish_mean_threshold (list[float], optional): List of mean thresholds for spot detection.
+        - bigfish_alpha (float, optional): Alpha parameter for spot decomposition.
+        - bigfish_beta (float, optional): Beta parameter for spot decomposition.
+        - bigfish_gamma (float, optional): Gamma parameter for spot decomposition.
+        - CLUSTER_RADIUS (float, optional): Radius for clustering spots.
+        - MIN_NUM_SPOT_FOR_CLUSTER (int, optional): Minimum number of spots for clustering.
+        - use_log_hook (bool, optional): Whether to use log kernel for spot detection.
+        - verbose (bool, optional): Whether to print verbose output.
+        - display_plots (bool, optional): Whether to display plots.
+    """
     def __init__(self):
         super().__init__()
 
@@ -511,16 +547,16 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         nuc_label = masks_nuclei[id] if masks_nuclei is not None else None
         cell_label = masks_complete_cells[id] if masks_complete_cells is not None else None
         img = list_images[id]
-        img = img.astype('uint16')
+        # img = img.astype('uint16')
         self.image_name = image_name
         for c in range(len(FISHChannel)):
             rna = img[:, :, :, FISHChannel[c]]
-            threshold = bigfish_mean_threshold[c]
-
             nuc = img[:, :, :, nucChannel[0]]
 
-            cell_label = cell_label.astype('uint16')
-            nuc_label = nuc_label.astype('uint16')
+            if bigfish_mean_threshold is not None:
+                threshold = bigfish_mean_threshold[c]
+            else:
+                threshold = None
 
             spots, dense_regions, reference_spot, clusters = self.detect_spots(
                 rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, bigfish_alpha,
@@ -529,13 +565,14 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 display_plots
             )
             if nuc_label is not None or cell_label is not None:
-
                 df = self.extract_cell_level_results(spots, clusters, nuc_label, cell_label, rna, nuc, 
                                                  verbose, display_plots)
-
                 df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
                 df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)
                 df['FISH_Channel'] = [c]*len(df)
+                
+            else:
+                df = None
 
             df_spotresults = pd.DataFrame(spots, columns=['z', 'y', 'x', 'cluster_index'])
             df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
@@ -558,6 +595,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
 
         if use_log_hook:
+            # Uses the log kernel to detect spots
             spot_radius_px = detection.get_object_radius_pixel(
                 voxel_size_nm=voxel_size,
                 object_radius_nm=spot_size,
@@ -567,42 +605,28 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 print("spot radius (yx plan): {:0.3f} pixels".format(spot_radius_px[-1]))
 
             spot_size = (spot_radius_px[0], spot_radius_px[-1], spot_radius_px[-1])
-
-            spots, threshold = detection.detect_spots(
+        # Log and Gaussian kernel paths converge here
+        spots, threshold = detection.detect_spots(
+            images=rna,
+            threshold=threshold,
+            return_threshold=True,
+            voxel_size=voxel_size if ~use_log_hook else None,  # in nanometer (one value per dimension zyx)
+            spot_radius=spot_size if ~use_log_hook else None,
+            log_kernel_size=spot_size if use_log_hook else None,
+            minimum_distance=spot_size if use_log_hook else None,
+            )  # in nanometer (one value per dimension zyx)
+        if verbose:
+            print(f"detected spots after {'log' if use_log_hook else 'gaussian'} kernel")
+            print("\r shape: {0}".format(spots.shape))
+            print("\r threshold: {0}".format(threshold))
+        if display_plots:
+            plot.plot_elbow(
                 images=rna,
-                threshold=threshold,
-                return_threshold=True,
-                log_kernel_size=spot_size,
-                minimum_distance=spot_size)
-            if verbose:
-                print("detected spots")
-                print("\r shape: {0}".format(spots.shape))
-                print("\r threshold: {0}".format(threshold))
-            if self.step_output_dir is not None:
-                plot.plot_elbow(
-                    images=rna,
-                    minimum_distance=spot_size,
-                    log_kernel_size=spot_size, 
-                    path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}') if self.step_output_dir is not None else None)
-
-        else:
-            spot_size = spot_size
-            spots, threshold = detection.detect_spots(
-                images=rna,
-                threshold=threshold,
-                return_threshold=True,
-                voxel_size=voxel_size,  # in nanometer (one value per dimension zyx)
-                spot_radius=spot_size)  # in nanometer (one value per dimension zyx)
-            if verbose:
-                print("detected spots")
-                print("\r shape: {0}".format(spots.shape))
-                print("\r threshold: {0}".format(threshold))
-            if display_plots:
-                plot.plot_elbow(
-                    images=rna,
-                    voxel_size=voxel_size,
-                    spot_radius=spot_size,
-                    path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}')) # TODO: these should be changed so they arent saved if either is none
+                voxel_size=voxel_size if ~use_log_hook else None,
+                spot_radius=spot_size if ~use_log_hook else None,
+                log_kernel_size=spot_size if use_log_hook else None,
+                minimum_distance=spot_size if use_log_hook else None,
+                path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}') if self.step_output_dir is not None else None) # TODO: these should be changed so they arent saved if either is none
         if display_plots:
             plot.plot_detection(np.max(rna, axis=0), spots, contrast=True, 
                                 path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
@@ -640,9 +664,9 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         return spots_post_clustering, dense_regions, reference_spot, clusters
 
     def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
-        if len(nuc_label.shape) != 2 and nuc_label is not None:
+        if nuc_label is not None and len(nuc_label.shape) != 2:
             nuc_label = np.max(nuc_label, axis=0)
-        if len(cell_label.shape) != 2 and cell_label is not None:
+        if cell_label is not None and len(cell_label.shape) != 2:
             cell_label = np.max(cell_label, axis=0)
 
         spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
@@ -661,15 +685,15 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             print("\r dtype: {0}".format(spots_out.dtype))
 
         other_images = {}
-        other_images["dapi"] = np.max(nuc, axis=0) if nuc is not None else None
+        other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
 
         fov_results = multistack.extract_cell(
-            cell_label=cell_label,
+            cell_label=cell_label.astype("uint16") if cell_label is not None else nuc_label.astype("uint16"),
             ndim=3,
-            nuc_label=nuc_label,
+            nuc_label=nuc_label.astype("uint16"),
             rna_coord=spots_no_ts,
             others_coord={"foci": foci, "transcription_site": ts},
-            image=np.max(rna, axis=0),
+            image=np.max(rna, axis=0).astype("uint16"),
             others_image=other_images,)
         if verbose:
             print("number of cells identified: {0}".format(len(fov_results)))
