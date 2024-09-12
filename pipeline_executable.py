@@ -40,12 +40,7 @@ shutil.unpack_archive(pipeline_package_location, extract_dir=extract_location, f
 settings = load_dict_from_file(os.path.join(extract_location, 'settings.txt'))
 scope = load_dict_from_file(os.path.join(extract_location, 'scope.txt'))
 experiment = load_dict_from_file(os.path.join(extract_location, 'experiment.txt'))
-# settings = np.load(os.path.join(extract_location, 'settings.npy')).item()
-# scope = np.load(os.path.join(extract_location, 'scope.npy')).item()
-# experiment = np.load(os.path.join(extract_location, 'experiment.npy')).item()
-# Settings = pickle.load(open(os.path.join(extract_location, 'settings.pkl'), 'rb'))
-# Scope = pickle.load(open(os.path.join(extract_location, 'scope.pkl'), 'rb'))
-# Experiment = pickle.load(open(os.path.join(extract_location, 'experiment.pkl'), 'rb'))
+
 Data = pickle.load(open(os.path.join(extract_location, 'data.pkl'), 'rb'))
 PrePipelineSteps = pickle.load(open(os.path.join(extract_location, 'prepipeline_steps.pkl'), 'rb'))
 PostPipelineSteps = pickle.load(open(os.path.join(extract_location, 'postpipeline_steps.pkl'), 'rb'))

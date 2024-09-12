@@ -962,17 +962,17 @@ class SimpleCellposeSegmentaion(PipelineStepsClass):
             if cell_mask is not None:
                 if cellpose_do_3D:
                     axs[i].imshow(np.max(image,axis=0)[:, : cytoChannel[0]], cmap='gray')
-                    axs[i].set_title('Nuclei')
+                    axs[i].set_title('cell_mask')
                     i += 1
                     axs[i].imshow(np.max(cell_mask, axis=0), cmap='tab20')
-                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                    axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
                 else:
                     axs[i].imshow(image[:,:,cytoChannel[0]], cmap='gray')
-                    axs[i].set_title('Nuclei')
+                    axs[i].set_title('cell_mask')
                     i += 1
                     axs[i].imshow(cell_mask, cmap='tab20')
-                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                    axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
                 if cellpose_do_3D:
                     axs[i].imshow(flows[0][image.shape[0]//2, :, :])

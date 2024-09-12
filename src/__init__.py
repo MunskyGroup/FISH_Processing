@@ -19,6 +19,7 @@ from .GeneralStepClasses import StepClass, PipelineStepsClass, postPipelineSteps
 from .GeneralOutputClasses import OutputClass, StepOutputsClass, PipelineOutputsClass, PrePipelineOutputsClass # GeneralOutputClasses
 from .PipelineDataClass import PipelineDataClass
 from .Pipeline import Pipeline
+from .SingleStepCompiler import SingleStepCompiler
 
 from . import Util
 from . import PipelineSteps
