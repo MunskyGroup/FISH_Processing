@@ -1,3 +1,15 @@
+# Purpose of this branch  
+
+The function of this code is to act as a backbone to image processing.  
+The goal is to be given a image processing function and be able to implement it into the pipeline with ease. This implementation would include running it on the cluster and in the future paralization of this step, without the creator of the step not having to directly implement these feature. Another goal is simply substitution of steps so that these steps can be exchanged easily when a new technique is  
+discovered.  
+
+In order to acheive this several classes have been implemented. The first of these is the step class:
+
+The step class has 3 children: pipeline step, prepipeline step, and the postpipeline step. The prepipeline steps are only ran once and can do many things. The pipeline steps are ran itteratively so with a new image being pass into the first then the second step and so on, then a new image is loaded an ran through the same steps.  
+
+In order to implement a step, 3 things must be done. The step must be a child of one of the 3 children steps. They must have a main method with arguments that follow the naming scheme (to be added), and they must have an output class that has an append function. The purpose of this is to clearly label the inputs and outputs and have a way of compiling these outputs using an append function.  
+
 # ​Fluorescence In Situ Hybridization (FISH) - automated image processing
 
 Authors: Luis U. Aguilera, Linda Forero-Quintero, Eric Ron, Joshua Cook, Brian Munsky
