@@ -13,6 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.path as mpltPath
 import matplotlib as mpl
+import trackpy as tp
 # import bigfish.segmentation as segmentation
 
 mpl.rc('image', cmap='viridis')
@@ -1017,12 +1018,134 @@ class SimpleCellposeSegmentaion(PipelineStepsClass):
                                         number_detected_cells=number_detected_cells,
                                         id=0)
 
+
+# %% Parameter Optimization Steps
+class ParamOptimizer_BIGFISH_SpotDetection_Output(StepOutputsClass):
+    def __init__(self, array_of_outputs, order_of_index: dict):
+        super().__init__()
+        self.array_of_outputs = array_of_outputs
+        self.order_of_index = order_of_index
+
+    def append(self, newOutput):
+        # for each element in array_of_outputs, append the corresponding element in newOutput.array_of_outputs
+        for i, output in np.ndenumerate(self.array_of_outputs):
+            output.append(newOutput.array_of_outputs[i]) #  This is awesome cause it mutable 
+
         
 
+class ParamOptimizer_BIGFISH_SpotDetection(PipelineStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, id, bigfish_mean_threshold: list[float] = [None], bigfish_alpha: list[float] = [0.7], bigfish_beta: list[float] = [1],
+             bigfish_gamma: list[float] = [5], CLUSTER_RADIUS: list[float] = [500],
+             MIN_NUM_SPOT_FOR_CLUSTER: list[int] = [4], **kwargs):
+        
+        self.mean_threshold = bigfish_mean_threshold if type(bigfish_mean_threshold) is list else [bigfish_mean_threshold]
+        self.alpha = bigfish_alpha if type(bigfish_alpha) is list else [bigfish_alpha]
+        self.beta = bigfish_beta if type(bigfish_beta) is list else [bigfish_beta]
+        self.gamma = bigfish_gamma  if type(bigfish_gamma) is list else [bigfish_gamma]
+        self.cluster_radius = CLUSTER_RADIUS if type(CLUSTER_RADIUS) is list else [CLUSTER_RADIUS]
+        self.min_num_spot_for_cluster = MIN_NUM_SPOT_FOR_CLUSTER if type(MIN_NUM_SPOT_FOR_CLUSTER) is list else [MIN_NUM_SPOT_FOR_CLUSTER]
+
+        order_of_index = {'mean_threshold': 0, 'alpha': 1, 'beta': 2, 'gamma': 3, 'cluster_radius': 4, 'min_num_spot_for_cluster': 5}
+        output = np.empty((len(self.mean_threshold), len(self.alpha), len(self.beta), len(self.gamma), len(self.cluster_radius), len(self.min_num_spot_for_cluster)), dtype=object)
+        for i, threshold in enumerate(self.mean_threshold):
+            for j, alpha in enumerate(self.alpha):
+                for k, beta in enumerate(self.beta):
+                    for l, gamma in enumerate(self.gamma):
+                        for m, radius in enumerate(self.cluster_radius):
+                            for n, min_num in enumerate(self.min_num_spot_for_cluster):
+                                print(f'Running threshold: {threshold}, alpha: {alpha}, beta: {beta}, gamma: {gamma}, cluster_radius: {radius}, min_num: {min_num}')
+                                kwargs['bigfish_mean_threshold'] = threshold
+                                kwargs['bigfish_alpha'] = alpha
+                                kwargs['bigfish_beta'] = beta
+                                kwargs['bigfish_gamma'] = gamma
+                                kwargs['CLUSTER_RADIUS'] = radius
+                                kwargs['MIN_NUM_SPOT_FOR_CLUSTER'] = min_num
+                                kwargs['id'] = id
+                                single_output = BIGFISH_SpotDetection().main(**kwargs)
+                                if output[i,j,k,l,m,n] is None:
+                                    output[i,j,k,l,m,n] = single_output
+                                else:
+                                    output[i,j,k,l,m,n].append(single_output)
+
+        return ParamOptimizer_BIGFISH_SpotDetection_Output(output, order_of_index)
+
+class Trackpy_SpotDetection_Output(StepOutputsClass):
+    def __init__(self, id, trackpy_features):
+        super().__init__()
+        self.id = [id]
+        self.trackpy_features = trackpy_features
+
+    def append(self, newOutput):
+        self.id = [*self.id, *newOutput.id]
+        self.trackpy_features = pd.concat([self.trackpy_features, newOutput.trackpy_features])
+
+
+class TrackPy_SpotDetection(PipelineStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, id, list_images, FISHChannel, spot_yx_px, spot_z_px, voxel_size_yx, voxel_size_z,
+             map_id_imgprops, trackpy_minmass: float = None,  trackpy_minsignal: float = 1000, 
+             trackpy_seperation_yx_px: float = 13, trackpy_seperation_z_px: float = 3,
+               display_plots: bool = False, plot_types: list[str] = ['mass', 'size', 'signal', 'raw_mass'], **kwargs):
+        img = list_images[id]
+        fish = np.squeeze(img[:, :, :, FISHChannel[0]])
+        print(fish.shape)
+        
+        # 3D spot detection
+        if len(fish.shape) == 3:
+            spot_diameter = (spot_z_px, spot_yx_px, spot_yx_px)
+            separation = (trackpy_seperation_z_px, trackpy_seperation_yx_px, trackpy_seperation_yx_px) if trackpy_seperation_yx_px is not None else None
+            trackpy_features = tp.locate(fish, diameter=spot_diameter, minmass=trackpy_minmass, separation=separation)
+
+        # 2D spot detection
+        else:
+            spot_diameter = spot_yx_px
+            separation = trackpy_seperation_yx_px
+            trackpy_features = tp.locate(fish, diameter=spot_diameter, minmass=trackpy_minmass, separation=separation)
+
+        # Plotting
+        if display_plots:
+            if len(fish.shape) == 3:
+                tp.annotate3d(trackpy_features, fish)
+                tp.subpx_bias(trackpy_features)
+
+            else:
+                tp.annotate(trackpy_features, fish)
+                tp.subpx_bias(trackpy_features)
+            
+            for plot_type in plot_types:
+                fig, ax = plt.subplots()
+                ax.hist(trackpy_features[plot_type], bins=20)
+                # Optionally, label the axes.
+                ax.set(xlabel=plot_type, ylabel='count')
+                plt.show()
 
 
 
 
 
 
-# %%
+
+        # append frame number and fov number to the features
+        trackpy_features['frame'] = [map_id_imgprops[id]['tp_num']]*len(trackpy_features)
+        trackpy_features['fov'] = [map_id_imgprops[id]['fov_num']]*len(trackpy_features)
+        trackpy_features['FISH_Channel'] = [FISHChannel[0]]*len(trackpy_features)
+        trackpy_features['xum'] = trackpy_features['x']*voxel_size_yx/1000 # convert to microns
+        trackpy_features['yum'] = trackpy_features['y']*voxel_size_yx/1000
+        if len(fish.shape) == 3:
+            trackpy_features['zum'] = trackpy_features['z']*voxel_size_z/1000
+
+        output = Trackpy_SpotDetection_Output(id=id, trackpy_features=trackpy_features)
+        return output
+
+
+
+
+
+
+
+

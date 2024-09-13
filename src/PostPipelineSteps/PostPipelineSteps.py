@@ -4,6 +4,9 @@ import shutil
 from fpdf import FPDF
 import os
 import pickle
+import trackpy as tp
+import matplotlib.pyplot as plt
+import pandas as pd
 
 from src import PipelineSettings, Experiment, ScopeClass, PipelineDataClass, postPipelineStepsClass
 from src.Util.Plots import Plots
@@ -109,12 +112,93 @@ class SendAnalysisToNAS(postPipelineStepsClass):
         os.remove(pathlib.Path().absolute().joinpath(analysis_location+'.zip'))
 
 
+
 class TrackPyAnlaysis(postPipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
 
-    def main(self):
-        pass
+    def main(self, list_images, analysis_location, timestep_s: float, trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 2.0,
+             link_search_range: list[float] = [1, 1.5, 2, 2.5], trackpy_memory: int = 5, trackpy_max_lagtime: int = 100, **kwargs):
+    
+        # if trackpy_features is not None: This is more complicated than I wanna do rn
+        #     trackpy_features = tp.batch(list_images, diameter=(7, 11, 11), separation=(3, 11, 11))
+
+        links = None
+        diffusion_constants = {}
+        msds = None
+
+        for i, fov in enumerate(trackpy_features['fov'].unique()):
+            features = trackpy_features[trackpy_features['fov'] == fov]
+
+            if display_plots:
+                for s in link_search_range:
+                    if 'zum' in features.columns:
+                        pos_columns = ['xum', 'yum', 'zum']
+                    else:
+                        pos_columns = ['xum', 'yum']
+                    linked = tp.link_df(features, s, memory=trackpy_memory, pos_columns=pos_columns)
+                    hist, bins = np.histogram(np.bincount(linked.particle.astype(int)),
+                                            bins=np.arange(30))
+                    plt.step(bins[1:], hist, label='range = {} microns'.format(s))
+                plt.ylabel('relative frequency')
+                plt.xlabel('track length (frames)')
+                plt.legend()
+                plt.show()
+
+            linked = tp.link_df(features, trackpy_link_distance_um, pos_columns=pos_columns)
+            
+            fps = 1/timestep_s
+            msd3D = tp.emsd(linked, mpp=1, fps=fps, max_lagtime=trackpy_max_lagtime,
+                            pos_columns=pos_columns)
+            slope = np.linalg.lstsq(msd3D.index[:, np.newaxis], msd3D)[0][0]
+
+            if display_plots:
+                ax = msd3D.plot(style='o', label='MSD in 3D')
+                ax.plot(np.arange(20), slope * np.arange(20), label='linear fit')
+                ax.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
+                ax.set(xlim=(0, 16), ylim=(0, 20))
+                ax.legend(loc='upper left')
+                print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 6))
+
+            linked['fov'] = fov*len(linked)
+
+            if links is None:
+                links = linked
+            else:
+                links = pd.concat([links, linked])
+
+            msd3D['fov'] = fov*len(msd3D)
+
+            if msds is None:
+                msds = msd3D    
+            else:
+                msds = pd.concat([msds, msd3D])
+
+            diffusion_constants[fov] = slope / 6
+
+
+        links.to_csv(os.path.join(analysis_location,'trackpy_links.csv'))
+        msd3D.to_csv(os.path.join(analysis_location,'trackpy_msd.csv'))
+        # save diffusion constants to a text file
+        with open(os.path.join(analysis_location,'diffusion_constants.txt'), 'w') as f:
+            for key in diffusion_constants.keys():
+                f.write(f'{key}: {diffusion_constants[key]}\n')
+
+
+        
+
+
+
+
+
+
+
+
+
+        
+
+
+        
 
 
 class DeleteTempFiles(postPipelineStepsClass):
@@ -123,6 +207,7 @@ class DeleteTempFiles(postPipelineStepsClass):
 
     def main(self, output_location, **kwargs):
         shutil.rmtree(output_location)
+
 
 
 
@@ -336,3 +421,9 @@ class Move_Results_To_Analysis_Folder(postPipelineStepsClass):
         Utilities().move_results_to_analyses_folder(output_identification_string, initial_data_location,
                                                     mask_dir_complete_name, path_to_masks_dir, save_filtered_images,
                                                     local_or_NAS, save_masks_as_file)
+
+
+
+
+
+

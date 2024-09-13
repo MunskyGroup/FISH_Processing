@@ -25,6 +25,7 @@ class Experiment:
     FISHChannel: list[int] = None
     voxel_size_z: int = 300  # This is voxel
     kwargs: dict = None
+    timestep_s: float = None
 
     def __init__(self, **kwargs):
         # Loop over all fields defined in the dataclass
