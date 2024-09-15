@@ -117,16 +117,36 @@ class TrackPyAnlaysis(postPipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
 
-    def main(self, list_images, analysis_location, timestep_s: float, trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 2.0,
-             link_search_range: list[float] = [1, 1.5, 2, 2.5], trackpy_memory: int = 5, trackpy_max_lagtime: int = 100, **kwargs):
-    
-        # if trackpy_features is not None: This is more complicated than I wanna do rn
-        #     trackpy_features = tp.batch(list_images, diameter=(7, 11, 11), separation=(3, 11, 11))
+    def main(self, list_images, analysis_location, voxel_size_yx, voxel_size_z, timestep_s: float, df_spotresults: pd.DataFrame = None, 
+             trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 1.25,
+             link_search_range: list[float] = [1, 1.25, 1.5], trackpy_memory: int = 5, trackpy_max_lagtime: int = 25, **kwargs):
 
+        # use bigfish or trackpy features
+        if trackpy_features is None and df_spotresults is not None:
+            trackpy_features = df_spotresults
+            if 'x_subpx' in trackpy_features.columns:
+                trackpy_features['xum'] = trackpy_features['x_subpx'] * voxel_size_yx / 1000 # convert px to um by px * nm/px * 1um/1000nm
+                trackpy_features['yum'] = trackpy_features['y_subpx'] * voxel_size_yx / 1000
+                trackpy_features['zum'] = trackpy_features['z_subpx'] * voxel_size_z / 1000
+                trackpy_features['frame'] = trackpy_features['timepoint']
+            else:
+                trackpy_features['xum'] = trackpy_features['x_px'] * voxel_size_yx / 1000
+                trackpy_features['yum'] = trackpy_features['y_px'] * voxel_size_yx / 1000
+                trackpy_features['zum'] = trackpy_features['z_px'] * voxel_size_z / 1000
+                trackpy_features['frame'] = trackpy_features['timepoint']
+
+        elif trackpy_features is None and df_spotresults is None:
+            raise ValueError('No spot detection results provided')
+
+        else: 
+            trackpy_features = trackpy_features
+
+        # prealocate variables
         links = None
         diffusion_constants = {}
         msds = None
 
+        # iterate over fovs
         for i, fov in enumerate(trackpy_features['fov'].unique()):
             features = trackpy_features[trackpy_features['fov'] == fov]
 
@@ -145,44 +165,58 @@ class TrackPyAnlaysis(postPipelineStepsClass):
                 plt.legend()
                 plt.show()
 
+            # link features
             linked = tp.link_df(features, trackpy_link_distance_um, pos_columns=pos_columns)
             
+            # calculate msd and diffusion constants
             fps = 1/timestep_s
-            msd3D = tp.emsd(linked, mpp=1, fps=fps, max_lagtime=trackpy_max_lagtime,
+            msd3D = tp.emsd(linked, mpp=(voxel_size_yx/1000, voxel_size_yx/1000, voxel_size_z/1000) if 'zum' in features.columns else (voxel_size_yx/1000, voxel_size_yx/1000),
+                            fps=fps, max_lagtime=trackpy_max_lagtime,
                             pos_columns=pos_columns)
             slope = np.linalg.lstsq(msd3D.index[:, np.newaxis], msd3D)[0][0]
 
             if display_plots:
                 ax = msd3D.plot(style='o', label='MSD in 3D')
-                ax.plot(np.arange(20), slope * np.arange(20), label='linear fit')
+                ax.plot(np.linspace(0, np.max(msd3D.index), 10), slope * np.linspace(0, np.max(msd3D.index), 10), label='linear fit')
                 ax.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
-                ax.set(xlim=(0, 16), ylim=(0, 20))
                 ax.legend(loc='upper left')
-                print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 6))
+                plt.show()
+                if 'zum' in features.columns:
+                    print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 6))
+                else:
+                    print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 4))
 
+            # merge dataframes from multiple fovs
             linked['fov'] = fov*len(linked)
-
             if links is None:
                 links = linked
             else:
                 links = pd.concat([links, linked])
 
+            # merge dataframes from multiple fovs
             msd3D['fov'] = fov*len(msd3D)
-
             if msds is None:
                 msds = msd3D    
             else:
                 msds = pd.concat([msds, msd3D])
 
-            diffusion_constants[fov] = slope / 6
+            # calculate diffusion constant for each fov in 2D or 3D
+            if 'zum' in features.columns:
+                diffusion_constants[f'fov num {fov}'] = slope / 6
+            else:
+                diffusion_constants[f'fov num {fov}'] = slope / 4
 
+        if analysis_location is not None:
+            links.to_csv(os.path.join(analysis_location,'trackpy_links.csv'))
+            msd3D.to_csv(os.path.join(analysis_location,'trackpy_msd.csv'))
+            # save diffusion constants to a text file
+            with open(os.path.join(analysis_location,'diffusion_constants.txt'), 'w') as f:
+                for key in diffusion_constants.keys():
+                    f.write(f'{key}: {diffusion_constants[key]}\n')
 
-        links.to_csv(os.path.join(analysis_location,'trackpy_links.csv'))
-        msd3D.to_csv(os.path.join(analysis_location,'trackpy_msd.csv'))
-        # save diffusion constants to a text file
-        with open(os.path.join(analysis_location,'diffusion_constants.txt'), 'w') as f:
-            for key in diffusion_constants.keys():
-                f.write(f'{key}: {diffusion_constants[key]}\n')
+        print('lagtime', trackpy_max_lagtime)
+
+        return links, msds, diffusion_constants
 
 
         

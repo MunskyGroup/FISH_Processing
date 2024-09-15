@@ -43,6 +43,7 @@ class SingleStepCompiler:
         num_cells_ran = 0
         if any(k in signature.parameters.keys() for k in ['id', 'image']):
             for id, image in enumerate(self.list_images):
+                print(f'========================== Running cell {id} ==========================')
                 kwargs = self.kwargs
                 kwargs['id'] = id
                 kwargs['image'] = image
@@ -57,7 +58,7 @@ class SingleStepCompiler:
                     break
         else:
             overall_output = function.main(**kwargs)
-        self.kwargs = {**self.kwargs, **overall_output.__dict__}
+        # self.kwargs = {**self.kwargs, **overall_output.__dict__}
         return overall_output
     
     def convert_dataset_to_zxyc(self, dataset):
