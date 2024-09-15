@@ -48,9 +48,9 @@ Scope = ScopeClass(**scope)
 experiment = Experiment(**experiment)
 Data = PipelineDataClass(**pipeline_dict['data'])
 
-prePipelineSteps = [getattr(PrePipelineSteps, i) for i in pipeline_dict['PrePipelineSteps']]
-postPipelineSteps = [getattr(PostPipelineSteps, i) for i in pipeline_dict['PostPipelineSteps']]
-pipelineSteps = [getattr(PipelineSteps, i) for i in pipeline_dict['PipelineSteps']]
+prePipelineSteps = [getattr(PrePipelineSteps, i)() for i in pipeline_dict['PrePipelineSteps']]
+postPipelineSteps = [getattr(PostPipelineSteps, i)() for i in pipeline_dict['PostPipelineSteps']]
+pipelineSteps = [getattr(PipelineSteps, i)() for i in pipeline_dict['PipelineSteps']]
 
 # Running the pipeline
 pipeline = Pipeline(Settings, Scope, experiment, Data, prePipelineSteps, postPipelineSteps, pipelineSteps)
