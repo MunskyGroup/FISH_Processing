@@ -574,7 +574,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
 
             # extract cell level results
             if nuc_label is not None or cell_label is not None:
-                df = self.extract_cell_level_results(spots, clusters, nuc_label, cell_label, rna, nuc, 
+                df = self.extract_cell_level_results(spots_px, clusters, nuc_label, cell_label, rna, nuc, 
                                                  verbose, display_plots)
                 df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
                 df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)

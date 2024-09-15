@@ -19,7 +19,8 @@ import shutil
 import os
 import numpy as np
 warnings.filterwarnings("ignore")
-from src import Pipeline, PipelineSettings, ScopeClass, Experiment
+from src import Pipeline, PipelineSettings, ScopeClass, Experiment, PipelineDataClass, \
+    PrePipelineSteps, PostPipelineSteps, PipelineSteps
 ######################################
 ######################################
 def load_dict_from_file(location):
@@ -30,28 +31,29 @@ def load_dict_from_file(location):
 
 # Zipped pickle files
 pipeline_package_location = os.path.normpath(sys.argv[1])
-extract_location = os.path.join(os.getcwd(), 'pipeline_package', os.path.splitext(os.path.basename(pipeline_package_location))[0])
+# extract_location = os.path.join(os.getcwd(), 'pipeline_package', os.path.splitext(os.path.basename(pipeline_package_location))[0])
 
 # Unzipping the pickle files
-shutil.unpack_archive(pipeline_package_location, extract_dir=extract_location, format='zip')
+# shutil.unpack_archive(pipeline_package_location, extract_dir=extract_location, format='zip')
 # extract_location = os.path.join(extract_location, os.path.splitext(os.path.basename(pipeline_package_location))[0])
 
 # Loading the pickle files
-settings = load_dict_from_file(os.path.join(extract_location, 'settings.txt'))
-scope = load_dict_from_file(os.path.join(extract_location, 'scope.txt'))
-experiment = load_dict_from_file(os.path.join(extract_location, 'experiment.txt'))
+pipeline_dict = load_dict_from_file(pipeline_package_location)
 
-Data = pickle.load(open(os.path.join(extract_location, 'data.pkl'), 'rb'))
-PrePipelineSteps = pickle.load(open(os.path.join(extract_location, 'prepipeline_steps.pkl'), 'rb'))
-PostPipelineSteps = pickle.load(open(os.path.join(extract_location, 'postpipeline_steps.pkl'), 'rb'))
-PipelineSteps = pickle.load(open(os.path.join(extract_location, 'pipeline_steps.pkl'), 'rb'))
-
+settings = pipeline_dict['settings']
+scope = pipeline_dict['scope']
+experiment = pipeline_dict['experiment']
 Settings = PipelineSettings(**settings)
 Scope = ScopeClass(**scope)
-Experiment = Experiment(**experiment)
+experiment = Experiment(**experiment)
+Data = PipelineDataClass(**pipeline_dict['data'])
+
+prePipelineSteps = [getattr(PrePipelineSteps, i) for i in pipeline_dict['PrePipelineSteps']]
+postPipelineSteps = [getattr(PostPipelineSteps, i) for i in pipeline_dict['PostPipelineSteps']]
+pipelineSteps = [getattr(PipelineSteps, i) for i in pipeline_dict['PipelineSteps']]
 
 # Running the pipeline
-pipeline = Pipeline(Settings, Scope, Experiment, Data, PrePipelineSteps, PostPipelineSteps, PipelineSteps)
+pipeline = Pipeline(Settings, Scope, experiment, Data, prePipelineSteps, postPipelineSteps, pipelineSteps)
 
 pipeline.run_pre_pipeline_steps()
 
