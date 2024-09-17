@@ -4,7 +4,83 @@ from .ExperimentClass import Experiment
 from .PipelineSettings import PipelineSettings
 from .MicroscopeClass import ScopeClass
 import numpy as np
+import tkinter as tk
+from tkinter import ttk
 
+# Function to update the slider range
+def update_slider_range(slider, min_entry, max_entry):
+    try:
+        new_min = float(min_entry.get())
+        new_max = float(max_entry.get())
+        if new_min < new_max:
+            slider.config(from_=new_min, to=new_max)
+    except ValueError:
+        pass  # Ignore invalid inputs
+
+# Function to create sliders, range inputs, and text boxes for parameters
+def create_gui(parameters, runner, function):
+    def run_processing():
+        param_values = {param: sliders[param].get() for param in sliders}
+        for key, value in param_values.items():
+            if hasattr(runner.kwargs, key):
+                setattr(runner.kwargs, key, value)
+            else:
+                runner.kwargs[key] = value
+        runner.sudo_run_step(function)
+
+    root = tk.Tk()
+    root.title("Dynamic Image Processing Parameters")
+
+    sliders = {}
+
+    for i, param in enumerate(parameters):
+        param_name, param_type, param_range = param
+
+        frame = tk.Frame(root)
+        frame.pack(pady=5)
+
+        label = tk.Label(frame, text=param_name)
+        label.pack(side=tk.LEFT)
+
+        if param_type == 'slider':
+            # Create range input fields
+            range_frame = tk.Frame(frame)
+            range_frame.pack(side=tk.LEFT, padx=10)
+
+            min_label = tk.Label(range_frame, text="Min:")
+            min_label.pack(side=tk.LEFT)
+
+            min_entry = ttk.Entry(range_frame, width=5)
+            min_entry.insert(0, str(param_range[0]))  # Default min value
+            min_entry.pack(side=tk.LEFT)
+
+            max_label = tk.Label(range_frame, text="Max:")
+            max_label.pack(side=tk.LEFT)
+
+            max_entry = ttk.Entry(range_frame, width=5)
+            max_entry.insert(0, str(param_range[1]))  # Default max value
+            max_entry.pack(side=tk.LEFT)
+
+            # Create the slider
+            slider = tk.Scale(frame, from_=param_range[0], to=param_range[1], orient=tk.HORIZONTAL)
+            slider.pack(side=tk.LEFT)
+            sliders[param_name] = slider
+
+            # Update slider range when min/max values change
+            update_button = tk.Button(range_frame, text="Update Range", 
+                                      command=lambda s=slider, min_e=min_entry, max_e=max_entry: update_slider_range(s, min_e, max_e))
+            update_button.pack(side=tk.LEFT, padx=5)
+
+        elif param_type == 'textbox':
+            entry = ttk.Entry(frame)
+            entry.pack(side=tk.LEFT)
+            sliders[param_name] = entry
+
+    # Run button
+    run_button = tk.Button(root, text="Run", command=run_processing)
+    run_button.pack(pady=10)
+
+    root.mainloop()
 
 
 
@@ -34,7 +110,6 @@ class SingleStepCompiler:
             if key not in self.kwargs.keys():
                 self.kwargs[key] = value
     
-
     def sudo_run_step(self, function):
         function = function()
         signature = inspect.signature(function.main)
@@ -104,3 +179,7 @@ class SingleStepCompiler:
         zstep = np.mean(zstep_list)
 
         return list_images_standard_format, map_id_imgprops, zstep
+    
+    def run_sliders(self, params, function):
+        create_gui(params, self, function)
+
