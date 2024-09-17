@@ -555,8 +555,8 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         # cycle through FISH channels
         for c in range(len(FISHChannel)):
             # extract single rna channel
-            rna = img[:, :, :, FISHChannel[c]]
-            nuc = img[:, :, :, nucChannel[0]]
+            rna = np.squeeze(img[:, :, :, FISHChannel[c]])
+            nuc = np.squeeze(img[:, :, :, nucChannel[0]])
 
             # check if a threshold is provided
             if bigfish_mean_threshold is not None:
@@ -616,30 +616,35 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                      CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose: bool = False, 
                      display_plots: bool = False, sub_pixel_fitting: bool = False,):
         # Define voxel size and spot size
-        voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
-        spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
+        num_dimensions = len(rna.shape)
+        
+        voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx)) if num_dimensions == 3 else (float(voxel_size_yx), float(voxel_size_yx))
+        spot_size = (float(spot_z), float(spot_yx), float(spot_yx)) if num_dimensions == 3 else (float(spot_yx), float(spot_yx))
                 
         # Uses the log kernel to detect spots
         if use_log_hook:
             spot_radius_px = detection.get_object_radius_pixel(
                 voxel_size_nm=voxel_size,
                 object_radius_nm=spot_size,
-                ndim=3)
+                ndim=num_dimensions)
             if verbose:
                 print("spot radius (z axis): {:0.3f} pixels".format(spot_radius_px[0]))
                 print("spot radius (yx plan): {:0.3f} pixels".format(spot_radius_px[-1]))
 
-            spot_size = (spot_radius_px[0], spot_radius_px[-1], spot_radius_px[-1])
+            log_spot_size = (spot_radius_px[0], spot_radius_px[-1], spot_radius_px[-1]) if num_dimensions == 3 else (spot_radius_px[-1], spot_radius_px[-1])
+        
+        else:
+            log_spot_size = None
 
         # Initial Spot Detection in px
         spots_px, threshold = detection.detect_spots(
             images=rna,
             threshold=threshold,
             return_threshold=True,
-            voxel_size=voxel_size if ~use_log_hook else None,  # in nanometer (one value per dimension zyx)
-            spot_radius=spot_size if ~use_log_hook else None,
-            log_kernel_size=spot_size if use_log_hook else None,
-            minimum_distance=spot_size if use_log_hook else None,
+            voxel_size=voxel_size if not use_log_hook else None,  # in nanometer (one value per dimension zyx)
+            spot_radius=spot_size if not use_log_hook else None,
+            log_kernel_size=log_spot_size,
+            minimum_distance=log_spot_size,
             )  # in nanometer (one value per dimension zyx)
         if verbose:
             print(f"detected spots after {'log' if use_log_hook else 'gaussian'} kernel")
@@ -648,13 +653,14 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         if display_plots:
             plot.plot_elbow(
                 images=rna,
-                voxel_size=voxel_size if ~use_log_hook else None,
-                spot_radius=spot_size if ~use_log_hook else None,
-                log_kernel_size=spot_size if use_log_hook else None,
-                minimum_distance=spot_size if use_log_hook else None,
+                voxel_size=voxel_size if not use_log_hook else None,
+                spot_radius=spot_size if not use_log_hook else None,
+                log_kernel_size=log_spot_size,
+                minimum_distance=log_spot_size,
                 path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}') if self.step_output_dir is not None else None) # TODO: these should be changed so they arent saved if either is none
         if display_plots:
-            plot.plot_detection(np.max(rna, axis=0), spots_px, contrast=True, 
+            plot.plot_detection(np.max(rna, axis=0) if num_dimensions == 3 else rna, 
+                                spots_px, contrast=True, 
                                 path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
         
         # decompose dense regions
@@ -687,6 +693,16 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             print("\r shape: {0}".format(spots_post_clustering.shape))
             print("detected clusters")
             print("\r shape: {0}".format(clusters.shape))
+        if display_plots:
+            plot.plot_detection(rna, 
+                    spots=[spots_post_decomposition, clusters[:, :3]], 
+                    shape=["circle", "polygon"], 
+                    radius=[3, 6], 
+                    color=["red", "blue"],
+                    linewidth=[1, 2], 
+                    fill=[False, True], 
+                    contrast=True,
+                    path_output=os.path.join(self.step_output_dir, f'detection_decomposition_{self.image_name}') if self.step_output_dir is not None else None)
 
         # subpixel fitting
         if sub_pixel_fitting:
