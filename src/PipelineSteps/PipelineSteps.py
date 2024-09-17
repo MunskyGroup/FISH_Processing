@@ -550,7 +550,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         nuc_label = masks_nuclei[id] if masks_nuclei is not None else None
         cell_label = masks_complete_cells[id] if masks_complete_cells is not None else None
         img = list_images[id]
-        self.image_name = image_name
+        # self.image_name = image_name
 
         # cycle through FISH channels
         for c in range(len(FISHChannel)):
@@ -565,12 +565,10 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 threshold = None
 
             # detect spots
-            spots_px, dense_regions, reference_spot, clusters, spots_subpx = self.detect_spots(
-                rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, bigfish_alpha,
-                bigfish_beta, bigfish_gamma, CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, 
-                use_log_hook, verbose, 
-                display_plots, sub_pixel_fitting
-            )
+            spots_px, dense_regions, reference_spot, clusters, spots_subpx = self.bigfish_spotdetection(
+                rna=rna, voxel_size_yx=voxel_size_yx, voxel_size_z=voxel_size_z, spot_yx=spot_yx, spot_z=spot_z, alpha=bigfish_alpha,
+                beta=bigfish_beta, gamma=bigfish_gamma, CLUSTER_RADIUS=CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER=MIN_NUM_SPOT_FOR_CLUSTER, 
+                threshold=threshold, use_log_hook=use_log_hook, verbose=verbose, display_plots=display_plots, sub_pixel_fitting=sub_pixel_fitting)
 
             # extract cell level results
             if nuc_label is not None or cell_label is not None:
@@ -612,100 +610,85 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             return output
 
 
-    def detect_spots(self, rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, alpha, beta, gamma,
+    def bigfish_spotdetection(self, rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, alpha, beta, gamma,
                      CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose: bool = False, 
                      display_plots: bool = False, sub_pixel_fitting: bool = False,):
-        # Define voxel size and spot size
-        voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
-        spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
-                
-        # Uses the log kernel to detect spots
+        rna = rna.squeeze()
+        print(rna.shape)
+
+        voxel_size_nm = (int(voxel_size_z), int(voxel_size_yx), int(voxel_size_yx)) if len(rna.shape) == 3 else (int(voxel_size_yx), int(voxel_size_yx))
+        spot_size_nm = (int(spot_z), int(spot_yx), int(spot_yx)) if len(rna.shape) == 3 else (int(spot_yx), int(spot_yx))
+        print(voxel_size_nm, spot_size_nm)
+
         if use_log_hook:
             spot_radius_px = detection.get_object_radius_pixel(
-                voxel_size_nm=voxel_size,
-                object_radius_nm=spot_size,
-                ndim=3)
-            if verbose:
-                print("spot radius (z axis): {:0.3f} pixels".format(spot_radius_px[0]))
-                print("spot radius (yx plan): {:0.3f} pixels".format(spot_radius_px[-1]))
+                voxel_size_nm=voxel_size_nm, 
+                object_radius_nm=voxel_size_nm, 
+                ndim=3 if len(rna.shape) == 3 else 2)
+            
 
-            spot_size = (spot_radius_px[0], spot_radius_px[-1], spot_radius_px[-1])
-
-        # Initial Spot Detection in px
-        spots_px, threshold = detection.detect_spots(
-            images=rna,
-            threshold=threshold,
-            return_threshold=True,
-            voxel_size=voxel_size if ~use_log_hook else None,  # in nanometer (one value per dimension zyx)
-            spot_radius=spot_size if ~use_log_hook else None,
-            log_kernel_size=spot_size if use_log_hook else None,
-            minimum_distance=spot_size if use_log_hook else None,
-            )  # in nanometer (one value per dimension zyx)
-        if verbose:
-            print(f"detected spots after {'log' if use_log_hook else 'gaussian'} kernel")
-            print("\r shape: {0}".format(spots_px.shape))
-            print("\r threshold: {0}".format(threshold))
-        if display_plots:
-            plot.plot_elbow(
-                images=rna,
-                voxel_size=voxel_size if ~use_log_hook else None,
-                spot_radius=spot_size if ~use_log_hook else None,
-                log_kernel_size=spot_size if use_log_hook else None,
-                minimum_distance=spot_size if use_log_hook else None,
-                path_output=os.path.join(self.step_output_dir, f'elbowPlot_{self.image_name}') if self.step_output_dir is not None else None) # TODO: these should be changed so they arent saved if either is none
-        if display_plots:
-            plot.plot_detection(np.max(rna, axis=0), spots_px, contrast=True, 
-                                path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
+        canidate_spots = detection.detect_spots(
+                                            images=rna, 
+                                            return_threshold=False, 
+                                            threshold=threshold,
+                                            voxel_size=voxel_size_nm if not use_log_hook else None,
+                                            spot_radius=spot_size_nm if not use_log_hook else None,
+                                            log_kernel_size=spot_radius_px if use_log_hook else None,
+                                            minimum_distance=spot_radius_px if use_log_hook else None,)
         
-        # decompose dense regions
+        canidate_spots = np.array(canidate_spots, dtype=int)
+        print(canidate_spots)
+        # check if all the values are integers
+        if not np.issubdtype(canidate_spots.dtype, np.integer):
+            canidate_spots = np.round(canidate_spots).astype(int)
+
+        print(canidate_spots.dtype)
         spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
-            image=rna,
-            spots=spots_px,
-            voxel_size=voxel_size,
-            spot_radius=spot_size,
-            alpha=alpha,  # alpha impacts the number of spots per candidate region
-            beta=beta,  # beta impacts the number of candidate regions to decompose
-            gamma=gamma,)  # gamma the filtering step to denoise the image
+                                                image=rna, 
+                                                spots=canidate_spots, 
+                                                voxel_size=130, 
+                                                spot_radius=450)
+        
+        spots_post_clustering, clusters = detection.detect_clusters(
+                                                        spots=spots_post_decomposition, 
+                                                        voxel_size=voxel_size_nm, 
+                                                        radius=CLUSTER_RADIUS, 
+                                                        nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
+        
+        if sub_pixel_fitting:
+            spots_subpx = detection.fit_subpixel(
+                                        image=rna, 
+                                        spots=canidate_spots, 
+                                        voxel_size=voxel_size_nm, 
+                                        spot_radius=voxel_size_nm)
+        else:
+            spots_subpx = None
+            
         if verbose:
-            print("detected spots before decomposition")
-            print("\r shape: {0}".format(spots_px.shape))
+            print("detected canidate spots")
+            print("\r shape: {0}".format(canidate_spots.shape))
+            print("\r threshold: {0}".format(threshold))
             print("detected spots after decomposition")
             print("\r shape: {0}".format(spots_post_decomposition.shape))
-        if display_plots:
-            plot.plot_reference_spot(reference_spot, rescale=True, 
-                                        path_output=os.path.join(self.step_output_dir, f'referenceSpot_{self.image_name}') if self.step_output_dir is not None else None
-                                        )
-            
-        # detect clusters
-        spots_post_clustering, clusters = detection.detect_clusters(
-            spots=spots_post_decomposition.astype(np.float64, casting='same_kind'),
-            voxel_size=voxel_size,
-            radius=CLUSTER_RADIUS,
-            nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
-        if verbose:
             print("detected spots after clustering")
             print("\r shape: {0}".format(spots_post_clustering.shape))
             print("detected clusters")
             print("\r shape: {0}".format(clusters.shape))
 
-        # subpixel fitting
-        if sub_pixel_fitting:
-            spots_subpx = detection.fit_subpixel(
-                image=rna,
-                spots=spots_post_clustering[:, :3],
-                voxel_size=voxel_size,
-                spot_radius=spot_size)
-            if verbose:
-                print("spots (subpixel fitting)")
-                print("\r shape: {0}".format(spots_subpx.shape))
-        else:
-            spots_subpx = None
-
-
-    
-            # create dataframes for spots and clusters
-
-        # output
+        if display_plots:
+            plot.plot_elbow(
+                images=rna, 
+                voxel_size=voxel_size_nm if not use_log_hook else None, 
+                spot_radius=spot_size_nm if not use_log_hook else None,)
+            plot.plot_reference_spot(reference_spot, rescale=True)
+            plot.plot_detection(np.max(rna, axis=0) if len(rna.shape) == 3 else rna, 
+                                spots=[spots_post_decomposition, clusters[:, :3]], 
+                                shape=["circle", "polygon"], 
+                                radius=[3, 6], 
+                                color=["red", "blue"],
+                                linewidth=[1, 2], 
+                                fill=[False, True], 
+                                contrast=True)
         return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx
 
     def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):

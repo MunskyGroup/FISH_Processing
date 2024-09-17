@@ -122,7 +122,8 @@ class SingleStepCompiler:
                 kwargs = self.kwargs
                 kwargs['id'] = id
                 kwargs['image'] = image
-                kwargs['image_name'] = None
+                # kwargs['image_name'] = None
+                print(kwargs.keys())
                 output = function.main(**kwargs)
                 num_cells_ran += 1
                 if overall_output is None:
@@ -132,6 +133,7 @@ class SingleStepCompiler:
                 if num_cells_ran >= self.kwargs['user_select_number_of_images_to_run']:  # not the biggest fan of this but its cheap and easy
                     break
         else:
+            print(kwargs.keys())
             overall_output = function.main(**kwargs)
         # self.kwargs = {**self.kwargs, **overall_output.__dict__}
         return overall_output
