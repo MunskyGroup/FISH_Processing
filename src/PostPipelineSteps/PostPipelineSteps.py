@@ -214,8 +214,6 @@ class TrackPyAnlaysis(postPipelineStepsClass):
                 for key in diffusion_constants.keys():
                     f.write(f'{key}: {diffusion_constants[key]}\n')
 
-        print('lagtime', trackpy_max_lagtime)
-
         return links, msds, diffusion_constants
 
 
