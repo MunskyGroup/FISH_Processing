@@ -102,10 +102,6 @@ class SendAnalysisToNAS(postPipelineStepsClass):
         super().__init__()
 
     def main(self, analysis_location, initial_data_location, connection_config_location, share_name,   **kwargs):
-        # where_to_send = str(os.path.dirname(initial_data_location))
-        # print(where_to_send)
-        # NASConnection(str(connection_config_location), share_name=str(share_name)).write_files_to_NAS(str(analysis_location), where_to_send)
-
         shutil.make_archive(analysis_location,'zip', pathlib.Path().absolute().joinpath(analysis_location))
         local_file_to_send_to_NAS = pathlib.Path().absolute().joinpath(analysis_location+'.zip')
         NASConnection(connection_config_location,share_name = share_name).write_files_to_NAS(local_file_to_send_to_NAS, initial_data_location)
@@ -119,7 +115,7 @@ class TrackPyAnlaysis(postPipelineStepsClass):
 
     def main(self, list_images, analysis_location, voxel_size_yx, voxel_size_z, timestep_s: float, df_spotresults: pd.DataFrame = None, 
              trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 1.25,
-             link_search_range: list[float] = [1, 1.25, 1.5], trackpy_memory: int = 5, trackpy_max_lagtime: int = 25, **kwargs):
+             link_search_range: list[float] = [0.5], trackpy_memory: int = 2, trackpy_max_lagtime: int = 25, **kwargs):
 
         # use bigfish or trackpy features
         if trackpy_features is None and df_spotresults is not None:
@@ -127,12 +123,12 @@ class TrackPyAnlaysis(postPipelineStepsClass):
             if 'x_subpx' in trackpy_features.columns:
                 trackpy_features['xum'] = trackpy_features['x_subpx'] * voxel_size_yx / 1000 # convert px to um by px * nm/px * 1um/1000nm
                 trackpy_features['yum'] = trackpy_features['y_subpx'] * voxel_size_yx / 1000
-                trackpy_features['zum'] = trackpy_features['z_subpx'] * voxel_size_z / 1000
+                trackpy_features['zum'] = trackpy_features('z_subpx', default=0) * voxel_size_z / 1000
                 trackpy_features['frame'] = trackpy_features['timepoint']
             else:
                 trackpy_features['xum'] = trackpy_features['x_px'] * voxel_size_yx / 1000
                 trackpy_features['yum'] = trackpy_features['y_px'] * voxel_size_yx / 1000
-                trackpy_features['zum'] = trackpy_features['z_px'] * voxel_size_z / 1000
+                trackpy_features['zum'] = trackpy_features.get('z_px', default=0) * voxel_size_z / 1000
                 trackpy_features['frame'] = trackpy_features['timepoint']
 
         elif trackpy_features is None and df_spotresults is None:

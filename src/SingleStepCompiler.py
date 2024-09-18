@@ -83,8 +83,6 @@ def create_gui(parameters, runner, function):
     root.mainloop()
 
 
-
-
 class SingleStepCompiler:
     def __init__(self, dataset: Dataset, kwargs: dict = {}):
         self.kwargs = kwargs
@@ -96,8 +94,6 @@ class SingleStepCompiler:
         else:
             zstep = zstep * 1000 # convert um to nm
 
-
-
         # compile into kwargs
         self.kwargs['list_images'] = self.list_images
         self.kwargs['map_id_imgprops'] = self.map_id_imgprops
@@ -105,10 +101,10 @@ class SingleStepCompiler:
         self.kwargs['display_plots'] = True
         self.kwargs['voxel_size_z'] = zstep
         kwargs = self.kwargs
-        default_settings = {**Experiment(**kwargs).__dict__, **PipelineSettings(**kwargs).__dict__, **ScopeClass(**kwargs).__dict__}
-        for key, value in default_settings.items():
-            if key not in self.kwargs.keys():
-                self.kwargs[key] = value
+        # default_settings = {**Experiment(**kwargs).__dict__, **PipelineSettings(**kwargs).__dict__, **ScopeClass(**kwargs).__dict__}
+        # for key, value in default_settings.items():
+        #     if key not in self.kwargs.keys():
+        #         self.kwargs[key] = value
     
     def sudo_run_step(self, function):
         function = function()
@@ -122,8 +118,7 @@ class SingleStepCompiler:
                 kwargs = self.kwargs
                 kwargs['id'] = id
                 kwargs['image'] = image
-                # kwargs['image_name'] = None
-                print(kwargs.keys())
+                kwargs['image_name'] = None
                 output = function.main(**kwargs)
                 num_cells_ran += 1
                 if overall_output is None:
@@ -133,9 +128,8 @@ class SingleStepCompiler:
                 if num_cells_ran >= self.kwargs['user_select_number_of_images_to_run']:  # not the biggest fan of this but its cheap and easy
                     break
         else:
-            print(kwargs.keys())
             overall_output = function.main(**kwargs)
-        # self.kwargs = {**self.kwargs, **overall_output.__dict__}
+        self.kwargs = {**self.kwargs, **overall_output.__dict__}
         return overall_output
     
     def convert_dataset_to_zxyc(self, dataset):

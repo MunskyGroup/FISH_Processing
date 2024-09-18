@@ -550,7 +550,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
         nuc_label = masks_nuclei[id] if masks_nuclei is not None else None
         cell_label = masks_complete_cells[id] if masks_complete_cells is not None else None
         img = list_images[id]
-        # self.image_name = image_name
+        self.image_name = image_name
 
         # cycle through FISH channels
         for c in range(len(FISHChannel)):
@@ -577,48 +577,73 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
                 df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)
                 df['FISH_Channel'] = [c]*len(df)
+
             else:
                 df = None
 
             # merge spots_px and spots_um
-            if sub_pixel_fitting:
-                spots = np.concatenate([spots_px, spots_subpx], axis=1)
-                
-                df_spotresults = pd.DataFrame(spots, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
-                df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
-                df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
-                df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+            if spots_px.shape[1] == 4:
+                if sub_pixel_fitting:
+                    spots = np.concatenate([spots_px, spots_subpx], axis=1)
+                    
+                    df_spotresults = pd.DataFrame(spots, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
+                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
+                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
+                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
 
-                df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
-                df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
-                df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
-                df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+                    df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
+                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
+                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
+                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
 
+                else:
+                    df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index'])
+                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
+                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
+                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+
+                    df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
+                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
+                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
+                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+            
             else:
-                df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index'])
-                df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
-                df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
-                df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+                if sub_pixel_fitting:
+                    spots = np.concatenate([spots_px, spots_subpx], axis=1)
+                    
+                    df_spotresults = pd.DataFrame(spots, columns=['y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
+                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
+                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
+                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
 
-                df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
-                df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
-                df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
-                df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+                    df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
+                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
+                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
+                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+
+                else:
+                    df_spotresults = pd.DataFrame(spots_px, columns=['y_px', 'x_px', 'cluster_index'])
+                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
+                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
+                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+
+                    df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
+                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
+                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
+                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
 
             # create output object
             output = BIGFISH_SpotOutputClass(img_id=id, df_cellresults=df, df_spotresults=df_spotresults, df_clusterresults=df_clusterresults)
             return output
 
 
-    def bigfish_spotdetection(self, rna, voxel_size_yx, voxel_size_z, spot_yx, spot_z, alpha, beta, gamma,
-                     CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER, threshold, use_log_hook, verbose: bool = False, 
-                     display_plots: bool = False, sub_pixel_fitting: bool = False,):
+    def bigfish_spotdetection(self, rna:np.array, voxel_size_yx:float, voxel_size_z:float, spot_yx:float, spot_z:float, alpha:int, beta:int,
+                               gamma:int, CLUSTER_RADIUS:float, MIN_NUM_SPOT_FOR_CLUSTER:int, threshold:float, use_log_hook:bool, 
+                               verbose: bool = False, display_plots: bool = False, sub_pixel_fitting: bool = False,):
         rna = rna.squeeze()
-        print(rna.shape)
 
         voxel_size_nm = (int(voxel_size_z), int(voxel_size_yx), int(voxel_size_yx)) if len(rna.shape) == 3 else (int(voxel_size_yx), int(voxel_size_yx))
         spot_size_nm = (int(spot_z), int(spot_yx), int(spot_yx)) if len(rna.shape) == 3 else (int(spot_yx), int(spot_yx))
-        print(voxel_size_nm, spot_size_nm)
 
         if use_log_hook:
             spot_radius_px = detection.get_object_radius_pixel(
@@ -636,18 +661,14 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                                             log_kernel_size=spot_radius_px if use_log_hook else None,
                                             minimum_distance=spot_radius_px if use_log_hook else None,)
         
-        canidate_spots = np.array(canidate_spots, dtype=int)
-        print(canidate_spots)
-        # check if all the values are integers
-        if not np.issubdtype(canidate_spots.dtype, np.integer):
-            canidate_spots = np.round(canidate_spots).astype(int)
-
-        print(canidate_spots.dtype)
         spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
-                                                image=rna, 
+                                                image=rna.astype(np.uint16), 
                                                 spots=canidate_spots, 
-                                                voxel_size=130, 
-                                                spot_radius=450)
+                                                voxel_size=voxel_size_nm, 
+                                                spot_radius=spot_size_nm,
+                                                alpha=alpha,
+                                                beta=beta,
+                                                gamma=gamma)
         
         spots_post_clustering, clusters = detection.detect_clusters(
                                                         spots=spots_post_decomposition, 
@@ -679,16 +700,15 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
             plot.plot_elbow(
                 images=rna, 
                 voxel_size=voxel_size_nm if not use_log_hook else None, 
-                spot_radius=spot_size_nm if not use_log_hook else None,)
-            plot.plot_reference_spot(reference_spot, rescale=True)
-            plot.plot_detection(np.max(rna, axis=0) if len(rna.shape) == 3 else rna, 
-                                spots=[spots_post_decomposition, clusters[:, :3]], 
-                                shape=["circle", "polygon"], 
-                                radius=[3, 6], 
-                                color=["red", "blue"],
-                                linewidth=[1, 2], 
-                                fill=[False, True], 
-                                contrast=True)
+                spot_radius=spot_size_nm if not use_log_hook else None,
+                log_kernel_size=spot_radius_px if use_log_hook else None,
+                minimum_distance=spot_radius_px if use_log_hook else None,
+                path_output=os.path.join(self.step_output_dir, f'elbow_{self.image_name}') if self.step_output_dir is not None else None)
+            plot.plot_reference_spot(reference_spot, rescale=True, 
+                                     path_output=os.path.join(self.step_output_dir, f'reference_spot_{self.image_name}') if self.step_output_dir is not None else None)
+            plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0),
+                                spots_post_decomposition, contrast=True, 
+                                path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
         return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx
 
     def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
