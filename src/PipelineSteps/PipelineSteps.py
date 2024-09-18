@@ -545,6 +545,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
              MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False,
               sub_pixel_fitting: bool = False, **kwargs):
+        print(map_id_imgprops)
         
         # Load in images and masks
         nuc_label = masks_nuclei[id] if masks_nuclei is not None else None
@@ -705,10 +706,25 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                 minimum_distance=spot_radius_px if use_log_hook else None,
                 path_output=os.path.join(self.step_output_dir, f'elbow_{self.image_name}') if self.step_output_dir is not None else None)
             plot.plot_reference_spot(reference_spot, rescale=True, 
-                                     path_output=os.path.join(self.step_output_dir, f'reference_spot_{self.image_name}') if self.step_output_dir is not None else None)
+                                    path_output=os.path.join(self.step_output_dir, f'reference_spot_{self.image_name}') if self.step_output_dir is not None else None)
+            
             plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0),
-                                spots_post_decomposition, contrast=True, 
-                                path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
+                                    canidate_spots, contrast=True, 
+                                    path_output=os.path.join(self.step_output_dir, f'canidate_{self.image_name}') if self.step_output_dir is not None else None)
+            
+            plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0),
+                                    spots_post_decomposition, contrast=True, 
+                                    path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
+            
+            plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0), 
+                                    spots=[spots_post_decomposition, clusters[:, :2] if len(rna.shape) == 2 else clusters[:, :3]], 
+                                    shape=["circle", "circle"], 
+                                    radius=[3, 6], 
+                                    color=["red", "blue"],
+                                    linewidth=[1, 2], 
+                                    fill=[False, True], 
+                                    contrast=True,
+                                    path_output=os.path.join(self.step_output_dir, f'cluster_{self.image_name}') if self.step_output_dir is not None else None)
         return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx
 
     def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):

@@ -129,7 +129,7 @@ class SingleStepCompiler:
                     break
         else:
             overall_output = function.main(**kwargs)
-        self.kwargs = {**self.kwargs, **overall_output.__dict__}
+        # self.kwargs = {**self.kwargs, **overall_output.__dict__}  # you need to do this mannually
         return overall_output
     
     def convert_dataset_to_zxyc(self, dataset):
@@ -170,8 +170,8 @@ class SingleStepCompiler:
                 z_tp.append((np.mean(dz)))
                 list_images_standard_format.append(temp_image)
                 map_id_imgprops[counter] = {'fov_num': fov, 'tp_num': tp}
+                counter += 1
             zstep_list.append(np.mean(z_tp))
-            counter += 1
         zstep = np.mean(zstep_list)
 
         return list_images_standard_format, map_id_imgprops, zstep
