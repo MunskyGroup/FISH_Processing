@@ -545,8 +545,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
              MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False,
               sub_pixel_fitting: bool = False, **kwargs):
-        print(map_id_imgprops)
-        
+
         # Load in images and masks
         nuc_label = masks_nuclei[id] if masks_nuclei is not None else None
         cell_label = masks_complete_cells[id] if masks_complete_cells is not None else None
@@ -591,22 +590,26 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                     df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
                     df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
                     df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+                    df_spotresults['img_id'] = [id]*len(df_spotresults)
 
                     df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
                     df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
                     df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
                     df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
 
                 else:
                     df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index'])
                     df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
                     df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
                     df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+                    df_spotresults['img_id'] = [id]*len(df_spotresults)
 
                     df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
                     df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
                     df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
                     df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
             
             else:
                 if sub_pixel_fitting:
@@ -616,22 +619,26 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
                     df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
                     df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
                     df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+                    df_spotresults['img_id'] = [id]*len(df_spotresults)
 
                     df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
                     df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
                     df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
                     df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
 
                 else:
                     df_spotresults = pd.DataFrame(spots_px, columns=['y_px', 'x_px', 'cluster_index'])
                     df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
                     df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
                     df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+                    df_spotresults['img_id'] = [id]*len(df_spotresults)
 
                     df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
                     df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
                     df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
                     df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
 
             # create output object
             output = BIGFISH_SpotOutputClass(img_id=id, df_cellresults=df, df_spotresults=df_spotresults, df_clusterresults=df_clusterresults)

@@ -113,11 +113,12 @@ class TrackPyAnlaysis(postPipelineStepsClass):
     def __init__(self) -> None:
         super().__init__()
 
-    def main(self, list_images, analysis_location, voxel_size_yx, voxel_size_z, timestep_s: float, df_spotresults: pd.DataFrame = None, 
+    def main(self, list_images, FISHChannel, analysis_location, voxel_size_yx, voxel_size_z, timestep_s: float, df_spotresults: pd.DataFrame = None, 
              df_clusterresults: pd.DataFrame = None, trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 1.25,
-             link_search_range: list[float] = [0.5], trackpy_memory: int = 2, trackpy_max_lagtime: int = 0.1, **kwargs):
+             link_search_range: list[float] = [0.5], trackpy_memory: int = 2, trackpy_max_lagtime: int = 3,
+             min_trajectory_length: int = 5, **kwargs):
 
-        tp.linking.Linker.MAX_SUB_NET_SIZE = 100
+        # tp.linking.Linker.MAX_SUB_NET_SIZE = 100
 
         # use bigfish or trackpy features
         if trackpy_features is None and df_spotresults is not None:
@@ -150,14 +151,7 @@ class TrackPyAnlaysis(postPipelineStepsClass):
         else: 
             trackpy_features = trackpy_features
 
-        # remove cluster and add in only cluster spot
-        # remove rows where cluster > 0
-        # trackpy_features = trackpy_features[trackpy_features['cluster_index'] == -1]
-        # # trackpy_features = pd.concat([trackpy_features, cluster_features])
-        # # drop all columns except for xum, yum, zum, frame, particle
-        # trackpy_features = trackpy_features[['xnm', 'ynm', 'znm', 'frame', 'fov']]
-        # print(trackpy_features)
-
+        print(trackpy_features.keys())
 
         # prealocate variables
         links = None
@@ -170,30 +164,32 @@ class TrackPyAnlaysis(postPipelineStepsClass):
 
             if 'zum' in features.columns:
                 pos_columns = ['xnm', 'ynm', 'znm']
+                px_pos_columns = ['x_px', 'y_px', 'z_px']
             else:
                 pos_columns = ['xnm', 'ynm']
+                px_pos_columns = ['x_px', 'y_px']
 
             # link features
-            linked = tp.link_df(features, 200, adaptive_stop=40, adaptive_step=0.95, pos_columns=pos_columns)
-            
+            linked = tp.link_df(features, 500, adaptive_stop=40, adaptive_step=0.95, 
+                                memory=trackpy_memory, pos_columns=pos_columns)
+            linked = linked.groupby('particle').filter(lambda x: len(x) >= min_trajectory_length)
             # calculate msd and diffusion constants
             fps = 1/timestep_s
-            print(linked.shape)
-            msd3D = tp.emsd(linked, mpp=(voxel_size_yx/1000, voxel_size_yx/1000, voxel_size_z/1000) if 'znm' in pos_columns else (voxel_size_yx/1000, voxel_size_yx/1000),
+            msd3D = tp.emsd(linked, mpp=(voxel_size_yx/1000, voxel_size_yx/1000, voxel_size_z/1000) if len(pos_columns) == 3 else (voxel_size_yx/1000, voxel_size_yx/1000),
                             fps=fps, max_lagtime=trackpy_max_lagtime,
-                            pos_columns=pos_columns)
-            # slope = np.linalg.lstsq(msd3D.index[:, np.newaxis], msd3D)[0][0]
+                            pos_columns=px_pos_columns)
+            fit = tp.utils.fit_powerlaw(msd3D)
+            n, slope = float(fit['n']), float(fit['A'])
+            if len(pos_columns) == 3:
+                print(f'The diffusion constant is {slope/6:.2f} μm²/s')
+                print(f'The anomalous exponent is {n:.2f}')
+            else:
+                print(f'The diffusion constant is {slope/4:.2f} μm²/s')
+                print(f'The anomalous exponent is {n:.2f}')
 
-            if display_plots:
-                ax = msd3D.plot(style='o', label='MSD in 3D')
-                # ax.plot(np.linspace(0, np.max(msd3D.index), 10), slope * np.linspace(0, np.max(msd3D.index), 10), label='linear fit')
-                ax.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
-                ax.legend(loc='upper left')
-                plt.show()
-                if 'znm' in pos_columns:
-                    print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 6))
-                else:
-                    print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 4))
+            # int_msd3D = np.array(msd3D)
+            # slope = np.linalg.lstsq(int_msd3D[:, np.newaxis], int_msd3D)[0][0]
+  
 
             # merge dataframes from multiple fovs
             linked['fov'] = fov*len(linked)
@@ -215,13 +211,40 @@ class TrackPyAnlaysis(postPipelineStepsClass):
             else:
                 diffusion_constants[f'fov num {fov}'] = slope / 4
 
+        if display_plots:
+            from celluloid import Camera
+            for particleIndex in linked['particle'].unique():
+                if particleIndex % 100 == 0:
+                    singleTrack = linked.loc[linked.particle == particleIndex]
+                    xrange = (int(singleTrack['x_px'].min()-50), int(singleTrack['x_px'].max()+50))
+                    yrange = (int(singleTrack['y_px'].min()-50), int(singleTrack['y_px'].max()+50))
+                    fig = plt.figure()
+                    ax = fig.add_subplot(111)
+                    camera = Camera(fig)
+                    timepoints = singleTrack['img_id']
+
+                    for i in timepoints:
+                        row = singleTrack.loc[singleTrack['frame'] == i]
+                        ax.imshow(np.max(list_images[i][:, :, :, FISHChannel[0]], axis=0), cmap='gray')
+                        ax.plot(singleTrack['x_px'], singleTrack['y_px'], color='b')
+                        try:
+                            ax.scatter(row['x_px'], row['y_px'], c='r', marker='2')
+                        except KeyError:
+                            pass
+                        plt.xlim(xrange[0], xrange[1])
+                        plt.ylim(yrange[0], yrange[1])
+                        camera.snap()
+                        
+                    animation = camera.animate(interval=500, blit=True)
+                    animation.save(f'animation_track_particle{particleIndex}.mp4')
+
         if analysis_location is not None:
             links.to_csv(os.path.join(analysis_location,'trackpy_links.csv'))
             msd3D.to_csv(os.path.join(analysis_location,'trackpy_msd.csv'))
             # save diffusion constants to a text file
-            with open(os.path.join(analysis_location,'diffusion_constants.txt'), 'w') as f:
-                for key in diffusion_constants.keys():
-                    f.write(f'{key}: {diffusion_constants[key]}\n')
+            # with open(os.path.join(analysis_location,'diffusion_constants.txt'), 'w') as f:
+            #     for key in diffusion_constants.keys():
+            #         f.write(f'{key}: {diffusion_constants[key]}\n')
 
         return links, msds, diffusion_constants
 
