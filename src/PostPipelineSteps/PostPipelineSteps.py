@@ -114,28 +114,50 @@ class TrackPyAnlaysis(postPipelineStepsClass):
         super().__init__()
 
     def main(self, list_images, analysis_location, voxel_size_yx, voxel_size_z, timestep_s: float, df_spotresults: pd.DataFrame = None, 
-             trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 1.25,
-             link_search_range: list[float] = [0.5], trackpy_memory: int = 2, trackpy_max_lagtime: int = 25, **kwargs):
+             df_clusterresults: pd.DataFrame = None, trackpy_features: pd.DataFrame = None, display_plots: bool = False, trackpy_link_distance_um: float = 1.25,
+             link_search_range: list[float] = [0.5], trackpy_memory: int = 2, trackpy_max_lagtime: int = 0.1, **kwargs):
+
+        tp.linking.Linker.MAX_SUB_NET_SIZE = 100
 
         # use bigfish or trackpy features
         if trackpy_features is None and df_spotresults is not None:
             trackpy_features = df_spotresults
             if 'x_subpx' in trackpy_features.columns:
-                trackpy_features['xum'] = trackpy_features['x_subpx'] * voxel_size_yx / 1000 # convert px to um by px * nm/px * 1um/1000nm
-                trackpy_features['yum'] = trackpy_features['y_subpx'] * voxel_size_yx / 1000
-                trackpy_features['zum'] = trackpy_features('z_subpx', default=0) * voxel_size_z / 1000
+                trackpy_features['xnm'] = trackpy_features['x_subpx'] * voxel_size_yx
+                trackpy_features['ynm'] = trackpy_features['y_subpx'] * voxel_size_yx
+                trackpy_features['znm'] = trackpy_features('z_subpx', default=0) * voxel_size_z
                 trackpy_features['frame'] = trackpy_features['timepoint']
+                cluster_features = df_clusterresults
+                cluster_features['xum'] = cluster_features['x_subpx'] * voxel_size_yx
+                cluster_features['ynm'] = cluster_features['y_subpx'] * voxel_size_yx
+                cluster_features['znm'] = cluster_features.get('z_subpx', default=0) * voxel_size_z
+                cluster_features['frame'] = cluster_features['timepoint']
+                raise ValueError('sub pix features not supported')
             else:
-                trackpy_features['xum'] = trackpy_features['x_px'] * voxel_size_yx / 1000
-                trackpy_features['yum'] = trackpy_features['y_px'] * voxel_size_yx / 1000
-                trackpy_features['zum'] = trackpy_features.get('z_px', default=0) * voxel_size_z / 1000
+                trackpy_features['xnm'] = trackpy_features['x_px'] * voxel_size_yx
+                trackpy_features['ynm'] = trackpy_features['y_px'] * voxel_size_yx
+                trackpy_features['znm'] = trackpy_features.get('z_px', default=0) * voxel_size_z
                 trackpy_features['frame'] = trackpy_features['timepoint']
+                cluster_features = df_clusterresults
+                cluster_features['xnm'] = cluster_features['x_px'] * voxel_size_yx
+                cluster_features['ynm'] = cluster_features['y_px'] * voxel_size_yx
+                cluster_features['znm'] = cluster_features.get('z_px', default=0) * voxel_size_z
+                cluster_features['frame'] = cluster_features['timepoint']
 
         elif trackpy_features is None and df_spotresults is None:
             raise ValueError('No spot detection results provided')
 
         else: 
             trackpy_features = trackpy_features
+
+        # remove cluster and add in only cluster spot
+        # remove rows where cluster > 0
+        # trackpy_features = trackpy_features[trackpy_features['cluster_index'] == -1]
+        # # trackpy_features = pd.concat([trackpy_features, cluster_features])
+        # # drop all columns except for xum, yum, zum, frame, particle
+        # trackpy_features = trackpy_features[['xnm', 'ynm', 'znm', 'frame', 'fov']]
+        # print(trackpy_features)
+
 
         # prealocate variables
         links = None
@@ -146,38 +168,29 @@ class TrackPyAnlaysis(postPipelineStepsClass):
         for i, fov in enumerate(trackpy_features['fov'].unique()):
             features = trackpy_features[trackpy_features['fov'] == fov]
 
-            if display_plots:
-                for s in link_search_range:
-                    if 'zum' in features.columns:
-                        pos_columns = ['xum', 'yum', 'zum']
-                    else:
-                        pos_columns = ['xum', 'yum']
-                    linked = tp.link_df(features, s, memory=trackpy_memory, pos_columns=pos_columns)
-                    hist, bins = np.histogram(np.bincount(linked.particle.astype(int)),
-                                            bins=np.arange(30))
-                    plt.step(bins[1:], hist, label='range = {} microns'.format(s))
-                plt.ylabel('relative frequency')
-                plt.xlabel('track length (frames)')
-                plt.legend()
-                plt.show()
+            if 'zum' in features.columns:
+                pos_columns = ['xnm', 'ynm', 'znm']
+            else:
+                pos_columns = ['xnm', 'ynm']
 
             # link features
-            linked = tp.link_df(features, trackpy_link_distance_um, pos_columns=pos_columns)
+            linked = tp.link_df(features, 200, adaptive_stop=40, adaptive_step=0.95, pos_columns=pos_columns)
             
             # calculate msd and diffusion constants
             fps = 1/timestep_s
-            msd3D = tp.emsd(linked, mpp=(voxel_size_yx/1000, voxel_size_yx/1000, voxel_size_z/1000) if 'zum' in features.columns else (voxel_size_yx/1000, voxel_size_yx/1000),
+            print(linked.shape)
+            msd3D = tp.emsd(linked, mpp=(voxel_size_yx/1000, voxel_size_yx/1000, voxel_size_z/1000) if 'znm' in pos_columns else (voxel_size_yx/1000, voxel_size_yx/1000),
                             fps=fps, max_lagtime=trackpy_max_lagtime,
                             pos_columns=pos_columns)
-            slope = np.linalg.lstsq(msd3D.index[:, np.newaxis], msd3D)[0][0]
+            # slope = np.linalg.lstsq(msd3D.index[:, np.newaxis], msd3D)[0][0]
 
             if display_plots:
                 ax = msd3D.plot(style='o', label='MSD in 3D')
-                ax.plot(np.linspace(0, np.max(msd3D.index), 10), slope * np.linspace(0, np.max(msd3D.index), 10), label='linear fit')
+                # ax.plot(np.linspace(0, np.max(msd3D.index), 10), slope * np.linspace(0, np.max(msd3D.index), 10), label='linear fit')
                 ax.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
                 ax.legend(loc='upper left')
                 plt.show()
-                if 'zum' in features.columns:
+                if 'znm' in pos_columns:
                     print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 6))
                 else:
                     print(r'The diffusion constant is {0:.2f} μm²/s'.format(slope / 4))
