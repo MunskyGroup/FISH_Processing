@@ -541,7 +541,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
              spot_yx, spot_z, map_id_imgprops, 
              image_name: str = None, masks_nuclei: list[np.array] = None, masks_complete_cells: list[np.array] = None,
              bigfish_mean_threshold:list[float] = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1,
-             bigfish_gamma:float = 5, CLUSTER_RADIUS:float = 500,
+             bigfish_gamma:float = 5, CLUSTER_RADIUS:int = 500,
              MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False,
               sub_pixel_fitting: bool = False, **kwargs):
