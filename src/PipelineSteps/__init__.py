@@ -3,6 +3,8 @@ from .PipelineSteps import (CellSegmentationOutput, CellSegmentationStepClass, S
                             CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, ParamOptimizer_BIGFISH_SpotDetection,
                             TrackPy_SpotDetection)
 
+from .Filters import (rescale_images, remove_background)
+
 
 
 

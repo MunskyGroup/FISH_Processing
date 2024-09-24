@@ -98,6 +98,7 @@ class Pipeline:
                                                         pipelineSettings=self.pipelineSettings,
                                                         terminatorScope=self.terminatorScope,
                                                         experiment=self.experiment)
+                
                 if singleImageSingleStepOutputs is None:
                     raise ValueError(f'{step} did not return a value')
                 self.pipelineData.append(singleImageSingleStepOutputs)

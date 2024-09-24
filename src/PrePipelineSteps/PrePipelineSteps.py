@@ -197,13 +197,24 @@ class CalculateSharpness(prePipelineStepsClass):
 
 #%% Automatic Spot Detection
 class AutomaticThresholdingOutput_JF(StepOutputsClass):
-    def __init__(self, bigfish_min_threshold, bigfish_max_threshold, bigfish_mean_threshold, bigfish_std_threshold) -> None:
+    def __init__(self, list_images, 
+                 bigfish_min_threshold, bigfish_max_threshold, 
+                 bigfish_mean_threshold, bigfish_std_threshold,
+                 bigfish_mode_threshold, bigfish_median_threshold,
+                 bigfish_75_quartile, bigfish_25_quartile,
+                 bigfish_90_quartile) -> None:
         super().__init__()
-        self.ModifyPipelineData = False
+        self.ModifyPipelineData = True
+        self.list_images = list_images
         self.bigfish_min_threshold = bigfish_min_threshold
         self.bigfish_max_threshold = bigfish_max_threshold
         self.bigfish_mean_threshold = bigfish_mean_threshold
         self.bigfish_std_threshold = bigfish_std_threshold
+        self.bigfish_mode_threshold = bigfish_mode_threshold
+        self.bigfish_median_threshold = bigfish_median_threshold
+        self.bigfish_75_quartile = bigfish_75_quartile
+        self.bigfish_25_quartile = bigfish_25_quartile
+        self.bigfish_90_quartile = bigfish_90_quartile
 
 
 class AutomaticSpotDetection_JF(prePipelineStepsClass):
@@ -211,7 +222,7 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
         super().__init__()
 
     def main(self, list_images, FISHChannel: list[int], voxel_size_yx, voxel_size_z, spot_yx, spot_z, 
-             list_image_names, MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD:int = 50,
+             list_image_names: list[str] = None, MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD:int = 50,
               use_log_hook:bool =False, bigfish_min_threshold:float = 0, verbose:bool = False, 
               display_plots: bool = False, **kwargs):
         voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
@@ -224,12 +235,18 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
         max_thresholds = []
         mean_thresholds = []
         std_thresholds = []
+        mode_threshold = []
+        median_threshold = []
+        quartiles_90_threshold = []
+        quartiles_75_threshold = []
+        quartiles_25_threshold = []
         for c in FISHChannel:
             num_images_used = 0
             list_thresholds = []
             for id, img in enumerate(list_images):
-                image_name = list_image_names[id]
-                image_name = os.path.splitext(image_name)[0]
+                if list_image_names is not None:
+                    image_name = list_image_names[id]
+                    image_name = os.path.splitext(image_name)[0]
                 rna = img[:,:,:,c]
                 if output_dir is not None:
                     self.step_output_dir = os.path.join(output_dir, f'elbow_{image_name}')
@@ -241,6 +258,8 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
                     list_thresholds.append(threshold)
                     num_images_used += 1
                 else:
+                    # list_images.pop(id)
+                    # list_image_names.pop(id)
                     if verbose:
                         print("Threshold: ", threshold, " was regected")
 
@@ -249,17 +268,31 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
             
             min_thresholds.append(np.min(list_thresholds))
             max_thresholds.append(np.max(list_thresholds))
+            mode_threshold.append(np.bincount(list_thresholds).argmax())
+            median_threshold.append(np.median(list_thresholds))
+            quartiles_75_threshold.append(np.percentile(list_thresholds, 75))
+            quartiles_25_threshold.append(np.percentile(list_thresholds, 25))
+            quartiles_90_threshold.append(np.percentile(list_thresholds, 90))
             mean_thresholds.append(np.mean(list_thresholds))
             std_thresholds.append(np.std(list_thresholds))
             if verbose:
                 print("Channel: ", c)
                 print("Min Threshold: ", min_thresholds[-1])
                 print("Max Threshold: ", max_thresholds[-1])
+                print("Mode Threshold: ", mode_threshold[-1])
+                print("Median Threshold: ", median_threshold[-1])
                 print("Mean Threshold: ", mean_thresholds[-1])
                 print("Std Threshold: ", std_thresholds[-1])
+                print("90 Quartile Threshold: ", quartiles_90_threshold[-1])
+                print("75 Quartile Threshold: ", quartiles_75_threshold[-1])
+                print("25 Quartile Threshold: ", quartiles_25_threshold[-1])
+                print()
 
-        output = AutomaticThresholdingOutput_JF(bigfish_min_threshold=min_thresholds, bigfish_max_threshold=max_thresholds, 
-                                                bigfish_mean_threshold=mean_thresholds, bigfish_std_threshold=std_thresholds)
+        output = AutomaticThresholdingOutput_JF(list_images=list_images, bigfish_min_threshold=min_thresholds, bigfish_max_threshold=max_thresholds, 
+                                                bigfish_mean_threshold=mean_thresholds, bigfish_std_threshold=std_thresholds, 
+                                                bigfish_mode_threshold=mode_threshold, bigfish_median_threshold=median_threshold,
+                                                bigfish_75_quartile=quartiles_75_threshold, bigfish_25_quartile=quartiles_25_threshold,
+                                                bigfish_90_quartile=quartiles_90_threshold)
         
         return output
 
@@ -307,14 +340,14 @@ class AutomaticSpotDetection_JF(prePipelineStepsClass):
                 print("\r shape: {0}".format(spots.shape))
                 print("\r threshold: {0}".format(threshold))
 
-        if self.display_plots:
-            plot.plot_elbow(
-                images=rna,
-                voxel_size=voxel_size,
-                spot_radius=spot_size, 
-                title="Normal Filter",
-                path_output=self.step_output_dir
-                )
+            if self.display_plots:
+                plot.plot_elbow(
+                    images=rna,
+                    voxel_size=voxel_size,
+                    spot_radius=spot_size, 
+                    title="Normal Filter",
+                    path_output=self.step_output_dir
+                    )
         
         return threshold
 

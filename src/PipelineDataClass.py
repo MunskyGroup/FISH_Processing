@@ -10,9 +10,9 @@ class PipelineDataClass:
     list_image_names: list[str] = None
     paths_to_images: list[pathlib.Path] = None
     list_images: list[np.ndarray] = None
-    mask_nuclei: list[np.ndarray] = None
-    mask_complete_cell: list[np.ndarray] = None
-    mask_cytosol: list[np.ndarray] = None
+    list_nuc_masks: list[np.ndarray] = None
+    list_cell_masks: list[np.ndarray] = None
+    list_cyto_mask: list[np.ndarray] = None
     num_img_2_run: int = None
 
     def pipeline_init(self):
@@ -29,6 +29,13 @@ class PipelineDataClass:
         pass
 
     def append(self, output):
+        attributes = output.__dict__.keys()
+        for attr in attributes:
+            if hasattr(self, attr):
+                if getattr(output, attr) is not None and len(getattr(output, attr)) != 0:
+                    setattr(self, attr, getattr(output, attr))
+            else:
+                setattr(self, attr, getattr(output, attr))
         if hasattr(self, output.__class__.__name__):
             getattr(self, output.__class__.__name__).append(output)
         else:
