@@ -68,7 +68,7 @@ import joypy
 from matplotlib import cm
 from scipy.ndimage import binary_dilation
 
-from src import PipelineStepsClass, StepOutputsClass
+from src import SequentialStepsClass, StepOutputsClass
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
@@ -96,7 +96,7 @@ class CellSegmentationOutput(StepOutputsClass):
         self.img_id = self.img_id + newOutputs.img_id
 
 
-class CellSegmentationStepClass(PipelineStepsClass):
+class CellSegmentationStepClass(SequentialStepsClass):
     def __init__(self) -> None:
         super().__init__()
         self.save_masks_as_file = None
@@ -311,7 +311,7 @@ class SpotDetectionStepOutputClass(StepOutputsClass):
         self.dfFISH = newOutputs.dfFISH  # I believe it does this in place :(
 
 
-class SpotDetectionStepClass_Luis(PipelineStepsClass):
+class SpotDetectionStepClass_Luis(SequentialStepsClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -441,7 +441,7 @@ class SpotDetectionStepClass_Luis(PipelineStepsClass):
 
 
 #%% Jacks Steps
-class BIGFISH_Tensorflow_Segmentation(PipelineStepsClass):
+class BIGFISH_Tensorflow_Segmentation(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 
@@ -501,7 +501,7 @@ class BIGFISH_SpotOutputClass(StepOutputsClass):
         self.df_clusterresults = pd.concat([self.df_clusterresults, newOutput.df_clusterresults])
 
 
-class BIGFISH_SpotDetection(PipelineStepsClass):
+class BIGFISH_SpotDetection(SequentialStepsClass):
     """
     A class for detecting RNA spots in FISH images using the BIGFISH library.
     Methods
@@ -820,7 +820,7 @@ class BIGFISH_SpotDetection(PipelineStepsClass):
     def get_spot_properties(self, rna, spot, voxel_size_yx, voxel_size_z, spot_yx, spot_z):
         pass
 
-class CellSegmentationStepClass_JF(PipelineStepsClass):
+class CellSegmentationStepClass_JF(SequentialStepsClass):
     def __init__(self) -> None:
         super().__init__()
         self.save_masks_as_file = None
@@ -1008,7 +1008,7 @@ class CellSegmentationStepClass_JF(PipelineStepsClass):
             self.list_cyto_masks_no_nuclei = None
 
 
-class SimpleCellposeSegmentaion(PipelineStepsClass):
+class SimpleCellposeSegmentaion(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 
@@ -1124,7 +1124,7 @@ class ParamOptimizer_BIGFISH_SpotDetection_Output(StepOutputsClass):
 
         
 
-class ParamOptimizer_BIGFISH_SpotDetection(PipelineStepsClass):
+class ParamOptimizer_BIGFISH_SpotDetection(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 
@@ -1174,7 +1174,7 @@ class Trackpy_SpotDetection_Output(StepOutputsClass):
         self.trackpy_features = pd.concat([self.trackpy_features, newOutput.trackpy_features])
 
 
-class TrackPy_SpotDetection(PipelineStepsClass):
+class TrackPy_SpotDetection(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 

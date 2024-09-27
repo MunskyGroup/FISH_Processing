@@ -71,7 +71,7 @@ import sys
 # append the path two directories before this file
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import PipelineStepsClass, StepOutputsClass, SingleStepCompiler
+from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
@@ -84,7 +84,7 @@ class filter_output(StepOutputsClass):
         self.list_images = [*self.list_images, *new_output.list_images]
 
 
-class rescale_images(PipelineStepsClass):
+class rescale_images(SequentialStepsClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -108,7 +108,7 @@ class rescale_images(PipelineStepsClass):
 
         
 
-class remove_background(PipelineStepsClass):
+class remove_background(SequentialStepsClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 

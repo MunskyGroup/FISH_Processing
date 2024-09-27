@@ -19,7 +19,7 @@ import shutil
 import os
 import numpy as np
 warnings.filterwarnings("ignore")
-from src import Pipeline, PipelineSettings, ScopeClass, Experiment, PipelineDataClass, \
+from src import Pipeline, Settings, ScopeClass, Experiment, DataContainer, \
     PrePipelineSteps, PostPipelineSteps, PipelineSteps
 ######################################
 ######################################
@@ -43,10 +43,10 @@ pipeline_dict = load_dict_from_file(pipeline_package_location)
 settings = pipeline_dict['settings']
 scope = pipeline_dict['scope']
 experiment = pipeline_dict['experiment']
-Settings = PipelineSettings(**settings)
+Settings = Settings(**settings)
 Scope = ScopeClass(**scope)
 experiment = Experiment(**experiment)
-Data = PipelineDataClass(**pipeline_dict['data'])
+Data = DataContainer(**pipeline_dict['data'])
 
 prePipelineSteps = [getattr(PrePipelineSteps, i)() for i in pipeline_dict['PrePipelineSteps']]
 postPipelineSteps = [getattr(PostPipelineSteps, i)() for i in pipeline_dict['PostPipelineSteps']]
@@ -55,8 +55,8 @@ pipelineSteps = [getattr(PipelineSteps, i)() for i in pipeline_dict['PipelineSte
 # Running the pipeline
 pipeline = Pipeline(Settings, Scope, experiment, Data, prePipelineSteps, postPipelineSteps, pipelineSteps)
 
-pipeline.run_pre_pipeline_steps()
+pipeline.execute_independent_steps()
 
-pipeline.run_pipeline_steps()
+pipeline.execute_sequential_steps()
 
-pipeline.run_post_pipeline_steps()
+pipeline.execute_finalization_steps()

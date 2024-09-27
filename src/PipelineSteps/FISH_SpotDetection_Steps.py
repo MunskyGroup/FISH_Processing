@@ -6,9 +6,9 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import PipelineStepsClass, StepOutputsClass, SingleStepCompiler
+from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler
 
-class UFISH_SpotDetection_Step(PipelineStepsClass):
+class UFISH_SpotDetection_Step(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 

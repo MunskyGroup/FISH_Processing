@@ -1,123 +1,172 @@
 import os
+import inspect
+import pickle
 
-from . import PipelineSettings, ScopeClass, Experiment, PipelineDataClass, PipelineOutputsClass, \
+from . import Settings, ScopeClass, Experiment, DataContainer, PipelineOutputsClass, \
     PrePipelineOutputsClass, StepOutputsClass
 from .Util.Utilities import Utilities
 
 
-# from .GeneralOutputClasses import PipelineOutputsClass
-# from .PipelineSettings import PipelineSettings
-# from .MicroscopeClass import ScopeClass
-# from .ExperimentClass import Experiment
-# from .PipelineDataClass import PipelineDataClass
-
 class Pipeline:
     def __init__(self,
-                 pipelineSettings: PipelineSettings,
-                 terminatorScope: ScopeClass,
+                 settings: Settings,
+                 scope: ScopeClass,
                  experiment: Experiment,
-                 pipelineData: PipelineDataClass,
-                 prePipelineSteps: list,
-                 postPipelineSteps: list,
-                 pipelineSteps: list
+                 dataContainer: DataContainer,
+                 independentSteps: list,
+                 finalizationSteps: list,
+                 sequentialSteps: list
                  ) -> None:
-        self.pipelineSettings = pipelineSettings
-        self.terminatorScope = terminatorScope
-        self.experiment = experiment
-        self.pipelineData = pipelineData
-        self.prePipelineSteps = prePipelineSteps
-        self.postPipelineSteps = postPipelineSteps
-        self.pipelineSteps = pipelineSteps
+        # data storage classes
+        self.settings = settings # user settings
+        self.scope = scope # microscope params
+        self.experiment = experiment # experiment params
+        self.dataContainer = dataContainer # data storage
+
+        # steps
+        self.independentSteps = independentSteps
+        self.finalizationSteps = finalizationSteps
+        self.sequentialSteps = sequentialSteps
 
         self.experiment.pipeline_init()
-        self.pipelineData.pipeline_init()
-        self.pipelineSettings.pipeline_init()
-        self.terminatorScope.pipeline_init()
+        self.dataContainer.pipeline_init()
+        self.settings.pipeline_init()
+        self.scope.pipeline_init()
 
-        self.override_bad_settings()
+        self.check_requirements()
 
-    def override_bad_settings(self):
-        '''if np.min(self.pipelineData.list_z_slices_per_image) < 5:
-            self.pipelineSettings.optimization_segmentation_method = 'center_slice' # MAYBE KEEP THIS
-            print(f'You picked a shit optimazation setting for segmentation because you have {self.pipelineData.list_z_slices_per_image} z slices \n',
-                  'I will pick a better one for you: center_slice')'''
-        pass
+    def check_requirements(self):
+        # inspects each steps main function to see if it has the required parameters
+        no_default_params = []
+        for step in self.independentSteps + self.finalizationSteps + self.sequentialSteps:
+            step_func = step.run
+            sig = inspect.signature(step_func)
+            no_default_params.append([param.name for param in sig.parameters.values() if param.default is param.empty])
 
-    def run_pre_pipeline_steps(self):
+        # make the list of lists into a single list
+        no_default_params = [item for sublist in no_default_params for item in sublist]
+
+        # make the list unique
+        no_default_params = list(set(no_default_params))
+
+        print('The following parameters are required in the run the pipeline')
+        print(no_default_params)
+
+    def display_all_params(self):
+        # inspects each steps main function to see if it has the required parameters
+        all_params = []
+        for step in self.independentSteps + self.finalizationSteps + self.sequentialSteps:
+            step_func = step.run
+            sig = inspect.signature(step_func)
+            all_params.append([param.name for param in sig.parameters.values()])
+
+        # make the list of lists into a single list
+        all_params = [item for sublist in all_params for item in sublist]
+
+        # make the list unique
+        all_params = list(set(all_params))
+
+        print('The following parameters are required in the run the pipeline')
+        print(all_params)
+
+    def execute_independent_steps(self):
         '''
         This method will run through all given prePipeline steps. PrePipeline steps are defined as steps that are ran on a subset of images.
         They can modify the pipelineData, they may also create new properties in pipelineData. they will also have the option to freeze the pipelineData in place
 
         '''
-        for step in self.prePipelineSteps:
+        for step in self.independentSteps:
             print(step)
-            stepOutput = step.run(pipelineData=self.pipelineData,
-                                  pipelineSettings=self.pipelineSettings,
-                                  terminatorScope=self.terminatorScope,
+            stepOutput = step.run(data=self.dataContainer,
+                                  settings=self.settings,
+                                  scope=self.scope,
                                   experiment=self.experiment)
-            if stepOutput is None:
-                print(f'{step} did not return a value')
+            # check if should modify pipelineData
             if hasattr(stepOutput, 'ModifyPipelineData'):
                 if stepOutput.ModifyPipelineData:
                     # find the attribute that both the pipelineData and stepOutput share
                     attrs = list(vars(stepOutput).keys()).copy()
                     for attr in attrs:
-                        if hasattr(self.pipelineData, attr):
-                            if getattr(stepOutput, attr) is not None and len(getattr(stepOutput, attr)) != 0:
+                        if hasattr(self.dataContainer, attr):
+                            if getattr(stepOutput, attr) is not None:
                                 print(f'Overwriting {attr} in pipelineData')
-                                setattr(self.pipelineData, attr, getattr(stepOutput, attr))
+                                setattr(self.dataContainer, attr, getattr(stepOutput, attr))
                             else:
                                 print(f'failed to modify {attr} because it was empty')
                             # remove that attribute from the stepOutput
                             delattr(stepOutput, attr)
+            if stepOutput is None:
+                print(f'{step} did not return a value')
+            
+            else:
                 # append the attributes to prePipelineOutputs
-            self.pipelineData.append(stepOutput)
+                self.dataContainer.append(stepOutput)
 
-    def run_pipeline_steps(self):
-        for img_index in range(self.pipelineData.num_img_2_run):
+    def execute_sequential_steps(self):
+        for img_index in range(self.dataContainer.num_img_2_run):
             print('')
             print(' ###################### ')
             print('        IMAGE : ' + str(img_index))
             print(' ###################### ')
-            print('    Image Name :  ', self.pipelineData.list_image_names[img_index])
+            print('    Image Name :  ', self.dataContainer.list_image_names[img_index])
 
-            img = self.pipelineData.list_images[img_index]
-            img_shape = list(img.shape)
-            if self.pipelineSettings.remove_z_slices_borders:
-                img_shape = list(img.shape)
-                img_shape[0] = img_shape[0] + 2 * self.pipelineSettings.NUMBER_Z_SLICES_TO_TRIM
-                print('    Original Image Shape :                    ', img_shape)
-                print('    Trimmed z_slices at each border :        ', self.pipelineSettings.NUMBER_Z_SLICES_TO_TRIM)
-            else:
-                print('    Original Image Shape :                   ', img_shape)
-                print('    Image sharpness metric :                 ',
-                self.pipelineData.CalculateSharpnessOutput.list_is_image_sharp[id])
-
-            for step in self.pipelineSteps:
-                singleImageSingleStepOutputs = step.run(id=img_index, pipelineData=self.pipelineData,
-                                                        pipelineSettings=self.pipelineSettings,
-                                                        terminatorScope=self.terminatorScope,
+            for step in self.sequentialSteps:
+                singleImageSingleStepOutputs = step.run(id=img_index, data=self.dataContainer,
+                                                        settings=self.settings,
+                                                        scope=self.scope,
                                                         experiment=self.experiment)
                 
                 if singleImageSingleStepOutputs is None:
                     raise ValueError(f'{step} did not return a value')
-                self.pipelineData.append(singleImageSingleStepOutputs)
+                self.dataContainer.append(singleImageSingleStepOutputs)
 
-    def run_post_pipeline_steps(self):
-        for step in self.postPipelineSteps:
+    def execute_finalization_steps(self):
+        for step in self.finalizationSteps:
             print(step)
-            step.run(pipelineData=self.pipelineData,
-                     pipelineSettings=self.pipelineSettings,
-                     terminatorScope=self.terminatorScope,
+            step.run(data=self.dataContainer,
+                     settings=self.settings,
+                     scope=self.scope,
                      experiment=self.experiment)
 
     def __post_init__(self):
-        self.pipelineData.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
-        if not os.path.exists(self.pipelineData.temp_folder_name) and self.pipelineSettings.save_files:
-            os.makedirs(self.pipelineData.temp_folder_name)
+        self.dataContainer.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
+        if not os.path.exists(self.dataContainer.temp_folder_name) and self.settings.save_files:
+            os.makedirs(self.dataContainer.temp_folder_name)
 
-        if self.pipelineSettings.save_all_images:
-            self.pipelineData.filtered_folder_name = str(
-                'filtered_images_' + self.experiment.initial_data_location.name)
-            if not os.path.exists(self.pipelineData.filtered_folder_name):
-                os.makedirs(self.pipelineData.filtered_folder_name)
+    def run_up_to(self, step_name):
+        if step_name not in [step.__class__.__name__ for step in self.sequentialSteps]:
+            raise ValueError(f'{step_name} is not in the pipelineSteps')
+        
+        # remove all steps from step_name and onwards
+        if step_name in [step.__class__.__name__ for step in self.independentSteps]:
+            # get the index of the step
+            index = [step.__class__.__name__ for step in self.independentSteps].index(step_name)
+            # remove all steps after the index
+            self.independentSteps = self.independentSteps[:index]
+            self.execute_independent_steps()
+            pickle.dump(self, open('pipeline.pkl', 'wb'))
+        else: 
+            self.execute_independent_steps()
+            if step_name in [step.__class__.__name__ for step in self.sequentialSteps]:
+                # get the index of the step
+                index = [step.__class__.__name__ for step in self.sequentialSteps].index(step_name)
+                # remove all steps after the index
+                self.sequentialSteps = self.sequentialSteps[:index]
+                self.execute_sequential_steps()
+                pickle.dump(self, open('pipeline.pkl', 'wb'))
+            else:
+                self.execute_sequential_steps()
+                if step_name in [step.__class__.__name__ for step in self.finalizationSteps]:
+                    # get the index of the step
+                    index = [step.__class__.__name__ for step in self.finalizationSteps].index(step_name)
+                    # remove all steps after the index
+                    self.finalizationSteps = self.finalizationSteps[:index]
+                    self.execute_finalization_steps()
+                    pickle.dump(self, open('pipeline.pkl', 'wb'))
+
+    def run_single_step(self, ):
+        pass
+
+
+
+            

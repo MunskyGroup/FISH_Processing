@@ -6,30 +6,30 @@ import numpy as np
 
 from src.Util.Utilities import Utilities
 # from .Util import Utilities
-from .. import Experiment, PipelineSettings, ScopeClass
+from .. import Experiment, Settings, ScopeClass, IndependentStepClass
 
 
-class Pycromanager2NativeDataType:
+class Pycromanager2NativeDataType(IndependentStepClass):
     def __init__(self):
         self.experiment = None
         self.pipelineSettings = None
         self.terminatorScope = None
         self.pipelineData = None
 
-    def run(self, pipelineData, pipelineSettings, terminatorScope, experiment):
+    def run(self, data, settings, scope, experiment):
 
-        connection_config_location = pipelineSettings.connection_config_location
+        connection_config_location = settings.connection_config_location
         self.experiment = experiment
-        self.pipelineSettings = pipelineSettings
-        self.terminatorScope = terminatorScope
-        self.pipelineData = pipelineData
+        self.pipelineSettings = settings
+        self.terminatorScope = scope
+        self.pipelineData = data
 
         (self.local_data_dir, self.masks_dir, self.list_files_names, self.list_images_all_fov, self.list_images, \
          self.number_of_fov, self.number_color_channels, self.number_z_slices, self.number_of_timepoints,
          self.list_tps, self.list_nZ, self.number_of_imgs, self.map_id_imgprops) = self.convert_to_standard_format(
             data_folder_path=pathlib.Path(experiment.initial_data_location),
             path_to_config_file=connection_config_location,
-            download_data_from_NAS=pipelineSettings.local_or_NAS,
+            download_data_from_NAS=settings.download_data_from_NAS,
             use_metadata=1,
             is_format_FOV_Z_Y_X_C=1)
 
@@ -45,11 +45,11 @@ class Pycromanager2NativeDataType:
         experiment.map_id_imgprops = self.map_id_imgprops
 
         # PipelineData 
-        pipelineData.local_data_folder = self.local_data_dir
-        pipelineData.total_num_imgs = experiment.number_of_images_to_process
-        pipelineData.list_image_names = self.list_files_names
-        pipelineData.list_images = self.list_images
-        pipelineData.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
+        data.local_data_folder = self.local_data_dir
+        data.total_num_imgs = experiment.number_of_images_to_process
+        data.list_image_names = self.list_files_names
+        data.list_images = self.list_images
+        data.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
                                         self.experiment.number_of_images_to_process)
 
 

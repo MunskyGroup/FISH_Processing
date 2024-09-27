@@ -4,7 +4,7 @@ import numpy as np
 
 from bigfish import detection, plot
 
-from .. import PipelineDataClass, PipelineSettings, Experiment, ScopeClass, prePipelineStepsClass, StepOutputsClass
+from .. import DataContainer, Settings, Experiment, ScopeClass, IndependentStepClass, StepOutputsClass
 
 from src.Util.Utilities import Utilities
 from src.Util.BigFish import BigFISH
@@ -15,7 +15,7 @@ class Make_Analysis_Dir_Output_JF(StepOutputsClass):
         super().__init__()
         self.analysis_location = analysis_dir
 
-class Make_Analysis_Dir_JF(prePipelineStepsClass):
+class Make_Analysis_Dir_JF(IndependentStepClass):
     def __init__(self):
         super().__init__()
         self.ModifyPipelineData = False
@@ -37,7 +37,7 @@ class Make_Output_Dir_Output_JF(StepOutputsClass):
         super().__init__()
         self.output_location = output_dir
 
-class Make_Output_Dir_JF(prePipelineStepsClass):
+class Make_Output_Dir_JF(IndependentStepClass):
     def __init__(self):
         super().__init__()
         self.ModifyPipelineData = False
@@ -62,7 +62,7 @@ class Make_Output_Dir_Output(StepOutputsClass):
         self.output_identification_string = output_dir
 
 
-class Make_Output_Dir(prePipelineStepsClass):
+class Make_Output_Dir(IndependentStepClass):
     def __init__(self):
         super().__init__()
         self.ModifyPipelineData = False
@@ -100,7 +100,7 @@ class ConsolidateImageShapesOutput(StepOutputsClass):
         self.list_images = list_images
 
 
-class ConsolidateImageShapes(prePipelineStepsClass):
+class ConsolidateImageShapes(IndependentStepClass):
     """
     This consolidates all images in list_images to the same shape (Z, Y, X, C)
 
@@ -145,7 +145,7 @@ class CalculateSharpnessOutput(StepOutputsClass):
         self.list_metric_sharpness_images = list_metric_sharpness_images
 
 
-class CalculateSharpness(prePipelineStepsClass):
+class CalculateSharpness(IndependentStepClass):
     """
     This step remove entire images if they are deemed out of focus (not just single Zs)
 
@@ -217,7 +217,7 @@ class AutomaticThresholdingOutput_JF(StepOutputsClass):
         self.bigfish_90_quartile = bigfish_90_quartile
 
 
-class AutomaticSpotDetection_JF(prePipelineStepsClass):
+class AutomaticSpotDetection_JF(IndependentStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -359,7 +359,7 @@ class AutomaticThresholdingOutput(StepOutputsClass):
         self.automatic_spot_detection_threshold = automatic_spot_detection_threshold
 
 
-class AutomaticSpotDetection(prePipelineStepsClass):
+class AutomaticSpotDetection(IndependentStepClass):
     """
     This uses list_images to calculate a threshold pre segmentation
 
@@ -455,7 +455,7 @@ class TrimZSlicesOutput(StepOutputsClass):
         self.list_z_slices_per_image = list_z_slices_per_image
 
 
-class TrimZSlices(prePipelineStepsClass):
+class TrimZSlices(IndependentStepClass):
     """
     This step removes a user specified number of Z from each image
 

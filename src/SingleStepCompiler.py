@@ -1,7 +1,7 @@
 from pycromanager import Dataset
 import inspect
 from .ExperimentClass import Experiment
-from .PipelineSettings import PipelineSettings
+from .PipelineSettings import Settings
 from .MicroscopeClass import ScopeClass
 import numpy as np
 import tkinter as tk

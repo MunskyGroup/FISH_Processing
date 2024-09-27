@@ -3,7 +3,7 @@ import numpy as np
 from dataclasses import dataclass
 
 @dataclass
-class PipelineDataClass:
+class DataContainer:
     local_data_folder: pathlib.Path = None
     local_mask_folder: pathlib.Path = None
     total_num_imgs: int = None  # this is the same as the experiment.number_of_images_to_process
@@ -30,12 +30,16 @@ class PipelineDataClass:
 
     def append(self, output):
         attributes = output.__dict__.keys()
+
+        # if its a default pipeline data field
         for attr in attributes:
             if hasattr(self, attr):
                 if getattr(output, attr) is not None and len(getattr(output, attr)) != 0:
                     setattr(self, attr, getattr(output, attr))
             else:
                 setattr(self, attr, getattr(output, attr))
+        
+        # if it comes from a step
         if hasattr(self, output.__class__.__name__):
             getattr(self, output.__class__.__name__).append(output)
         else:

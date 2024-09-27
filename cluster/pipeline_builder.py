@@ -127,10 +127,10 @@ def compile_pipeline_package(PipelineStorageLocation: str):
     PipelineSteps = display_pipeline_steps()
 
     # Create instances of the classes
-    settings = src.PipelineSettings()
+    settings = src.Settings()
     scope = src.ScopeClass()
     experiment = src.Experiment()
-    data = src.PipelineDataClass()
+    data = src.DataContainer()
 
     # Modify the attributes of the instances
     settings = display_object_attributes(settings)

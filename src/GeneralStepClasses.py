@@ -1,13 +1,13 @@
 import os
-from . import PipelineSettings, Experiment, ScopeClass, PipelineDataClass
+# from . import Settings, Experiment, ScopeClass, DataContainer
 
 
 class StepClass:
     def __init__(self):
         self.freeze = False
-        self.pipelineData = None
-        self.pipelineSettings = None
-        self.terminatorScope = None
+        self.data = None
+        self.settings = None
+        self.scope = None
         self.experiment = None
         self.step_output_dir = None
 
@@ -24,37 +24,37 @@ class StepClass:
         As long as the attributes are unique and saved using a step output class, this function will load them in.
         """
 
-        kwargs_pipelineData = self.pipelineData.__dict__
+        kwargs_data = self.data.__dict__
         kwargs_experiment = self.experiment.__dict__
-        kwargs_terminatorScope = self.terminatorScope.__dict__
-        kwargs_pipelineSettings = self.pipelineSettings.__dict__
+        kwargs_scope = self.scope.__dict__
+        kwargs_settings = self.settings.__dict__
 
-        for key in kwargs_pipelineData:
+        for key in kwargs_data:
             try:
-                step_dict = getattr(self.pipelineData, key).__dict__
-                kwargs_pipelineData = {**kwargs_pipelineData, **step_dict}
-                kwargs_pipelineData.pop(key)
+                step_dict = getattr(self.data, key).__dict__
+                kwargs_data = {**kwargs_data, **step_dict}
+                kwargs_data.pop(key)
             except AttributeError:
                 pass
         
         kwargs_IDspecific = {'id': id}
         if id is not None:
-            kwargs_IDspecific['image'] = self.pipelineData.list_images[id]
-            kwargs_IDspecific['image_name'] = os.path.splitext(self.pipelineData.list_image_names[id])[0]
+            kwargs_IDspecific['image'] = self.data.list_images[id]
+            kwargs_IDspecific['image_name'] = os.path.splitext(self.data.list_image_names[id])[0]
             try:
-                kwargs_IDspecific['cell_mask'] = self.pipelineData.masks_complete_cells[id]
+                kwargs_IDspecific['cell_mask'] = self.data.masks_complete_cells[id]
             except AttributeError:
                 kwargs_IDspecific['cell_mask'] = None
             try:
-                kwargs_IDspecific['nuc_mask'] = self.pipelineData.masks_nuclei[id]
+                kwargs_IDspecific['nuc_mask'] = self.data.masks_nuclei[id]
             except AttributeError:
                 kwargs_IDspecific['nuc_mask'] = None
             try:
-                kwargs_IDspecific['cyto_mask'] = self.pipelineData.masks_cytosol[id]
+                kwargs_IDspecific['cyto_mask'] = self.data.masks_cytosol[id]
             except AttributeError:
                 kwargs_IDspecific['cyto_mask'] = None
         
-        kwargs = {**kwargs_pipelineData, **kwargs_experiment, **kwargs_terminatorScope, **kwargs_pipelineSettings, **kwargs_IDspecific}
+        kwargs = {**kwargs_data, **kwargs_experiment, **kwargs_scope, **kwargs_settings, **kwargs_IDspecific}
 
         return kwargs
     
@@ -68,13 +68,13 @@ class StepClass:
     def main(self):
         pass
 
-    def run(self, pipelineData: PipelineDataClass = None,
-            pipelineSettings: PipelineSettings = None,
-            terminatorScope: ScopeClass = None,
-            experiment: Experiment = None):
-        self.pipelineData = pipelineData
-        self.pipelineSettings = pipelineSettings
-        self.terminatorScope = terminatorScope
+    def run(self, data,
+            settings,
+            scope,
+            experiment):
+        self.data = data
+        self.settings = settings
+        self.scope = scope
         self.experiment = experiment
         kwargs = self.load_in_attributes()
         self.create_step_output_dir(**kwargs)
@@ -83,19 +83,18 @@ class StepClass:
     
 
 
-class PipelineStepsClass(StepClass):
+class SequentialStepsClass(StepClass):
     def __init__(self):
         super().__init__()
         self.freeze = False
         self.is_first_run = True
 
-    def run(self, id: int = None, pipelineData: PipelineDataClass = None, pipelineSettings: PipelineSettings = None,
-            terminatorScope: ScopeClass = None, experiment: Experiment = None):
-        self.pipelineData = pipelineData
-        self.pipelineSettings = pipelineSettings
-        self.terminatorScope = terminatorScope
+    def run(self, id: int = None, data = None, settings = None,
+            scope = None, experiment = None):
+        self.data = data
+        self.settings = settings
+        self.scope = scope
         self.experiment = experiment
-
 
         if id is None:  # allows for pipelineSteps to be run a pre or postPipeline
             for img_index in range(min(self.pipelineSettings.user_select_number_of_images_to_run,
@@ -131,12 +130,12 @@ class PipelineStepsClass(StepClass):
         pass
         
 
-class postPipelineStepsClass(StepClass):
+class finalizingStepClass(StepClass):
     def __init__(self):
         super().__init__()
 
 
-class prePipelineStepsClass(StepClass):
+class IndependentStepClass(StepClass):
     def __init__(self):
         super().__init__()
         self.ModifyPipelineData = False

@@ -1,6 +1,6 @@
 import pickle
 
-from src import Experiment, PipelineSettings, ScopeClass, Pycromanager2NativeDataType, PipelineDataClass, Pipeline, \
+from src import Experiment, Settings, ScopeClass, Pycromanager2NativeDataType, DataContainer, Pipeline, \
     ConsolidateImageShapes, TrimZSlices, CalculateSharpness, AutomaticSpotDetection, CellSegmentationStepClass, \
     SpotDetectionStepClass, SavePDFReport
 
@@ -18,7 +18,7 @@ voxel_size_z = 500
 
 #%% Pipeline
 # Settings
-settings = PipelineSettings()
+settings = Settings()
 
 # Scope
 scope = ScopeClass()
