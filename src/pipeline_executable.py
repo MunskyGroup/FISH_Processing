@@ -20,7 +20,7 @@ import os
 import numpy as np
 warnings.filterwarnings("ignore")
 from src import Pipeline, Settings, ScopeClass, Experiment, DataContainer, \
-    PrePipelineSteps, PostPipelineSteps, PipelineSteps
+    IndependentSteps, FinalizationSteps, SequentialSteps
 ######################################
 ######################################
 def load_dict_from_file(location):
@@ -48,9 +48,9 @@ Scope = ScopeClass(**scope)
 experiment = Experiment(**experiment)
 Data = DataContainer(**pipeline_dict['data'])
 
-prePipelineSteps = [getattr(PrePipelineSteps, i)() for i in pipeline_dict['PrePipelineSteps']]
-postPipelineSteps = [getattr(PostPipelineSteps, i)() for i in pipeline_dict['PostPipelineSteps']]
-pipelineSteps = [getattr(PipelineSteps, i)() for i in pipeline_dict['PipelineSteps']]
+prePipelineSteps = [getattr(IndependentSteps, i)() for i in pipeline_dict['PrePipelineSteps']]
+postPipelineSteps = [getattr(FinalizationSteps, i)() for i in pipeline_dict['PostPipelineSteps']]
+pipelineSteps = [getattr(SequentialSteps, i)() for i in pipeline_dict['PipelineSteps']]
 
 # Running the pipeline
 pipeline = Pipeline(Settings, Scope, experiment, Data, prePipelineSteps, postPipelineSteps, pipelineSteps)

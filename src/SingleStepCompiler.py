@@ -1,8 +1,8 @@
 from pycromanager import Dataset
 import inspect
-from .ExperimentClass import Experiment
+from .Experiment import Experiment
 from .PipelineSettings import Settings
-from .MicroscopeClass import ScopeClass
+from .Microscope import ScopeClass
 import numpy as np
 import tkinter as tk
 from tkinter import ttk

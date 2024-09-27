@@ -3,7 +3,6 @@ import os
 import yaml
 import sys
 import pickle
-from pipeline_builder import display_object_attributes
 import shutil
 
 # Get the path of the current script (or current working directory)
@@ -12,6 +11,43 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 # Append the parent directory to sys.path
 sys.path.append(parent_dir)
+
+
+def display_object_attributes(obj):
+    # Get a list of all attributes of the object
+    print("Attributes of the object:" + obj.__class__.__name__)
+    attributes = vars(obj)
+    # Iterate over the attributes and print them
+    attr_list = []
+    for i, (attr, value) in enumerate(attributes.items()):
+        attr_list.append(attr)
+        print(f'{i}: {attr}: {value}')
+
+    user_input = input("Please enter the index of the attribute you want to change (c to continue): ")
+    while user_input != 'c':
+        try:
+            attr_index = int(user_input)
+            if attr_index >= 0 and attr_index < len(attr_list):
+                attr_name = attr_list[attr_index]
+                new_value = input(f"Enter the new value for attribute {attr_name}: ")
+                setattr(obj, attr_name, new_value)
+                print("Updated attributes:")
+                for i, (attr, value) in enumerate(attributes.items()):
+                    print(f'{i}: {attr}: {value}')
+            else:
+                print("Invalid index! Please enter a valid index.")
+        except ValueError:
+            print("Invalid input! Please enter an integer index.")
+        user_input = input("Please enter the index of the attribute you want to change (c to continue): ")
+
+    user_input = input("Would you like to add a new attribute? (y/n): ")
+    while user_input == 'y':
+        new_attr_name = input("Enter the name of the new attribute: ")
+        new_attr_value = input("Enter the value of the new attribute: ")
+        setattr(obj, new_attr_name, new_attr_value)
+        user_input = input("Would you like to add another attribute? (y/n): ")
+    
+    return obj
 
 
 def select_pipeline(pipeline_locations):
