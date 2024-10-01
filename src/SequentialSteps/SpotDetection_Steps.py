@@ -19,6 +19,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler
 from src.Util import Plots, SpotDetection
 
+#%% Useful Functions
+def add_indepenedent_params_to_df(df, independent_params):
+    if df is None:
+        return None
+    if independent_params is None:
+        return df
+    else:
+        for key, value in independent_params.items():
+            df[key] = [value]*len(df)
+        return df
+
 
 #%% Output Classes
 class SpotDetectionOutputClass(StepOutputsClass):
@@ -114,13 +125,12 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
         cell_label = list_cell_masks[id] if list_cell_masks is not None else None
         img = list_images[id]
         self.image_name = image_name
+        nuc = img[:, :, :, nucChannel[0]]
 
         # cycle through FISH channels
         for c in range(len(FISHChannel)):
             # extract single rna channel
             rna = img[:, :, :, FISHChannel[c]]
-            nuc = img[:, :, :, nucChannel[0]]
-
 
             threshold = self._establish_threshold(c, bigfish_threshold, kwargs)
 
@@ -130,80 +140,38 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                 beta=bigfish_beta, gamma=bigfish_gamma, CLUSTER_RADIUS=CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER=MIN_NUM_SPOT_FOR_CLUSTER, 
                 threshold=threshold, use_log_hook=use_log_hook, verbose=verbose, display_plots=display_plots, sub_pixel_fitting=sub_pixel_fitting,
                 minimum_distance=bigfish_minDistance, use_pca=bigfish_use_pca)
-
+            
             # extract cell level results
             if nuc_label is not None or cell_label is not None:
-                df = self.extract_cell_level_results(spots_px, clusters, nuc_label, cell_label, rna, nuc, 
+                df_cellresults = self.extract_cell_level_results(spots_px, clusters, nuc_label, cell_label, rna, nuc, 
                                                  verbose, display_plots)
-                df['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df)
-                df['fov'] = [map_id_imgprops[id]['fov_num']]*len(df)
-                df['FISH_Channel'] = [c]*len(df)
+                df_cellresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_cellresults)
+                df_cellresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_cellresults)
+                df_cellresults['FISH_Channel'] = [c]*len(df_cellresults)
 
             else:
                 df = None
 
-            # merge spots_px and spots_um
-            if spots_px.shape[1] == 4:
-                if sub_pixel_fitting:
-                    spots = np.concatenate([spots_px, spots_subpx], axis=1)
-                    
-                    df_spotresults = pd.DataFrame(spots, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
-                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
-                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
-                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
-                    df_spotresults['img_id'] = [id]*len(df_spotresults)
+            # standardize df
+            df_spotresults, df_clusterresults = self.standardize_df(spots_px, spots_subpx, sub_pixel_fitting, clusters, id, c, map_id_imgprops)
 
-                    df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
-                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
-                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
-                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
-                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
+            df_spotresults = add_indepenedent_params_to_df(df_spotresults, kwargs['independent_params'])
+            df_clusterresults = add_indepenedent_params_to_df(df_clusterresults, kwargs['independent_params'])
+            df_cellresults = add_indepenedent_params_to_df(df_cellresults, kwargs['independent_params'])
 
-                else:
-                    df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index'])
-                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
-                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
-                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
-                    df_spotresults['img_id'] = [id]*len(df_spotresults)
-
-                    df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
-                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
-                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
-                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
-                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
-            
+            # save single channel results
+            if c == 0:
+                df_spotresults_all = df_spotresults
+                df_clusterresults_all = df_clusterresults
+                df_cellresults_all = df_cellresults
             else:
-                if sub_pixel_fitting:
-                    spots = np.concatenate([spots_px, spots_subpx], axis=1)
-                    
-                    df_spotresults = pd.DataFrame(spots, columns=['y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
-                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
-                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
-                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
-                    df_spotresults['img_id'] = [id]*len(df_spotresults)
+                df_spotresults_all = pd.concat([df_spotresults_all, df_spotresults])
+                df_clusterresults_all = pd.concat([df_clusterresults_all, df_clusterresults])
+                df_cellresults_all = pd.concat([df_cellresults_all, df_cellresults])
 
-                    df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
-                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
-                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
-                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
-                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
-
-                else:
-                    df_spotresults = pd.DataFrame(spots_px, columns=['y_px', 'x_px', 'cluster_index'])
-                    df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
-                    df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
-                    df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
-                    df_spotresults['img_id'] = [id]*len(df_spotresults)
-
-                    df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
-                    df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
-                    df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
-                    df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
-                    df_clusterresults['img_id'] = [id]*len(df_clusterresults)
-
-            # create output object
-            output = SpotDetectionOutputClass(img_id=id, df_cellresults=df, df_spotresults=df_spotresults, df_clusterresults=df_clusterresults)
-            return output
+        # create output object
+        output = SpotDetectionOutputClass(img_id=id, df_cellresults=df_cellresults_all, df_spotresults=df_spotresults_all, df_clusterresults=df_clusterresults_all)
+        return output
         
     def _establish_threshold(self, c, bigfish_threshold, kwargs):
             # check if a threshold is provided
@@ -451,11 +419,47 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
     def get_spot_properties(self, rna, spot, voxel_size_yx, voxel_size_z, spot_yx, spot_z):
         pass
 
+    def get_cluster_properties(self, rna, cluster, voxel_size_yx, voxel_size_z, spot_yx, spot_z):
+        pass
+
+    def standardize_df(self, spots_px, spots_subpx, sub_pixel_fitting, clusters, id, c, map_id_imgprops):
+            # merge spots_px and spots_um
+            if spots_px.shape[1] == 4:
+                if sub_pixel_fitting:
+                    spots = np.concatenate([spots_px, spots_subpx], axis=1)
+                    df_spotresults = pd.DataFrame(spots, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
+                    df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
+
+                else:
+                    df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index'])
+                    df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
+            
+            else:
+                if sub_pixel_fitting:
+                    spots = np.concatenate([spots_px, spots_subpx], axis=1)
+                    df_spotresults = pd.DataFrame(spots, columns=['y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
+                    df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
+
+                else:
+                    df_spotresults = pd.DataFrame(spots_px, columns=['y_px', 'x_px', 'cluster_index'])
+                    df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
+
+            df_spotresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_spotresults)
+            df_spotresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_spotresults)
+            df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+            df_spotresults['img_id'] = [id]*len(df_spotresults)
+
+            df_clusterresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(df_clusterresults)
+            df_clusterresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(df_clusterresults)
+            df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+            df_clusterresults['img_id'] = [id]*len(df_clusterresults)
+
+
+            return df_spotresults, df_clusterresults
 
 class UFISH_SpotDetection_Step(SequentialStepsClass):
     def __init__(self):
         super().__init__()
-
 
     def main(self, image, FISHChannel, display_plots:bool = False, **kwargs):
         rna = image[:, :, :, FISHChannel[0]]
@@ -481,91 +485,120 @@ class TrackPy_SpotDetection(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 
-    def main(self, id, list_images, FISHChannel, spot_yx_px, spot_z_px, voxel_size_yx, voxel_size_z,
-             map_id_imgprops, trackpy_minmass: float = None,  trackpy_minsignal: float = None, 
-             trackpy_seperation_yx_px: float = 13, trackpy_seperation_z_px: float = 3, trackpy_maxsize: float = None,
-               display_plots: bool = False, plot_types: list[str] = ['mass', 'size', 'signal', 'raw_mass'], 
-               trackpy_percentile:int = 64, trackpy_use_pca: bool = False, **kwargs):
-        # Load in image and extract FISH channel
+    def main(self, id, list_images, FISHChannel, nucChannel, spot_yx_px, spot_z_px, voxel_size_yx, voxel_size_z,
+             map_id_imgprops, trackpy_minmass: float = None,  list_nuc_masks: list[np.array] = None, list_cell_masks: list[np.array] = None,
+             trackpy_minsignal: float = None, trackpy_seperation_yx_px: float = 13, trackpy_seperation_z_px: float = 3, CLUSTER_RADIUS: float = 500, 
+             MIN_NUM_SPOT_FOR_CLUSTER: int = 4,
+             trackpy_maxsize: float = None, display_plots: bool = False, plot_types: list[str] = ['mass', 'size', 'signal', 'raw_mass'], 
+             trackpy_percentile:int = 64, trackpy_use_pca: bool = False, verbose: bool = False, **kwargs):
+        # Load in images and masks
         img = list_images[id]
-        fish = np.squeeze(img[:, :, :, FISHChannel[0]])   
+        nuc = img[:, :, : , nucChannel[0]]
+        nuc_label = list_nuc_masks[id] if list_nuc_masks is not None else None
+        cell_label = list_cell_masks[id] if list_cell_masks is not None else None
 
-        # 3D spot detection
-        if len(fish.shape) == 3:
-            spot_diameter = (spot_z_px, spot_yx_px, spot_yx_px)
-            separation = (trackpy_seperation_z_px, trackpy_seperation_yx_px, trackpy_seperation_yx_px) if trackpy_seperation_yx_px is not None else None
-            trackpy_features = tp.locate(fish, diameter=spot_diameter, minmass=trackpy_minmass, separation=separation)
+        for c in range(len(FISHChannel)):
+            fish = np.squeeze(img[:, :, :, FISHChannel[c]])   
 
-        # 2D spot detection
-        else:
-            spot_diameter = spot_yx_px
-            separation = trackpy_seperation_yx_px
-            trackpy_features = tp.locate(fish, diameter=spot_diameter, separation=separation, percentile=trackpy_percentile)
-
-        if trackpy_minmass is not None:
-            trackpy_features = trackpy_features[trackpy_features['mass'] > trackpy_minmass]
-        if trackpy_minsignal is not None:
-            trackpy_features = trackpy_features[trackpy_features['signal'] > trackpy_minsignal]
-        if trackpy_maxsize is not None:
-            trackpy_features = trackpy_features[trackpy_features['size'] < trackpy_maxsize]
-        
-        if trackpy_use_pca:
-            pca_data = trackpy_features[['mass', 'size', 'signal', 'raw_mass']]
-            scaler = StandardScaler()
-            scaler.fit(pca_data)
-            pca_data = scaler.transform(pca_data)
-
-            pca = PCA(n_components=3)
-            pca.fit(pca_data)
-            X = pca.transform(pca_data)
-
-            # color the spots best on the clusters
-            kmeans_pca = KMeans(n_clusters=2)
-            kmeans_pca.fit(X)
-            trackpy_features['cluster'] = kmeans_pca.labels_
-            plt.scatter(X[:, 0], X[:, 1], c=kmeans_pca.labels_)
-            plt.xlabel('PC1')
-            plt.ylabel('PC2')
-            plt.show()
-
-            # print the PCA vectors and the explained variance
-            print(['mass', 'size', 'signal', 'raw_mass'])
-            print(pca.components_)
-            print(pca.explained_variance_ratio_)
-
-        # Plotting
-        if display_plots:
+            # 3D spot detection
             if len(fish.shape) == 3:
-                tp.annotate3d(trackpy_features, fish, plot_style={'markersize': 2})
-                tp.subpx_bias(trackpy_features)
+                spot_diameter = (spot_z_px, spot_yx_px, spot_yx_px)
+                separation = (trackpy_seperation_z_px, trackpy_seperation_yx_px, trackpy_seperation_yx_px) if trackpy_seperation_yx_px is not None else None
+                trackpy_features = tp.locate(fish, diameter=spot_diameter, minmass=trackpy_minmass, separation=separation)
 
+            # 2D spot detection
             else:
-                plt.imshow(fish)
-                plt.show()
-                tp.annotate(trackpy_features, fish, plot_style={'markersize': 2})
-                tp.subpx_bias(trackpy_features)
-            
-            for plot_type in plot_types:
-                fig, ax = plt.subplots()
-                ax.hist(trackpy_features[plot_type], bins=20)
-                # Optionally, label the axes.
-                ax.set(xlabel=plot_type, ylabel='count')
+                spot_diameter = spot_yx_px
+                separation = trackpy_seperation_yx_px
+                trackpy_features = tp.locate(fish, diameter=spot_diameter, separation=separation, percentile=trackpy_percentile)
+
+            if trackpy_minmass is not None:
+                trackpy_features = trackpy_features[trackpy_features['mass'] > trackpy_minmass]
+            if trackpy_minsignal is not None:
+                trackpy_features = trackpy_features[trackpy_features['signal'] > trackpy_minsignal]
+            if trackpy_maxsize is not None:
+                trackpy_features = trackpy_features[trackpy_features['size'] < trackpy_maxsize]
+
+            # rename x to x_px and y to y_px and z if it exists
+            trackpy_features = trackpy_features.rename(columns={'x': 'x_px', 'y': 'y_px'})
+            if len(fish.shape) == 3:
+                trackpy_features = trackpy_features.rename(columns={'z': 'z_px'})
+
+            # get np.array of spots for bigfish
+            spots_px = np.array(
+                trackpy_features[['z_px', 'y_px', 'x_px']].values if len(fish.shape) == 3 else trackpy_features[['y_px','x_px']].values
+                )
+
+            # Get cluster 
+            clusters = detection.detect_clusters(spots_px, 
+                                                 voxel_size=(voxel_size_z, voxel_size_yx, voxel_size_yx) if len(fish.shape) == 3 else (voxel_size_yx, voxel_size_yx), 
+                                                 radius=CLUSTER_RADIUS, 
+                                                 nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
+
+            # Extract Cell level results
+            if nuc_label is not None or cell_label is not None:
+                cellresults = self.extract_cell_level_results(spots_px, clusters, nuc_label, cell_label, fish, nuc, 
+                                                    verbose, display_plots)
+                cellresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(cellresults)
+                cellresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(cellresults)
+                cellresults['FISH_Channel'] = [c]*len(cellresults)
+
+            if trackpy_use_pca:
+                pca_data = trackpy_features[['mass', 'size', 'signal', 'raw_mass']]
+                scaler = StandardScaler()
+                scaler.fit(pca_data)
+                pca_data = scaler.transform(pca_data)
+
+                pca = PCA(n_components=3)
+                pca.fit(pca_data)
+                X = pca.transform(pca_data)
+
+                # color the spots best on the clusters
+                kmeans_pca = KMeans(n_clusters=2)
+                kmeans_pca.fit(X)
+                trackpy_features['cluster'] = kmeans_pca.labels_
+                plt.scatter(X[:, 0], X[:, 1], c=kmeans_pca.labels_)
+                plt.xlabel('PC1')
+                plt.ylabel('PC2')
                 plt.show()
 
-        # append frame number and fov number to the features
-        trackpy_features['frame'] = [map_id_imgprops[id]['tp_num']]*len(trackpy_features)
-        trackpy_features['fov'] = [map_id_imgprops[id]['fov_num']]*len(trackpy_features)
-        trackpy_features['FISH_Channel'] = [FISHChannel[0]]*len(trackpy_features)
-        trackpy_features['xum'] = trackpy_features['x']*voxel_size_yx/1000 # convert to microns
-        trackpy_features['yum'] = trackpy_features['y']*voxel_size_yx/1000
-        if len(fish.shape) == 3:
-            trackpy_features['zum'] = trackpy_features['z']*voxel_size_z/1000
+                # print the PCA vectors and the explained variance
+                print(['mass', 'size', 'signal', 'raw_mass'])
+                print(pca.components_)
+                print(pca.explained_variance_ratio_)
+
+            # Plotting
+            if display_plots:
+                if len(fish.shape) == 3:
+                    tp.annotate3d(trackpy_features, fish, plot_style={'markersize': 2})
+                    tp.subpx_bias(trackpy_features)
+
+                else:
+                    plt.imshow(fish)
+                    plt.show()
+                    tp.annotate(trackpy_features, fish, plot_style={'markersize': 2})
+                    tp.subpx_bias(trackpy_features)
+                
+                for plot_type in plot_types:
+                    fig, ax = plt.subplots()
+                    ax.hist(trackpy_features[plot_type], bins=20)
+                    # Optionally, label the axes.
+                    ax.set(xlabel=plot_type, ylabel='count')
+                    plt.show()
+
+            # append frame number and fov number to the features
+            trackpy_features['frame'] = [map_id_imgprops[id]['tp_num']]*len(trackpy_features)
+            trackpy_features['fov'] = [map_id_imgprops[id]['fov_num']]*len(trackpy_features)
+            trackpy_features['FISH_Channel'] = [FISHChannel[0]]*len(trackpy_features)
+            trackpy_features['x_nm'] = trackpy_features['x']*voxel_size_yx # convert to nm
+            trackpy_features['y_nm'] = trackpy_features['y']*voxel_size_yx
+            if len(fish.shape) == 3:
+                trackpy_features['z_nm'] = trackpy_features['z']*voxel_size_z
+
+            
 
         output = Trackpy_SpotDetection_Output(id=id, trackpy_features=trackpy_features)
         return output
-
-
-
 
 
 class SpotDetectionStepClass_Luis(SequentialStepsClass):
@@ -695,6 +728,10 @@ class SpotDetectionStepClass_Luis(SequentialStepsClass):
 
     def first_run(self, id):
         self.dataframe = None
+
+
+
+
 if __name__ == "__main__":
     ds = Dataset(r"C:\Users\Jack\Desktop\H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2")
     kwargs = {'nucChannel': [0], 'FISHChannel': [0],
