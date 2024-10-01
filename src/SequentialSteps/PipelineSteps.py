@@ -31,6 +31,9 @@ import pycromanager as pycro
 import pandas as pd
 import cellpose
 from cellpose import models
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 
 
 import torch
@@ -544,7 +547,8 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
              bigfish_gamma:float = 5, CLUSTER_RADIUS:int = 500,
              MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False,
-              sub_pixel_fitting: bool = False, **kwargs):
+             bigfish_use_pca: bool = False,
+              sub_pixel_fitting: bool = False, bigfish_minDistance:Union[float, list] = None, **kwargs):
 
         # Load in images and masks
         nuc_label = list_nuc_masks[id] if list_nuc_masks is not None else None
@@ -584,7 +588,8 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
             spots_px, dense_regions, reference_spot, clusters, spots_subpx = self.bigfish_spotdetection(
                 rna=rna, voxel_size_yx=voxel_size_yx, voxel_size_z=voxel_size_z, spot_yx=spot_yx, spot_z=spot_z, alpha=bigfish_alpha,
                 beta=bigfish_beta, gamma=bigfish_gamma, CLUSTER_RADIUS=CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER=MIN_NUM_SPOT_FOR_CLUSTER, 
-                threshold=threshold, use_log_hook=use_log_hook, verbose=verbose, display_plots=display_plots, sub_pixel_fitting=sub_pixel_fitting)
+                threshold=threshold, use_log_hook=use_log_hook, verbose=verbose, display_plots=display_plots, sub_pixel_fitting=sub_pixel_fitting,
+                minimum_distance=bigfish_minDistance, use_pca=bigfish_use_pca)
 
             # extract cell level results
             if nuc_label is not None or cell_label is not None:
@@ -663,7 +668,8 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
 
     def bigfish_spotdetection(self, rna:np.array, voxel_size_yx:float, voxel_size_z:float, spot_yx:float, spot_z:float, alpha:int, beta:int,
                                gamma:int, CLUSTER_RADIUS:float, MIN_NUM_SPOT_FOR_CLUSTER:int, threshold:float, use_log_hook:bool, 
-                               verbose: bool = False, display_plots: bool = False, sub_pixel_fitting: bool = False,):
+                               verbose: bool = False, display_plots: bool = False, sub_pixel_fitting: bool = False, minimum_distance:Union[list, float] = None,
+                               use_pca: bool = False):
         rna = rna.squeeze()
 
         voxel_size_nm = (int(voxel_size_z), int(voxel_size_yx), int(voxel_size_yx)) if len(rna.shape) == 3 else (int(voxel_size_yx), int(voxel_size_yx))
@@ -672,8 +678,10 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
         if use_log_hook:
             spot_radius_px = detection.get_object_radius_pixel(
                 voxel_size_nm=voxel_size_nm, 
-                object_radius_nm=voxel_size_nm, 
+                object_radius_nm=spot_size_nm, 
                 ndim=3 if len(rna.shape) == 3 else 2)
+        else:
+            spot_radius_px = None
             
 
         canidate_spots = detection.detect_spots(
@@ -683,8 +691,61 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                                             voxel_size=voxel_size_nm if not use_log_hook else None,
                                             spot_radius=spot_size_nm if not use_log_hook else None,
                                             log_kernel_size=spot_radius_px if use_log_hook else None,
-                                            minimum_distance=spot_radius_px if use_log_hook else None,)
+                                            minimum_distance=minimum_distance if use_log_hook and minimum_distance is None else spot_radius_px,)
         
+        if use_pca:
+            # lets try log filter
+            log = stack.log_filter(rna.copy(), 3)
+
+            # TODO: PCA for overdetected spots
+            print(canidate_spots.shape)
+            valid_spots = np.ones(canidate_spots.shape[0])
+            canidate_spots = np.array(canidate_spots)
+            pca_data = np.zeros((canidate_spots.shape[0], 5*5))
+
+            for i in range(canidate_spots.shape[0]-1):
+                xyz = canidate_spots[i, :] # idk why this is being mean to me 
+                if len(rna.shape) == 3:
+                    x, y, z = xyz
+                    try:
+                        spot_kernel = log[z-2:z+3, y-2:y+3, x-2:x+3]
+                        pca_data[i, :] = spot_kernel.flatten()
+                        plt.imshow(spot_kernel)
+                    except:
+                        valid_spots[i] = 0
+                else:
+                    x, y = xyz
+                    try:
+                        spot_kernel = log[y-2:y+3, x-2:x+3]
+                        pca_data[i, :] = spot_kernel.flatten()
+                        plt.imshow(spot_kernel)
+                    except:
+                        valid_spots[i] = 0
+
+            plt.show()
+
+            # z score normalization
+            pca_data = (pca_data - np.mean(pca_data, axis=0)) / np.std(pca_data, axis=0)
+            pca = PCA(n_components=9)
+            pca.fit(pca_data)
+            X = pca.transform(pca_data)
+
+            # color the spots best on the clusters
+            kmeans_pca = KMeans(n_clusters=2)
+            kmeans_pca.fit(X)
+            plt.scatter(X[:, 0], X[:, 1], c=kmeans_pca.labels_)
+            plt.xlabel('PC1')
+            plt.ylabel('PC2')
+            plt.show()
+
+            # remove larger varying clusters
+            valid_spots[kmeans_pca.labels_ != 1] = 0
+            valid_spots = valid_spots.astype(bool)
+            canidate_spots = canidate_spots[valid_spots, :]
+
+            print(canidate_spots.shape)
+
+        # decompose dense regions
         spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
                                                 image=rna.astype(np.uint16), 
                                                 spots=canidate_spots, 
@@ -693,6 +754,12 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                                                 alpha=alpha,
                                                 beta=beta,
                                                 gamma=gamma)
+
+        # TODO: define ts by some other metric for ts
+
+
+        
+
         
         spots_post_clustering, clusters = detection.detect_clusters(
                                                         spots=spots_post_decomposition, 
@@ -1179,9 +1246,10 @@ class TrackPy_SpotDetection(SequentialStepsClass):
         super().__init__()
 
     def main(self, id, list_images, FISHChannel, spot_yx_px, spot_z_px, voxel_size_yx, voxel_size_z,
-             map_id_imgprops, trackpy_minmass: float = None,  trackpy_minsignal: float = 1000, 
-             trackpy_seperation_yx_px: float = 13, trackpy_seperation_z_px: float = 3,
-               display_plots: bool = False, plot_types: list[str] = ['mass', 'size', 'signal', 'raw_mass'], **kwargs):
+             map_id_imgprops, trackpy_minmass: float = None,  trackpy_minsignal: float = None, 
+             trackpy_seperation_yx_px: float = 13, trackpy_seperation_z_px: float = 3, trackpy_maxsize: float = None,
+               display_plots: bool = False, plot_types: list[str] = ['mass', 'size', 'signal', 'raw_mass'], 
+               trackpy_percentile:int = 64, trackpy_use_pca: bool = False, **kwargs):
         # Load in image and extract FISH channel
         img = list_images[id]
         fish = np.squeeze(img[:, :, :, FISHChannel[0]])   
@@ -1196,16 +1264,49 @@ class TrackPy_SpotDetection(SequentialStepsClass):
         else:
             spot_diameter = spot_yx_px
             separation = trackpy_seperation_yx_px
-            trackpy_features = tp.locate(fish, diameter=spot_diameter, minmass=trackpy_minmass, separation=separation)
+            trackpy_features = tp.locate(fish, diameter=spot_diameter, separation=separation, percentile=trackpy_percentile)
+
+        if trackpy_minmass is not None:
+            trackpy_features = trackpy_features[trackpy_features['mass'] > trackpy_minmass]
+        if trackpy_minsignal is not None:
+            trackpy_features = trackpy_features[trackpy_features['signal'] > trackpy_minsignal]
+        if trackpy_maxsize is not None:
+            trackpy_features = trackpy_features[trackpy_features['size'] < trackpy_maxsize]
+        
+        if trackpy_use_pca:
+            pca_data = trackpy_features[['mass', 'size', 'signal', 'raw_mass']]
+            scaler = StandardScaler()
+            scaler.fit(pca_data)
+            pca_data = scaler.transform(pca_data)
+
+            pca = PCA(n_components=3)
+            pca.fit(pca_data)
+            X = pca.transform(pca_data)
+
+            # color the spots best on the clusters
+            kmeans_pca = KMeans(n_clusters=2)
+            kmeans_pca.fit(X)
+            trackpy_features['cluster'] = kmeans_pca.labels_
+            plt.scatter(X[:, 0], X[:, 1], c=kmeans_pca.labels_)
+            plt.xlabel('PC1')
+            plt.ylabel('PC2')
+            plt.show()
+
+            # print the PCA vectors and the explained variance
+            print(['mass', 'size', 'signal', 'raw_mass'])
+            print(pca.components_)
+            print(pca.explained_variance_ratio_)
 
         # Plotting
         if display_plots:
             if len(fish.shape) == 3:
-                tp.annotate3d(trackpy_features, fish)
+                tp.annotate3d(trackpy_features, fish, plot_style={'markersize': 2})
                 tp.subpx_bias(trackpy_features)
 
             else:
-                tp.annotate(trackpy_features, fish)
+                plt.imshow(fish)
+                plt.show()
+                tp.annotate(trackpy_features, fish, plot_style={'markersize': 2})
                 tp.subpx_bias(trackpy_features)
             
             for plot_type in plot_types:
