@@ -119,7 +119,7 @@ class remove_background(SequentialStepsClass):
         rna = np.squeeze(image[:, :, :, FISHChannel[0]])
 
         if display_plots:
-            plt.imshow(np.max(rna, axis=0))
+            plt.imshow(np.max(rna, axis=0) if len(rna.shape) > 2 else rna)
             plt.title(f'pre-filtered image')
             plt.show()
 
@@ -129,7 +129,7 @@ class remove_background(SequentialStepsClass):
             rna = stack.log_filter(rna, sigma=sigma)
 
         elif filter_type == 'mean':
-            rna = stack.remove_background_mean(np.max(rna, axis=0) if len(rna.shape) == 3 else rna, 
+            rna = stack.remove_background_mean(np.max(rna, axis=0) if len(rna.shape) > 2 else rna, 
                                                kernel_shape=kernel_shape, kernel_size=kernel_size)
         else:
             raise ValueError('Invalid filter type')
@@ -137,7 +137,7 @@ class remove_background(SequentialStepsClass):
         image[:, :, :, FISHChannel[0]] = rna
 
         if display_plots:
-            plt.imshow(np.max(rna, axis=0))
+            plt.imshow(np.max(rna, axis=0) if len(rna.shape) > 2 else rna)
             plt.title(f'filtered image, type: {filter_type}, sigma: {sigma}')
             plt.show()
 

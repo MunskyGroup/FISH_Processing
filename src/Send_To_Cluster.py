@@ -104,7 +104,7 @@ def update_package_for_sending(pipelines_location):
     return copy_pipeline_location + '.zip'
 
 
-def run_on_cluster(path_to_config_file: str, local_file: str):
+def run_on_cluster(path_to_config_file: str, local_file: str, remote_path: str = '/home/formanj/Github/FISH_Processing/cluster'):
     # Load the configuration
     conf = yaml.safe_load(open(str(path_to_config_file)))
     usr = str(conf['user']['username'])
@@ -112,8 +112,6 @@ def run_on_cluster(path_to_config_file: str, local_file: str):
     remote_address = str(conf['user']['remote_address'])
     port = 22
 
-    remote_path = '/home/formanj/FISH_Processing_JF/FISH_Processing/cluster'  # Path where you want to store directories_list.txt on the cluster
-    # remote_script = '/home/formanj/FISH_Processing/cluster/runner_cluster_TerminatorBridge.sh'
 
     # Create SSH client
     ssh = paramiko.SSHClient()
