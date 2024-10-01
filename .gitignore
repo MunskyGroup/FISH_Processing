@@ -108,3 +108,4 @@ cluster/Standard_Pipeline/settings.txt
 Pipelines/Standard_Pipeline/experiment.txt
 Pipelines/Standard_Pipeline/scope.txt
 Pipelines/Standard_Pipeline/settings.txt
+*.mp4
