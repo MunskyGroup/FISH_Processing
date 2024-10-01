@@ -32,6 +32,7 @@ class Make_Analysis_Dir_JF(IndependentStepClass):
 
         return Make_Analysis_Dir_Output_JF(analysis_dir)
 
+
 class Make_Output_Dir_Output_JF(StepOutputsClass):
     def __init__(self, output_dir):
         super().__init__()
@@ -60,7 +61,6 @@ class Make_Output_Dir_Output(StepOutputsClass):
     def __init__(self, output_dir):
         super().__init__()
         self.output_identification_string = output_dir
-
 
 class Make_Output_Dir(IndependentStepClass):
     def __init__(self):
