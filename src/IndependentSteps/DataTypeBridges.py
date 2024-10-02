@@ -3,12 +3,35 @@ import pycromanager as pycro
 import shutil
 import tifffile
 import numpy as np
+import os
+import sys
+import inspect
 
-from src.Util.Utilities import Utilities
-# from .Util import Utilities
-from .. import Experiment, Settings, ScopeClass, IndependentStepClass
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from src import IndependentStepClass
+from src.Util import Utilities, NASConnection
 
 
+#%% Useful Functions
+def get_first_executing_folder():
+    # Get the current stack
+    stack = inspect.stack()
+    
+    # The first frame in the stack is the current function,
+    # The second frame is the caller. However, we want the first script.
+    # To find that, we look for the first frame that isn't from an internal call.
+    for frame in stack:
+        if frame.filename != __file__:
+            # Extract the directory of the first non-internal call
+            return os.path.dirname(os.path.abspath(frame.filename))
+
+    return None
+
+
+
+
+#%% Data Bridges
 class Pycromanager2NativeDataType(IndependentStepClass):
     def __init__(self):
         self.experiment = None
@@ -51,9 +74,6 @@ class Pycromanager2NativeDataType(IndependentStepClass):
         data.list_images = self.list_images
         data.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
                                         self.experiment.number_of_images_to_process)
-
-
-
 
     def convert_to_standard_format(self, data_folder_path, path_to_config_file, download_data_from_NAS, use_metadata,
                                    is_format_FOV_Z_Y_X_C):
@@ -128,3 +148,75 @@ class Pycromanager2NativeDataType(IndependentStepClass):
         return (destination_folder, masks_dir, list_files_names, list_images_all_fov, list_images_standard_format,
                 number_of_fov, number_color_channels, number_z_slices, number_of_tp, list_tps, list_zs, number_of_imgs,
                 map_id_imgprops)
+
+
+class FFF2NativeDataType(IndependentStepClass):
+    def __init__(self):
+        self.experiment = None
+        self.pipelineSettings = None
+        self.terminatorScope = None
+        self.pipelineData = None
+
+    def run(self, data, settings, scope, experiment):
+    
+            connection_config_location = settings.connection_config_location
+            self.experiment = experiment
+            self.pipelineSettings = settings
+            self.terminatorScope = scope
+            self.pipelineData = data
+    
+            # download the folder from NAS
+            nas = NASConnection(pathlib.Path(settings.connection_config_location))
+            self.local_folder = 'temp_' + os.path.basename(experiment.initial_data_location)
+            os.makedirs(self.local_folder, exist_ok=True)   
+            nas.copy_files(remote_folder_path=pathlib.Path(experiment.initial_data_location), 
+                           local_folder_path=self.local_folder, 
+                           file_extension=['.tif', '.zip', '.tiff', '.log'])
+
+            # convert data to standard format
+            
+
+
+
+            # return extracted data to the experiment storage
+            experiment.number_of_channels = self.number_color_channels
+            experiment.number_of_timepoints = self.number_of_timepoints
+            experiment.number_of_Z = self.number_z_slices
+            experiment.number_of_FOVs = self.number_of_fov
+            experiment.number_of_Timepoints = self.number_of_timepoints
+            experiment.number_of_images_to_process = experiment.number_of_FOVs * experiment.number_of_timepoints
+            experiment.list_initial_z_slices_per_image = self.list_nZ
+            experiment.list_timepoints = self.list_tps
+            experiment.map_id_imgprops = self.map_id_imgprops
+    
+            # PipelineData 
+            data.local_data_folder = self.local_data_dir
+            data.total_num_imgs = experiment.number_of_images_to_process
+            data.list_image_names = self.list_files_names
+            data.list_images = self.list_images
+            data.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
+                                            self.experiment.number_of_images_to_process)
+            
+    def extract_fff_data(self):
+        pass
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    from src import Experiment, Settings, ScopeClass, DataContainer
+    experiment = Experiment()
+    settings = Settings()
+    scope = ScopeClass()
+    data = DataContainer()
+
+    experiment.initial_data_location = r'smFISH_images\Eric_smFISH_images\20230511\DUSP1_DexTimeConcSweep_10nM_75min_041223'
+
+    FFF2NativeDataType().run(data, settings, scope, experiment)
+
+
+
+  
