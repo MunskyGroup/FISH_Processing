@@ -2,9 +2,13 @@ First build your env
 
     Use conda to create a torch env. this will be used as a base for the virtual env.
 
+        conda create -n torch_env
         use: https://pytorch.org/ to select the correct installation, 
         also use nvidia-smi in the command line to determine the correct cuda 
 
+        for the mac plebeians:
+        conda create -n torch_env python==3.10
+        pip3 install torch torchvision torchaudio
 
     Next install vritualenv
 
@@ -19,6 +23,10 @@ First build your env
 
         conda deactivate
         venvNameHere\Scripts\activate
+
+        for mac:
+        you may need to alter the permisions
+        source venvNameHere/Scripts/activate
 
     Install Requirements
 

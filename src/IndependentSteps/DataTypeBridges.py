@@ -214,9 +214,9 @@ class FFF2NativeDataType(IndependentStepClass):
         if len(zipped_mask_dir) == 1 and len(mask_tifs) == 0:
             shutil.unpack_archive(os.path.join(self.local_folder, zipped_mask_dir[0]), self.local_folder)
             self.masks_dir = os.path.join(self.local_folder, zipped_mask_dir[0].split('.')[0])
-            mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
             already_made_masks = True
 
+        mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
         if len(mask_tifs) > 0:
             mask_cells = [f for f in mask_tifs if 's_cyto_R' in f]
