@@ -1,0 +1,33 @@
+First build your env
+
+    Use conda to create a torch env. this will be used as a base for the virtual env.
+
+        use: https://pytorch.org/ to select the correct installation, 
+        also use nvidia-smi in the command line to determine the correct cuda 
+
+
+    Next install vritualenv
+
+        conda install virtualenv
+
+    Next use conda to create a virtual env
+        
+        Navigate to the repository the run
+        virtualenv venvNameHere
+
+    Next activate virtualenv
+
+        conda deactivate
+        venvNameHere\Scripts\activate
+
+    Install Requirements
+
+        pip install -r requirements.txt
+    
+
+
+
+
+
+
+

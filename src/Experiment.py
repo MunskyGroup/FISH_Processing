@@ -24,6 +24,7 @@ class Experiment:
     cytoChannel: list[int] = None
     FISHChannel: list[int] = None
     voxel_size_z: int = 300  # This is voxel
+    independent_params: dict = None
     kwargs: dict = None
     timestep_s: float = None
 

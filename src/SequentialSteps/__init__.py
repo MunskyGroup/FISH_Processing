@@ -1,9 +1,10 @@
-from .PipelineSteps import (CellSegmentationOutput, CellSegmentationStepClass, SpotDetectionStepOutputClass,
-                            SpotDetectionStepClass_Luis, BIGFISH_SpotDetection, BIGFISH_Tensorflow_Segmentation,
-                            CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, ParamOptimizer_BIGFISH_SpotDetection,
-                            TrackPy_SpotDetection)
+from .PipelineSteps import (ParamOptimizer_BIGFISH_SpotDetection)
+
+from .SpotDetection_Steps import (BIGFISH_SpotDetection, UFISH_SpotDetection_Step, TrackPy_SpotDetection, SpotDetectionStepClass_Luis)
 
 from .Filters import (rescale_images, remove_background)
+
+from .Segmentation_Steps import (CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, BIGFISH_Tensorflow_Segmentation, CellSegmentationStepClass)
 
 
 
