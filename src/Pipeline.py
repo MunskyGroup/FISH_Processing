@@ -169,6 +169,8 @@ class Pipeline:
         if modify_kwargs is not None:
             self.modify_kwargs(modify_kwargs)
 
+        stepOutput = None
+
         if step.__class__.__base__.__name__ == 'SequentialStepsClass':
             for img_index in range(self.dataContainer.num_img_2_run):
                 print('')
@@ -177,15 +179,16 @@ class Pipeline:
                 print(' ###################### ')
                 print('    Image Name :  ', self.dataContainer.list_image_names[img_index])
 
-                singleImageSingleStepOutputs = step.run(id=img_index, 
-                                                        data=self.dataContainer,
-                                                        settings=self.settings,
-                                                        scope=self.scope,
-                                                        experiment=self.experiment)
+                singleImgOutput = step.run(id=img_index, 
+                                        data=self.dataContainer,
+                                        settings=self.settings,
+                                        scope=self.scope,
+                                        experiment=self.experiment)
                 
-                if singleImageSingleStepOutputs is None:
-                    raise ValueError(f'{step} did not return a value')
-                self.dataContainer.append(singleImageSingleStepOutputs)
+                if stepOutput is None:
+                    stepOutput = singleImgOutput
+                else:
+                    stepOutput.append(singleImgOutput)
 
         else:
             print(step)
@@ -193,27 +196,9 @@ class Pipeline:
                                   settings=self.settings,
                                   scope=self.scope,
                                   experiment=self.experiment)
-            # check if should modify pipelineData
-            if hasattr(stepOutput, 'ModifyPipelineData'):
-                if stepOutput.ModifyPipelineData:
-                    # find the attribute that both the pipelineData and stepOutput share
-                    attrs = list(vars(stepOutput).keys()).copy()
-                    for attr in attrs:
-                        if hasattr(self.dataContainer, attr):
-                            if getattr(stepOutput, attr) is not None:
-                                print(f'Overwriting {attr} in pipelineData')
-                                setattr(self.dataContainer, attr, getattr(stepOutput, attr))
-                            else:
-                                print(f'failed to modify {attr} because it was empty')
-                            # remove that attribute from the stepOutput
-                            delattr(stepOutput, attr)
-            if stepOutput is None:
-                print(f'{step} did not return a value')
             
-            else:
-                # append the attributes to prePipelineOutputs
-                self.dataContainer.append(stepOutput)
-    
+        return stepOutput
+        
     def modify_kwargs(self, modify_kwargs: dict):
         kwargs_experiment = self.experiment.__dict__
         kwargs_scope = self.scope.__dict__
