@@ -114,7 +114,7 @@ class SimpleCellposeSegmentaion(SequentialStepsClass):
         # check if list_nuc_mask and list_cell_mask are None 
         # and assume that if either exist segmentation does not need to be done
         
-        if list_nuc_mask is None and list_cell_mask is None:
+        if len(list_nuc_mask) == 0 and len(list_cell_mask) == 0:
 
             (nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, 
                 nuc_cellprob_threshold, cyto_cellprob_threshold, nuc_model_type, 

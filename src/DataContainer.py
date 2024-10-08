@@ -7,12 +7,12 @@ class DataContainer:
     local_data_folder: pathlib.Path = None
     local_mask_folder: pathlib.Path = None
     total_num_imgs: int = None  # this is the same as the experiment.number_of_images_to_process
-    list_image_names: list[str] = None
+    list_image_names: list[str] = []
     paths_to_images: list[pathlib.Path] = None
-    list_images: list[np.ndarray] = None
-    list_nuc_masks: list[np.ndarray] = None
-    list_cell_masks: list[np.ndarray] = None
-    list_cyto_mask: list[np.ndarray] = None
+    list_images: list[np.ndarray] = []
+    list_nuc_masks: list[np.ndarray] = []
+    list_cell_masks: list[np.ndarray] = []
+    list_cyto_mask: list[np.ndarray] = []
     num_img_2_run: int = None
 
     def pipeline_init(self):
