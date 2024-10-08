@@ -1,4 +1,7 @@
 from dataclasses import dataclass, fields
+import os
+
+repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @dataclass
@@ -9,7 +12,7 @@ class Settings:
     user_select_number_of_images_to_run: int = 100_000  # TODO: This is bad but I want it to select all and am too lazy
                                                         # to deal with it rn
     download_data_from_NAS: int = 0  # 0 for local, 1 for NAS
-    connection_config_location: str = r"C:\Users\Jack\Desktop\config_nas.yml" # r"/home/formanj/FISH_Processing_JF/FISH_Processing/config.yml"
+    connection_config_location: str = str(os.path.join(repo_path, 'config_nas.yml')) #r"C:\Users\Jack\Desktop\config_nas.yml" # r"/home/formanj/FISH_Processing_JF/FISH_Processing/config.yml"
     share_name: str = 'share'
     display_plots: bool = True
     load_in_mask: bool = False
@@ -34,6 +37,8 @@ class Settings:
     
 
 
-        
+
+
+
 
 
