@@ -12,6 +12,7 @@ class Settings:
     connection_config_location: str = r"C:\Users\Jack\Desktop\config_nas.yml" # r"/home/formanj/FISH_Processing_JF/FISH_Processing/config.yml"
     share_name: str = 'share'
     display_plots: bool = True
+    load_in_mask: bool = False
     kwargs: dict = None
 
     def __init__(self, **kwargs):

@@ -164,6 +164,7 @@ class FFF2NativeDataType(IndependentStepClass):
             self.pipelineSettings = settings
             self.terminatorScope = scope
             self.pipelineData = data
+            self.load_in_mask = settings.load_in_mask
     
             # download the folder from NAS
             self.local_folder = 'temp_' + os.path.basename(experiment.initial_data_location)
@@ -206,34 +207,35 @@ class FFF2NativeDataType(IndependentStepClass):
 
         already_made_masks = False
 
-        unzipped_mask_dir = [f for f in mask_dirs if os.path.isdir(os.path.join(self.local_folder, f))]
-        zipped_mask_dir = [f for f in mask_dirs if f.endswith('.zip')]
+        if self.load_in_mask:
+            unzipped_mask_dir = [f for f in mask_dirs if os.path.isdir(os.path.join(self.local_folder, f))]
+            zipped_mask_dir = [f for f in mask_dirs if f.endswith('.zip')]
 
-        mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
+            mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
-        if len(zipped_mask_dir) == 1 and len(mask_tifs) == 0:
-            shutil.unpack_archive(os.path.join(self.local_folder, zipped_mask_dir[0]), self.local_folder)
-            self.masks_dir = os.path.join(self.local_folder, zipped_mask_dir[0].split('.')[0])
-            already_made_masks = True
+            if len(zipped_mask_dir) == 1 and len(mask_tifs) == 0:
+                shutil.unpack_archive(os.path.join(self.local_folder, zipped_mask_dir[0]), self.local_folder)
+                already_made_masks = True
+            
+            mask_dirs = [f for f in files if f.startswith('masks')]
+            mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
-        mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
-
-        if len(mask_tifs) > 0:
-            mask_cells = [f for f in mask_tifs if 's_cyto_R' in f]
-            mask_nuclei = [f for f in mask_tifs if 'nuclei' in f]
-            mask_cyto = [f for f in mask_tifs if 'cyto_no_nuclei' in f]
-            already_made_masks = True
+            if len(mask_tifs) > 0:
+                mask_cells = [f for f in mask_tifs if 's_cyto_R' in f]
+                mask_nuclei = [f for f in mask_tifs if 'nuclei' in f]
+                mask_cyto = [f for f in mask_tifs if 'cyto_no_nuclei' in f]
+                already_made_masks = True
     
         # create list of images
         list_images_names = [f for f in self.tifs if not f.startswith('masks')]
-        self.list_channels = np.sort([f.split('_')[-1].split('.')[0] for f in list_images_names])
-        self.list_roi = np.sort([f.split('_')[0] for f in list_images_names])
+        self.list_channels = np.sort(list(set([f.split('_')[-1].split('.')[0] for f in list_images_names])))
+        self.list_roi = np.sort(list(set([f.split('_')[0] for f in list_images_names])))
         self.list_names = [f.split('_')[1] for f in list_images_names]
-        self.z_slices = np.sort([f.split('_')[2] for f in list_images_names])
-        self.timepoints = np.sort([f.split('_')[3] for f in list_images_names])
+        self.z_slices = np.sort(list(set([f.split('_')[2] for f in list_images_names])))
+        self.timepoints = np.sort(list(set([f.split('_')[3] for f in list_images_names])))
 
         self.number_of_timepoints = len(set(self.timepoints))
-        # self.number_z_slices = len(set(self.z_slices))
+        self.number_z_slices = len(set(self.z_slices))
         self.number_color_channels = len(set(self.list_channels))
         self.number_of_fov = len(set(self.list_roi))
 
@@ -249,14 +251,15 @@ class FFF2NativeDataType(IndependentStepClass):
         self.map_id_imgprops = {}
         count = 0
         for t in range(self.number_of_timepoints):
-            tp = list(set(self.timepoints))[t]
+            tp = self.timepoints[t]
             for r in range(self.number_of_fov):
-                fov = list(set(self.list_roi))[r]
+                fov = self.list_roi[r]
                 if x is not None:
                     temp_img = np.zeros((self.number_z_slices, y, x, self.number_color_channels))
                 for c in range(self.number_color_channels):
-                    channel = list(set(self.list_channels))[c]
+                    channel = self.list_channels[c]
                     search_params = [fov, channel, tp]
+                    # print(search_params)
                     img_name = [f for f in list_images_names if all(v in f for v in search_params)][0]
                     img = tifffile.imread(os.path.join(self.local_folder, img_name))
                     if x is None:
