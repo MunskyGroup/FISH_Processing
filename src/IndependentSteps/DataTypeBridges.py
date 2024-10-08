@@ -226,11 +226,11 @@ class FFF2NativeDataType(IndependentStepClass):
     
         # create list of images
         list_images_names = [f for f in self.tifs if not f.startswith('masks')]
-        self.list_channels = [f.split('_')[-1].split('.')[0] for f in list_images_names]
-        self.list_roi = [f.split('_')[0] for f in list_images_names]
+        self.list_channels = np.sort([f.split('_')[-1].split('.')[0] for f in list_images_names])
+        self.list_roi = np.sort([f.split('_')[0] for f in list_images_names])
         self.list_names = [f.split('_')[1] for f in list_images_names]
-        self.z_slices = [f.split('_')[2] for f in list_images_names]
-        self.timepoints = [f.split('_')[3] for f in list_images_names]
+        self.z_slices = np.sort([f.split('_')[2] for f in list_images_names])
+        self.timepoints = np.sort([f.split('_')[3] for f in list_images_names])
 
         self.number_of_timepoints = len(set(self.timepoints))
         # self.number_z_slices = len(set(self.z_slices))

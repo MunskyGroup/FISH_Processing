@@ -5,19 +5,32 @@ import tifffile
 import matplotlib.pyplot as plt
 from cellpose import models
 from skimage.io import imread
+import skimage as sk
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 from src import StepOutputsClass, SequentialStepsClass
 
 #%% Output Classes
 class CellSegmentationOutput(StepOutputsClass):
-    def __init__(self, list_cell_masks, list_nuc_masks, list_cyto_masks, segmentation_successful,
-                 number_detected_cells, id):
+    def __init__(self, id, list_cell_masks = None, list_nuc_masks = None, list_cyto_masks = None, segmentation_successful = 0,
+                 number_detected_cells = 0):
         super().__init__()
         self.step_name = 'CellSegmentation'
-        self.list_cell_masks = [list_cell_masks]
-        self.list_nuc_masks = [list_nuc_masks]
-        self.list_cyto_masks = [list_cyto_masks]
+        if list_cell_masks is not None:
+            self.list_cell_masks = [list_cell_masks]
+        else:
+            self.list_cell_masks = None
+    
+        if list_nuc_masks is not None:
+            self.list_nuc_masks = [list_nuc_masks]
+        else:
+            self.list_nuc_masks = None
+        
+        if list_cyto_masks is not None:
+            self.list_cyto_masks = [list_cyto_masks]
+        else:    
+            self.list_cyto_masks = None
+
         self.segmentation_successful = [segmentation_successful]
         self.number_detected_cells = [number_detected_cells]
         self.img_id = [id]
@@ -53,106 +66,224 @@ class CellSegmentationOutput_Luis(StepOutputsClass):
 
 
 #%% Steps
+class DilationedCytoMask(SequentialStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, id, cyto_mask, nuc_mask, dilation_size: int = 5, **kwargs):
+        if cyto_mask is None:
+            cell_mask = np.zeros_like(nuc_mask)
+            for label in np.unique(nuc_mask):
+                if label == 0:
+                    continue
+                dilated_mask = np.zeros_like(nuc_mask)
+                mask = nuc_mask == label
+                dilated_mask += sk.morphology.binary_dilation(mask, selem=sk.morphology.disk(dilation_size))
+                cell_mask[dilated_mask] = label
+        
+        cyto_mask = cell_mask.copy()
+        cyto_mask[nuc_mask > 0] = 0
+
+        return CellSegmentationOutput(list_cell_masks=cell_mask, list_cyto_masks=cyto_mask)
+
+
+
 class SimpleCellposeSegmentaion(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 
-    def main(self, image, cytoChannel, nucChannel, image_name: str = None,
-             cellpose_model_type: str = 'cyto3', cellpose_diameter: float = 70, cellpose_channel_axis: int = 3,
-             cellpose_invert: bool = False, cellpose_normalize: bool = True, cellpose_do_3D: bool = False, 
-             cellpose_min_size: float = None, cellpose_flow_threshold: float = 0.3, cellpose_cellprob_threshold: float = 0.0,
+    def main(self, image, 
+             cytoChannel, 
+             nucChannel, 
+             list_nuc_mask: list[np.array] = None, 
+             list_cell_mask: list[np.array] = None, 
+             image_name: str = None,
+             cellpose_model_type: str | list[str] = ['cyto3', 'nuclei'], 
+             cellpose_diameter: float | list[float] = 70, 
+             cellpose_channel_axis: int = -1,
+             cellpose_invert: bool | list = False, 
+             cellpose_normalize: bool = True, 
+             cellpose_do_3D: bool = False, 
+             cellpose_min_size: float | list[float] = 0, 
+             cellpose_flow_threshold: float | list[float] = 0.3, 
+             cellpose_cellprob_threshold: float | list[float] = 0.0,
              display_plots: bool = False,
                **kwargs):
-        if cellpose_min_size is None:
-            cellpose_min_size = np.pi * (cellpose_diameter / 4) ** 2
-
-        if not cellpose_do_3D:
-            image = np.max(image, axis=0)
         
-        nuc_channel = nucChannel[0] if nucChannel is not None else 0
-        cyto_channel = cytoChannel[0] if cytoChannel is not None else 0
-        channels = [[cyto_channel, nuc_channel]]
-
-        model = models.Cellpose(model_type=cellpose_model_type, gpu=True)
-        masks, flows, styles, diams = model.eval(image, channels=channels, diameter=cellpose_diameter, 
-                                                 invert=cellpose_invert, normalize=cellpose_normalize, 
-                                                 channel_axis=cellpose_channel_axis, do_3D=cellpose_do_3D,
-                                                 min_size=cellpose_min_size, flow_threshold=cellpose_flow_threshold, cellprob_threshold=cellpose_cellprob_threshold)
         
-        if nucChannel is not None and len(masks.shape) == cellpose_channel_axis+1:
-            nuc_mask = np.take(masks, nuc_channel, axis=cellpose_channel_axis) if len(masks.shape) == cellpose_channel_axis+1 and nucChannel is not None else masks
-        elif nucChannel is not None:
-            nuc_mask = masks
-        else:
-            nuc_mask = None
+        # check if list_nuc_mask and list_cell_mask are None 
+        # and assume that if either exist segmentation does not need to be done
+        
+        if list_nuc_mask is None and list_cell_mask is None:
 
-        if cytoChannel is not None and len(masks.shape) == cellpose_channel_axis+1:
-            cell_mask = np.take(masks, cyto_channel, axis=cellpose_channel_axis) if len(masks.shape) == cellpose_channel_axis+1 and cytoChannel is not None else masks
-        elif cytoChannel is not None:
-            cell_mask = masks
-        else:
-            cell_mask = None
+            (nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, 
+                nuc_cellprob_threshold, cyto_cellprob_threshold, nuc_model_type, 
+                cyto_model_type, nuc_diameter, cyto_diameter) = self.unpack_lists(cellpose_min_size, 
+                                                                             cellpose_flow_threshold, 
+                                                                             cellpose_cellprob_threshold,
+                                                                             cellpose_model_type,
+                                                                             cellpose_diameter)
 
-        cyto_mask = cell_mask[nuc_mask>0] if cell_mask is not None and nuc_mask is not None else None
+            if cellpose_min_size is None:
+                cellpose_min_size = np.pi * (cellpose_diameter / 4) ** 2
 
-        number_detected_cells = np.max(cell_mask) if cell_mask is not None else np.max(nuc_mask)
+            if not cellpose_do_3D:
+                image = np.max(image, axis=0)
+            
+            print(nucChannel)
+            print(cytoChannel)
+            print(image.shape)
+            
+            nuc_channel = nucChannel[0] if nucChannel is not None else 0
+            cyto_channel = cytoChannel[0] if cytoChannel is not None else 0
 
-        if display_plots:
-            num_sub_plots = 1
-            if nuc_mask is not None:
-                num_sub_plots += 2
-            if cyto_mask is not None:
-                num_sub_plots += 2
-            fig, axs = plt.subplots(1, num_sub_plots, figsize=(12, 5))
-            i = 0
-            if nuc_mask is not None:
-                if cellpose_do_3D:
-                    axs[i].imshow(np.max(image,axis=0)[:, : nucChannel[0]], cmap='gray')
-                    axs[i].set_title('Nuclei')
-                    i += 1
-                    axs[i].imshow(np.max(nuc_mask,axis=0), cmap='tab20')
-                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
-                    i += 1
-                else:
-                    axs[i].imshow(image[:,:,nucChannel[0]], cmap='gray')
-                    axs[i].set_title('Nuclei')
-                    i += 1
-                    axs[i].imshow(nuc_mask, cmap='tab20')
-                    axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
-                    i += 1
-            if cell_mask is not None:
-                if cellpose_do_3D:
-                    axs[i].imshow(np.max(image,axis=0)[:, : cytoChannel[0]], cmap='gray')
-                    axs[i].set_title('cell_mask')
-                    i += 1
-                    axs[i].imshow(np.max(cell_mask, axis=0), cmap='tab20')
-                    axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
-                    i += 1
-                else:
-                    axs[i].imshow(image[:,:,cytoChannel[0]], cmap='gray')
-                    axs[i].set_title('cell_mask')
-                    i += 1
-                    axs[i].imshow(cell_mask, cmap='tab20')
-                    axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
-                    i += 1
+            print('Nuclei Channel: ', nuc_channel)
+            print('Cyto Channel: ', cyto_channel)
+
+
+            if nucChannel is not None:
+                
+                nucmodel = models.Cellpose(model_type=nuc_model_type, gpu=True)
+                channels = [[0, nuc_channel]]
+                nuc_mask, flows, styles, diams = nucmodel.eval(image, 
+                                                               channels=channels, 
+                                                            diameter=nuc_diameter, 
+                                                            invert=cellpose_invert, 
+                                                            normalize=cellpose_normalize, 
+                                                            channel_axis=cellpose_channel_axis, 
+                                                            do_3D=cellpose_do_3D,
+                                                            min_size=nuc_min_size, 
+                                                            flow_threshold=nuc_flow_threshold, 
+                                                            cellprob_threshold=nuc_cellprob_threshold)
+            
+            if cytoChannel is not None:
+                cytomodel = models.Cellpose(model_type=cyto_model_type, gpu=True)
+                channels = [[cyto_channel, nuc_channel]]
+                cell_mask, flows, styles, diams = cytomodel.eval(image, 
+                                                             channels=channels, 
+                                                             diameter=cyto_diameter, 
+                                                            invert=cellpose_invert, 
+                                                            normalize=cellpose_normalize, 
+                                                            channel_axis=cellpose_channel_axis, 
+                                                            do_3D=cellpose_do_3D,
+                                                            min_size=cyto_min_size, 
+                                                            flow_threshold=cyto_flow_threshold, 
+                                                            cellprob_threshold=cyto_cellprob_threshold)
+
+            # nuc_mask = masks[0]
+            # cell_mask = masks[1]
+            
+            # print('-----------------------------------------------')
+            # print(mask.shape)
+            # print('-----------------------------------------------')
+            cyto_mask = cell_mask[nuc_mask>0] if cell_mask is not None and nuc_mask is not None else None
+
+            number_detected_cells = np.max(cell_mask) + 1 if cell_mask is not None else np.max(nuc_mask) + 1
+
+
+            if display_plots:
+                num_sub_plots = 1
+                if nuc_mask is not None:
+                    num_sub_plots += 2
+                if cyto_mask is not None:
+                    num_sub_plots += 2
+                fig, axs = plt.subplots(1, num_sub_plots, figsize=(12, 5))
+                i = 0
+                if nuc_mask is not None:
+                    if cellpose_do_3D:
+                        axs[i].imshow(np.max(image,axis=0)[:, : nuc_channel], cmap='gray')
+                        axs[i].set_title('Nuclei')
+                        i += 1
+                        axs[i].imshow(np.max(nuc_mask,axis=0), cmap='tab20')
+                        axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                        i += 1
+                    else:
+                        axs[i].imshow(image[:,:,nuc_channel], cmap='gray')
+                        axs[i].set_title('Nuclei')
+                        i += 1
+                        axs[i].imshow(nuc_mask, cmap='tab20')
+                        axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
+                        i += 1
+                if cell_mask is not None:
+                    if cellpose_do_3D:
+                        axs[i].imshow(np.max(image,axis=0)[:, : cyto_channel], 
+                                      cmap='gray')
+                        axs[i].set_title('cell_mask')
+                        i += 1
+                        axs[i].imshow(np.max(cell_mask, axis=0), cmap='tab20')
+                        axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
+                        i += 1
+                    else:
+                        axs[i].imshow(image[:,:,cyto_channel], cmap='gray')
+                        axs[i].set_title('cell_mask')
+                        i += 1
+                        axs[i].imshow(cell_mask, cmap='tab20')
+                        axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
+                        i += 1
                 if cellpose_do_3D:
                     axs[i].imshow(flows[0][image.shape[0]//2, :, :])
                     axs[i].set_title('Flow')
                 else:
                     axs[i].imshow(flows[0][:, :])
                     axs[i].set_title('Flow')
-            plt.tight_layout()
-            if self.step_output_dir is not None:
-                plt.savefig(os.path.join(self.step_output_dir, f'{image_name}_segmentation.png'))
-            plt.show()
+                plt.tight_layout()
+                if self.step_output_dir is not None:
+                    plt.savefig(os.path.join(self.step_output_dir, f'{image_name}_segmentation.png'))
+                plt.show()
 
 
-        return CellSegmentationOutput(list_cell_masks=cell_mask,
-                                        list_nuc_masks=nuc_mask,
-                                        list_cyto_masks=cyto_mask,
-                                        segmentation_successful=1,
-                                        number_detected_cells=number_detected_cells,
-                                        id=0)
+            return CellSegmentationOutput(list_cell_masks=cell_mask,
+                                            list_nuc_masks=nuc_mask,
+                                            list_cyto_masks=cyto_mask,
+                                            segmentation_successful=1,
+                                            number_detected_cells=number_detected_cells,
+                                            id=0)
+        
+        else:
+            return None
+        
+    def unpack_lists(self, cellpose_min_size, 
+             cellpose_flow_threshold, 
+             cellpose_cellprob_threshold,
+             cellpose_model_type,
+             cellpose_diameter):
+        if isinstance(cellpose_min_size, list):
+            nuc_min_size = cellpose_min_size[1]
+            cyto_min_size = cellpose_min_size[0]
+        else:
+            nuc_min_size = cellpose_min_size
+            cyto_min_size = cellpose_min_size
+        
+        if isinstance(cellpose_flow_threshold, list):
+            nuc_flow_threshold = cellpose_flow_threshold[1]
+            cyto_flow_threshold = cellpose_flow_threshold[0]
+        else:
+            nuc_flow_threshold = cellpose_flow_threshold
+            cyto_flow_threshold = cellpose_flow_threshold
+        
+        if isinstance(cellpose_cellprob_threshold, list):
+            nuc_cellprob_threshold = cellpose_cellprob_threshold[1]
+            cyto_cellprob_threshold = cellpose_cellprob_threshold[0]
+        else:
+            nuc_cellprob_threshold = cellpose_cellprob_threshold
+            cyto_cellprob_threshold = cellpose_cellprob_threshold
+
+        if isinstance(cellpose_model_type, list):
+            nuc_model_type = cellpose_model_type[1]
+            cyto_model_type = cellpose_model_type[0]
+        else:
+            nuc_model_type = cellpose_model_type
+            cyto_model_type = cellpose_model_type
+
+        if isinstance(cellpose_diameter, list):
+            nuc_diameter = cellpose_diameter[1]
+            cyto_diameter = cellpose_diameter[0]
+        else:
+            nuc_diameter = cellpose_diameter
+            cyto_diameter = cellpose_diameter
+
+        return nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, nuc_cellprob_threshold, cyto_cellprob_threshold, nuc_model_type, cyto_model_type, nuc_diameter, cyto_diameter
+
     
 
 class CellSegmentationStepClass_JF(SequentialStepsClass):
@@ -343,7 +474,7 @@ class CellSegmentationStepClass_JF(SequentialStepsClass):
             self.list_cyto_masks_no_nuclei = None
 
 
-class CellSegmentationStepClass(SequentialStepsClass):
+class CellSegmentationStepClass_Luis(SequentialStepsClass):
     def __init__(self) -> None:
         super().__init__()
         self.save_masks_as_file = None
@@ -582,3 +713,9 @@ class BIGFISH_Tensorflow_Segmentation(SequentialStepsClass):
         #                                 list_cyto_masks=mask_cytosol, segmentation_successful=1,
         #                                 number_detected_cells=num_of_cells, id=id)
         # return output
+
+
+
+
+if __name__ == '__main__':
+    pass

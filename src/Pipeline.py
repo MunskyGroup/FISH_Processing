@@ -39,7 +39,7 @@ class Pipeline:
         # inspects each steps main function to see if it has the required parameters
         no_default_params = []
         for step in self.independentSteps + self.finalizationSteps + self.sequentialSteps:
-            step_func = step.run
+            step_func = step.main
             sig = inspect.signature(step_func)
             no_default_params.append([param.name for param in sig.parameters.values() if param.default is param.empty])
 
@@ -117,8 +117,9 @@ class Pipeline:
                                                         experiment=self.experiment)
                 
                 if singleImageSingleStepOutputs is None:
-                    raise ValueError(f'{step} did not return a value')
-                self.dataContainer.append(singleImageSingleStepOutputs)
+                    print(f'{step} did not return a value')
+                else:
+                    self.dataContainer.append(singleImageSingleStepOutputs)
 
     def execute_finalization_steps(self):
         for step in self.finalizationSteps:
@@ -134,10 +135,12 @@ class Pipeline:
             os.makedirs(self.dataContainer.temp_folder_name)
 
     def run_up_to(self, step_name):
-        if step_name not in [step.__class__.__name__ for step in self.sequentialSteps]:
-            raise ValueError(f'{step_name} is not in the pipelineSteps')
-        
+        all_steps = self.independentSteps + self.sequentialSteps + self.finalizationSteps
+        if not (step_name in [step.__class__.__name__ for step in all_steps]):
+            raise ValueError(f'{step_name} is not a valid step name')
+
         # remove all steps from step_name and onwards
+        # check if its an independent step step and removes all after
         if step_name in [step.__class__.__name__ for step in self.independentSteps]:
             # get the index of the step
             index = [step.__class__.__name__ for step in self.independentSteps].index(step_name)
@@ -145,6 +148,7 @@ class Pipeline:
             self.independentSteps = self.independentSteps[:index]
             self.execute_independent_steps()
             pickle.dump(self, open('pipeline.pkl', 'wb'))
+        # check if its a sequential step and removes all after
         else: 
             self.execute_independent_steps()
             if step_name in [step.__class__.__name__ for step in self.sequentialSteps]:
@@ -154,6 +158,7 @@ class Pipeline:
                 self.sequentialSteps = self.sequentialSteps[:index]
                 self.execute_sequential_steps()
                 pickle.dump(self, open('pipeline.pkl', 'wb'))
+            # check if its a finalization step and removes all after
             else:
                 self.execute_sequential_steps()
                 if step_name in [step.__class__.__name__ for step in self.finalizationSteps]:

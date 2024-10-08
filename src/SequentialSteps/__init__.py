@@ -4,7 +4,8 @@ from .SpotDetection_Steps import (BIGFISH_SpotDetection, UFISH_SpotDetection_Ste
 
 from .Filters import (rescale_images, remove_background)
 
-from .Segmentation_Steps import (CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, BIGFISH_Tensorflow_Segmentation, CellSegmentationStepClass)
+from .Segmentation_Steps import (CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, BIGFISH_Tensorflow_Segmentation,
+                                  CellSegmentationStepClass_Luis, DilationedCytoMask)
 
 
 
