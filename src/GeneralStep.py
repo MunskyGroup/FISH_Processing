@@ -97,12 +97,12 @@ class SequentialStepsClass(StepClass):
         self.experiment = experiment
 
         if id is None:  # allows for pipelineSteps to be run a pre or postPipeline
-            for img_index in range(min(self.pipelineSettings.user_select_number_of_images_to_run,
+            for img_index in range(min(self.settings.user_select_number_of_images_to_run,
                                        self.experiment.number_of_images_to_process)):
-                kwargs = self.load_in_attributes(id)
+                kwargs = self.load_in_attributes(img_index)
                 self.create_step_output_dir(**kwargs)
                 self.on_first_run(img_index)
-                single_step_output = self.main(id=img_index, **kwargs)
+                single_step_output = self.main(**kwargs)
                 if img_index == 0:
                     output = single_step_output
                 else:
