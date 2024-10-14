@@ -215,6 +215,15 @@ class Pipeline:
             for key, value in d.items():
                 if key in modify_kwargs:
                     d[key] = modify_kwargs[key]
+                    # remove the entry from modify_kwargs
+                    print(f'Overwriting {key} in {d.__class__.__name__}')
+                    del modify_kwargs[key]
+        
+        # if it still has keys, save themme to settings
+        if len(modify_kwargs) > 0:
+            for key, value in modify_kwargs.items():
+                print(f'Overwriting {key} in settings')
+                kwargs_settings[key] = value
 
         self.experiment.__dict__ = kwargs_experiment
         self.scope.__dict__ = kwargs_scope

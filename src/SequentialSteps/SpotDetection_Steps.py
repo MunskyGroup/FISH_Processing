@@ -164,7 +164,7 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
 
         else:
             max_signal = image_to_process[spot_y, spot_x]
-            spot_background_, _ = get_spot_surface(
+            spot_background_, _ = detection.get_spot_surface(
                 image_to_process, spot_y, spot_x, radius_background_yx)
             spot_background = spot_background_.copy()
 
@@ -322,15 +322,14 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                 df_cellresults['FISH_Channel'] = [c]*len(df_cellresults)
 
             else:
-                df = None
+                df_cellresults = None
 
             # standardize df
             df_spotresults, df_clusterresults = self.standardize_df(spots_px, spots_subpx, sub_pixel_fitting, clusters, id, c, map_id_imgprops)
 
             df_spotresults = add_indepenedent_params_to_df(df_spotresults, kwargs['independent_params'])
             df_clusterresults = add_indepenedent_params_to_df(df_clusterresults, kwargs['independent_params'])
-            if df_cellresults is not None:
-                df_cellresults = add_indepenedent_params_to_df(df_cellresults, kwargs['independent_params'])
+            df_cellresults = add_indepenedent_params_to_df(df_cellresults, kwargs['independent_params'])
 
             # save single channel results
             if c == 0:
@@ -523,7 +522,7 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
         if sub_pixel_fitting:
             spots_subpx = detection.fit_subpixel(
                                         image=rna, 
-                                        spots=canidate_spots, 
+                                        spots=spots_post_clustering, 
                                         voxel_size=voxel_size_nm, 
                                         spot_radius=voxel_size_nm)
         else:
@@ -711,7 +710,7 @@ class TrackPy_SpotDetection(SequentialStepsClass):
         super().__init__()
 
     def main(self, id, list_images, FISHChannel, nucChannel, spot_yx_px, spot_z_px, voxel_size_yx, voxel_size_z,
-             map_id_imgprops, trackpy_minmass: float = None,  list_nuc_masks: list[np.array] = None, list_cell_masks: list[np.array] = None,
+             map_id_imgprops, image_name:str, trackpy_minmass: float = None,  list_nuc_masks: list[np.array] = None, list_cell_masks: list[np.array] = None,
              trackpy_minsignal: float = None, trackpy_seperation_yx_px: float = 13, trackpy_seperation_z_px: float = 3, CLUSTER_RADIUS: float = 500, 
              MIN_NUM_SPOT_FOR_CLUSTER: int = 4,
              trackpy_maxsize: float = None, display_plots: bool = False, plot_types: list[str] = ['mass', 'size', 'signal', 'raw_mass'], 
@@ -748,16 +747,27 @@ class TrackPy_SpotDetection(SequentialStepsClass):
             spots_px = np.array(
                 trackpy_features[['z', 'y', 'x']].values if len(fish.shape) == 3 else trackpy_features[['y','x']].values
                 )
+            
+            spots_nm = spots_px.copy()
+            if len(fish.shape) == 3:
+                spots_nm[:, 0] = spots_nm[:, 0]*voxel_size_z
+                spots_nm[:, 1] = spots_nm[:, 1]*voxel_size_yx
+                spots_nm[:, 2] = spots_nm[:, 2]*voxel_size_yx
+            else:
+                spots_nm[:, 0] = spots_nm[:, 0]*voxel_size_yx
+                spots_nm[:, 1] = spots_nm[:, 1]*voxel_size_yx
 
             # Get cluster 
-            clusters = detection.detect_clusters(spots_px, 
-                                                 voxel_size=(voxel_size_z, voxel_size_yx, voxel_size_yx) if len(fish.shape) == 3 else (voxel_size_yx, voxel_size_yx), 
-                                                 radius=CLUSTER_RADIUS, 
-                                                 nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
+            spots_nm, clusters = detection.detect_clusters(spots_nm, 
+                                                voxel_size=(voxel_size_z, voxel_size_yx, voxel_size_yx) if len(fish.shape) == 3 else (voxel_size_yx, voxel_size_yx), 
+                                                radius=CLUSTER_RADIUS, 
+                                                nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
+            print(clusters)
+            clusters = np.array(clusters)
 
             # Extract Cell level results
             if nuc_label is not None or cell_label is not None:
-                cellresults = self.extract_cell_level_results(spots_px, clusters, nuc_label, cell_label, fish, nuc, 
+                cellresults = self.extract_cell_level_results(spots_nm, clusters, nuc_label, cell_label, fish, nuc, 
                                                     verbose, display_plots)
                 cellresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(cellresults)
                 cellresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(cellresults)
@@ -798,6 +808,16 @@ class TrackPy_SpotDetection(SequentialStepsClass):
                     plt.show()
                     tp.annotate(trackpy_features, fish, plot_style={'markersize': 2})
                     tp.subpx_bias(trackpy_features)
+
+                plot.plot_detection(fish if len(fish.shape) == 2 else np.max(fish, axis=0), 
+                                    spots=[spots_px, clusters[:, :2] if len(fish.shape) == 2 else clusters[:, :3]], 
+                                    shape=["circle", "circle"], 
+                                    radius=[3, 6], 
+                                    color=["red", "blue"],
+                                    linewidth=[1, 2], 
+                                    fill=[False, True], 
+                                    contrast=True,
+                                    path_output=os.path.join(self.step_output_dir, f'cluster_{image_name}') if self.step_output_dir is not None else None)
                 
                 for plot_type in plot_types:
                     fig, ax = plt.subplots()
@@ -807,6 +827,7 @@ class TrackPy_SpotDetection(SequentialStepsClass):
                     plt.show()
 
             # clean up output
+            
 
             # rename x to x_px and y to y_px and z if it exists
             trackpy_features = trackpy_features.rename(columns={'x': 'x_px', 'y': 'y_px'})
@@ -814,6 +835,7 @@ class TrackPy_SpotDetection(SequentialStepsClass):
                 trackpy_features = trackpy_features.rename(columns={'z': 'z_px'})
 
             # append frame number and fov number to the features
+            trackpy_features['cluster_index'] = spots_px[:, -1]
             trackpy_features['frame'] = [map_id_imgprops[id]['tp_num']]*len(trackpy_features)
             trackpy_features['fov'] = [map_id_imgprops[id]['fov_num']]*len(trackpy_features)
             trackpy_features['FISH_Channel'] = [FISHChannel[0]]*len(trackpy_features)

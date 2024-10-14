@@ -220,11 +220,10 @@ class FFF2NativeDataType(IndependentStepClass):
             mask_dirs = [f for f in files if f.startswith('masks')]
             mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
-            if len(mask_tifs) > 0:
-                mask_cells = [f for f in mask_tifs if 's_cyto_R' in f]
-                mask_nuclei = [f for f in mask_tifs if 'nuclei' in f]
-                mask_cyto = [f for f in mask_tifs if 'cyto_no_nuclei' in f]
-                already_made_masks = True
+            mask_cells = [f for f in mask_tifs if 's_cyto_R' in f]
+            mask_nuclei = [f for f in mask_tifs if 'nuclei' in f]
+            mask_cyto = [f for f in mask_tifs if 'cyto_no_nuclei' in f]
+            already_made_masks = True
     
         # create list of images
         list_images_names = [f for f in self.tifs if not f.startswith('masks')]
