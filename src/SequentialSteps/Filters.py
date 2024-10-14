@@ -68,6 +68,8 @@ import joypy
 from matplotlib import cm
 from scipy.ndimage import binary_dilation
 import sys
+import skimage as sk
+from skimage import exposure
 # append the path two directories before this file
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -78,17 +80,43 @@ from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 class filter_output(StepOutputsClass):
     def __init__(self, image: np.array):
         super().__init__()
+        self.ModifyPipelineData = True
         self.list_images = [image]
 
     def append(self, new_output):
         self.list_images = [*self.list_images, *new_output.list_images]
+
+class exposure_correction(SequentialStepsClass):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def main(self, image: np.array, FISHChannel, display_plots: bool = False, **kwargs):
+        for f in FISHChannel:
+            if display_plots:
+                plt.imshow(np.max(image[:, :, :, f], axis=0))
+                plt.title(f'Pre exposure correction, channel {f}')
+                plt.show()
+            rna = np.squeeze(image[:, :, :, f])
+            rna = exposure.rescale_intensity(rna, out_range=(0, 1))
+            rna = exposure.equalize_adapthist(rna)
+            image[:, :, :, f] = exposure.rescale_intensity(rna, out_range=(np.min(image[:, :, :, f]), np.max(image[:, :, :, f])))
+            if display_plots:
+                plt.imshow(np.max(image[:, :, :, f], axis=0))
+                plt.title(f'Post exposure correction, channel {f}')
+                plt.show()
+
+        output = filter_output(image)
+        output.__class__.__name__ = 'exposure_correction'
+        return output
 
 
 class rescale_images(SequentialStepsClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def main(self, image: np.array, id: int, channel_to_stretch: int = None, stretching_percentile:float = 99.9, display_plots: bool = False, **kwargs):
+    def main(self, image: np.array, id: int, 
+             channel_to_stretch: int = None, stretching_percentile:float = 99.9, 
+             display_plots: bool = False, **kwargs):
         # reshape image from zyxc to czyx
         image = np.moveaxis(image, -1, 0)
         # rescale image
@@ -104,7 +132,9 @@ class rescale_images(SequentialStepsClass):
                 plt.title(f'channel {c}')
                 plt.show()
 
-        return filter_output(image)
+        output = filter_output(image)
+        output.__class__.__name__ = 'rescale_images'
+        return output
 
         
 
@@ -112,8 +142,8 @@ class remove_background(SequentialStepsClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def main(self, image: np.array, FISHChannel: list[int], id: int, 
-             filter_type: str = 'gaussian', sigma: float = 3, display_plots:bool = False, 
+    def main(self, image: np.array, FISHChannel: list[int], id: int, spot_z, spot_yx, voxel_size_z, voxel_size_yx,
+             filter_type: str = 'gaussian', sigma: float = None, display_plots:bool = False, 
              kernel_shape: str = 'disk', kernel_size = 200, **kwargs):
 
         rna = np.squeeze(image[:, :, :, FISHChannel[0]])
@@ -124,7 +154,15 @@ class remove_background(SequentialStepsClass):
             plt.show()
 
         if filter_type == 'gaussian':
+            if sigma is None:
+                voxel_size_nm = (int(voxel_size_z), int(voxel_size_yx), int(voxel_size_yx)) if len(rna.shape) == 3 else (int(voxel_size_yx), int(voxel_size_yx))
+                spot_size_nm = (int(spot_z), int(spot_yx), int(spot_yx)) if len(rna.shape) == 3 else (int(spot_yx), int(spot_yx))
+                sigma = detection.get_object_radius_pixel(
+                        voxel_size_nm=voxel_size_nm, 
+                        object_radius_nm=spot_size_nm, 
+                        ndim=3 if len(rna.shape) == 3 else 2)
             rna = stack.remove_background_gaussian(rna, sigma=sigma)
+
         elif filter_type == 'log_filter':
             rna = stack.log_filter(rna, sigma=sigma)
 
@@ -141,7 +179,9 @@ class remove_background(SequentialStepsClass):
             plt.title(f'filtered image, type: {filter_type}, sigma: {sigma}')
             plt.show()
 
-        return filter_output(image)
+        output = filter_output(image)
+        output.__class__.__name__ = 'remove_background'
+        return output
 
 
 
