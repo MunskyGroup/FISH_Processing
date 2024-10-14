@@ -118,7 +118,9 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
              bigfish_threshold: Union[int, str] = None, bigfish_alpha: float = 0.7, bigfish_beta:float = 1, bigfish_gamma:float = 5, 
              CLUSTER_RADIUS:int = 500, MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False, bigfish_use_pca: bool = False,
-             sub_pixel_fitting: bool = False, bigfish_minDistance:Union[float, list] = None, **kwargs):
+             sub_pixel_fitting: bool = False, bigfish_minDistance:Union[float, list] = None, luis_trick:bool = False, **kwargs):
+        
+        self.luis_trick = luis_trick
 
         # Load in images and masks
         nuc_label = list_nuc_masks[id] if list_nuc_masks is not None else None
@@ -157,7 +159,8 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
 
             df_spotresults = add_indepenedent_params_to_df(df_spotresults, kwargs['independent_params'])
             df_clusterresults = add_indepenedent_params_to_df(df_clusterresults, kwargs['independent_params'])
-            df_cellresults = add_indepenedent_params_to_df(df_cellresults, kwargs['independent_params'])
+            if df_cellresults is not None:
+                df_cellresults = add_indepenedent_params_to_df(df_cellresults, kwargs['independent_params'])
 
             # save single channel results
             if c == 0:
@@ -207,18 +210,40 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
         voxel_size_nm = (int(voxel_size_z), int(voxel_size_yx), int(voxel_size_yx)) if len(rna.shape) == 3 else (int(voxel_size_yx), int(voxel_size_yx))
         spot_size_nm = (int(spot_z), int(spot_yx), int(spot_yx)) if len(rna.shape) == 3 else (int(spot_yx), int(spot_yx))
 
-        if use_log_hook:
-            spot_radius_px = detection.get_object_radius_pixel(
-                voxel_size_nm=voxel_size_nm, 
-                object_radius_nm=spot_size_nm, 
-                ndim=3 if len(rna.shape) == 3 else 2)
-        else:
-            spot_radius_px = None
-            
 
-        canidate_spots = detection.detect_spots(
+            
+        if self.luis_trick:
+            spot_radius_px = detection.get_object_radius_pixel(
+                        voxel_size_nm=voxel_size_nm, 
+                        object_radius_nm=spot_size_nm, 
+                        ndim=3 if len(rna.shape) == 3 else 2)
+            sigma = spot_radius_px
+            ## SPOT DETECTION
+            if use_log_hook:
+                rna_filtered = stack.log_filter(rna, sigma) # LoG filter
+            else:
+                rna_filtered = stack.remove_background_gaussian(rna, sigma)
+            # Automatic threshold detection.
+            mask = detection.local_maximum_detection(rna_filtered, min_distance=sigma) # local maximum detection        
+            if threshold is None:
+                threshold = detection.automated_threshold_setting(rna_filtered, mask) # thresholding
+            canidate_spots, _ = detection.spots_thresholding(rna_filtered, mask, threshold)
+            if verbose:
+                print('threshold used for the detection of spots: ',threshold )
+                print('sigma_value (z,y,x) =', sigma)
+
+        else:
+            if use_log_hook:
+                spot_radius_px = detection.get_object_radius_pixel(
+                        voxel_size_nm=voxel_size_nm, 
+                        object_radius_nm=spot_size_nm, 
+                        ndim=3 if len(rna.shape) == 3 else 2)
+            else:
+                spot_radius_px = None
+
+            canidate_spots, individual_thershold = detection.detect_spots(
                                             images=rna, 
-                                            return_threshold=False, 
+                                            return_threshold=True, 
                                             threshold=threshold,
                                             voxel_size=voxel_size_nm if not use_log_hook else None,
                                             spot_radius=spot_size_nm if not use_log_hook else None,
@@ -278,7 +303,8 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
             print(canidate_spots.shape)
 
         # decompose dense regions
-        spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
+        try: # TODO fix this try 
+            spots_post_decomposition, dense_regions, reference_spot = detection.decompose_dense(
                                                 image=rna.astype(np.uint16), 
                                                 spots=canidate_spots, 
                                                 voxel_size=voxel_size_nm, 
@@ -286,6 +312,8 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                                                 alpha=alpha,
                                                 beta=beta,
                                                 gamma=gamma)
+        except RuntimeError:
+            spots_post_decomposition = canidate_spots
 
         # TODO: define ts by some other metric for ts
 
@@ -311,7 +339,7 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
         if verbose:
             print("detected canidate spots")
             print("\r shape: {0}".format(canidate_spots.shape))
-            print("\r threshold: {0}".format(threshold))
+            print("\r threshold: {0}".format(individual_thershold))
             print("detected spots after decomposition")
             print("\r shape: {0}".format(spots_post_decomposition.shape))
             print("detected spots after clustering")
@@ -519,14 +547,9 @@ class TrackPy_SpotDetection(SequentialStepsClass):
             if trackpy_maxsize is not None:
                 trackpy_features = trackpy_features[trackpy_features['size'] < trackpy_maxsize]
 
-            # rename x to x_px and y to y_px and z if it exists
-            trackpy_features = trackpy_features.rename(columns={'x': 'x_px', 'y': 'y_px'})
-            if len(fish.shape) == 3:
-                trackpy_features = trackpy_features.rename(columns={'z': 'z_px'})
-
             # get np.array of spots for bigfish
             spots_px = np.array(
-                trackpy_features[['z_px', 'y_px', 'x_px']].values if len(fish.shape) == 3 else trackpy_features[['y_px','x_px']].values
+                trackpy_features[['z', 'y', 'x']].values if len(fish.shape) == 3 else trackpy_features[['y','x']].values
                 )
 
             # Get cluster 
@@ -586,19 +609,91 @@ class TrackPy_SpotDetection(SequentialStepsClass):
                     ax.set(xlabel=plot_type, ylabel='count')
                     plt.show()
 
+            # clean up output
+
+            # rename x to x_px and y to y_px and z if it exists
+            trackpy_features = trackpy_features.rename(columns={'x': 'x_px', 'y': 'y_px'})
+            if len(fish.shape) == 3:
+                trackpy_features = trackpy_features.rename(columns={'z': 'z_px'})
+
             # append frame number and fov number to the features
             trackpy_features['frame'] = [map_id_imgprops[id]['tp_num']]*len(trackpy_features)
             trackpy_features['fov'] = [map_id_imgprops[id]['fov_num']]*len(trackpy_features)
             trackpy_features['FISH_Channel'] = [FISHChannel[0]]*len(trackpy_features)
-            trackpy_features['x_nm'] = trackpy_features['x']*voxel_size_yx # convert to nm
-            trackpy_features['y_nm'] = trackpy_features['y']*voxel_size_yx
+            trackpy_features['x_nm'] = trackpy_features['x_px']*voxel_size_yx # convert to nm
+            trackpy_features['y_nm'] = trackpy_features['y_px']*voxel_size_yx
             if len(fish.shape) == 3:
-                trackpy_features['z_nm'] = trackpy_features['z']*voxel_size_z
-
-            
+                trackpy_features['z_nm'] = trackpy_features['z_px']*voxel_size_z
 
         output = Trackpy_SpotDetection_Output(id=id, trackpy_features=trackpy_features)
         return output
+    
+    def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
+        # convert masks to max projection
+        if nuc_label is not None and len(nuc_label.shape) != 2:
+            nuc_label = np.max(nuc_label, axis=0)
+        if cell_label is not None and len(cell_label.shape) != 2:
+            cell_label = np.max(cell_label, axis=0)
+
+        # remove transcription sites
+        spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
+        if verbose:
+            print("detected spots (without transcription sites)")
+            print("\r shape: {0}".format(spots_no_ts.shape))
+            print("\r dtype: {0}".format(spots_no_ts.dtype))
+
+        # get spots inside and outside nuclei
+        spots_in, spots_out = multistack.identify_objects_in_region(nuc_label, spots, ndim=3)
+        if verbose:
+            print("detected spots (inside nuclei)")
+            print("\r shape: {0}".format(spots_in.shape))
+            print("\r dtype: {0}".format(spots_in.dtype), "\n")
+            print("detected spots (outside nuclei)")
+            print("\r shape: {0}".format(spots_out.shape))
+            print("\r dtype: {0}".format(spots_out.dtype))
+
+        # extract fov results
+        other_images = {}
+        other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
+        fov_results = multistack.extract_cell(
+            cell_label=cell_label.astype("uint16") if cell_label is not None else nuc_label.astype("uint16"),
+            ndim=3,
+            nuc_label=nuc_label.astype("uint16"),
+            rna_coord=spots_no_ts,
+            others_coord={"foci": foci, "transcription_site": ts},
+            image=np.max(rna, axis=0).astype("uint16"),
+            others_image=other_images,)
+        if verbose:
+            print("number of cells identified: {0}".format(len(fov_results)))
+
+        # cycle through cells and save the results
+        for i, cell_results in enumerate(fov_results):
+            # get cell results
+            cell_mask = cell_results["cell_mask"]
+            cell_coord = cell_results["cell_coord"]
+            nuc_mask = cell_results["nuc_mask"]
+            nuc_coord = cell_results["nuc_coord"]
+            rna_coord = cell_results["rna_coord"]
+            foci_coord = cell_results["foci"]
+            ts_coord = cell_results["transcription_site"]
+            image_contrasted = cell_results["image"]
+            if verbose:
+                print("cell {0}".format(i))
+                print("\r number of rna {0}".format(len(rna_coord)))
+                print("\r number of foci {0}".format(len(foci_coord)))
+                print("\r number of transcription sites {0}".format(len(ts_coord)))
+
+            # plot individual cells
+            if display_plots:
+                plot.plot_cell(
+                    ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
+                    rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
+                    image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask,
+                    title="Cell {0}".format(i), 
+                    path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
+
+        df = multistack.summarize_extraction_results(fov_results, ndim=3)
+        return df
 
 
 class SpotDetectionStepClass_Luis(SequentialStepsClass):
