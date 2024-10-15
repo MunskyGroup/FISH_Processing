@@ -93,14 +93,6 @@ class filter_output(StepOutputsClass):
     def append(self, new_output):
         self.list_images = [*self.list_images, *new_output.list_images]
 
-# class filter_output(StepOutputsClass):
-#     def __init__(self, image: np.array):
-#         super().__init__()
-#         self.ModifyPipelineData = True
-#         self.corrected_images = [image]
-
-#     def append(self, new_output):
-#         self.corrected_images = [*self.corrected_images, *new_output.corrected_images]
 
 
 class exposure_correction(SequentialStepsClass):
@@ -126,17 +118,34 @@ class exposure_correction(SequentialStepsClass):
         output.__class__.__name__ = 'exposure_correction'
         return output
 
+class illumination_correction_output(StepOutputsClass):
+    def __init__(self, images: list):
+        super().__init__()
+        self.ModifyPipelineData = True
+        self.corrected_images = images
+
+    def append(self, new_output):
+        self.corrected_images.extend(new_output.corrected_images)
 
 class illumination_correction(SequentialStepsClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.has_run = False  # Flag to indicate whether the correction has run
 
-    def main(self, list_images: list, FISHChannel, cytoChannel, nucChannel, sigma: float = 50, output_dir: str = None, save_images: bool = False,
-            display_plots: bool = True, show_final_projection: bool = True, show_illumination_profile: bool = True, max_images: int = 5, **kwargs):
-        """Perform exposure correction on multiple images using nuclear and cyto channels."""
+    def main(self, list_images: list, FISHChannel, cytoChannel, nucChannel, sigma: float = 50, output_dir: str = None, 
+             save_images: bool = False, display_plots: bool = False, show_final_projection: bool = False, 
+             show_illumination_profile: bool = False, max_images: int = None, **kwargs):
+        """Perform illumination correction on multiple images using nuclear and cyto channels."""
+        
+        if self.has_run:
+            print("illumination_correction has already been executed. Exiting.")
+            return None
+
+        print("Starting illumination correction...")
+
         corrected_images = []
 
-        # Limit the number of images to process
+        # Limit the number of images to process, if specified
         if max_images is not None:
             list_images = list_images[:max_images]
             print(f"Limiting the number of images to process to {max_images}")
@@ -147,47 +156,44 @@ class illumination_correction(SequentialStepsClass):
                 raise ValueError("An output directory must be specified when 'save_images' is set to True.")
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
-        
+
         # Step 1: Compute the average illumination profile across all images
         print("Calculating average illumination profile...")
         illumination_profile = self.average_illumination_profile(list_images, cytoChannel, nucChannel, sigma)
 
         if show_illumination_profile:
-            # Display the illumination profile as a heatmap
             self.show_illumination_profile(illumination_profile)
 
         # Step 2: Correct each image based on the illumination profile
         print("Starting image correction...")
         for idx, image in enumerate(list_images):
             print(f"Processing image {idx + 1}/{len(list_images)}...")
-            # Make a copy of the original image to avoid modifying it
             corrected_image = image.copy()
-
-            # Correct the 3D FISH channels using the averaged illumination profile
             corrected_image = self.correct_image(corrected_image, FISHChannel, illumination_profile, display_plots=display_plots)
 
             if show_final_projection:
-                # Generate a 2D max projection of the corrected 3D stack for visualization
                 self.show_corrected_max_projection(image, corrected_image, FISHChannel)
 
             corrected_images.append(corrected_image)
-            
+
             if save_images:
-                # Generate a unique filename for the corrected image
                 unique_filename = os.path.join(output_dir, f'corrected_image_{idx}.tif')
-                
                 try:
-                    # Save the corrected image as a 3D TIFF stack
                     imsave(unique_filename, corrected_image, plugin='tifffile')
                     print(f"Corrected 3D image saved: {unique_filename}")
                 except Exception as e:
                     print(f"Failed to save image {idx}: {e}")
                     continue
 
-        # Explicitly exit the function after processing all images
-        print("Processing complete. Exiting the function.")
-        return corrected_images
+        # Create an output instance and return it
+        output = illumination_correction_output(images=corrected_images)  # Pass the list of corrected images
+        output.__class__.__name__ = 'illumination_correction'
+        print("illumination_correction step completed.")
 
+        # Mark the correction as completed
+        self.has_run = True
+
+        return output
 
     def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma):
         """Compute the averaged illumination profile across all images."""
