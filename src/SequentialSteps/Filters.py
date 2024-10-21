@@ -51,6 +51,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from skimage.io import imsave
 import seaborn as sns
+from skimage import exposure
 
 warnings.filterwarnings('ignore', category=matplotlib.MatplotlibDeprecationWarning)
 
@@ -80,7 +81,7 @@ from skimage import exposure
 # append the path two directories before this file
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler
+from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler, IndependentStepClass # TODO: remove this
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
@@ -88,10 +89,10 @@ class filter_output(StepOutputsClass):
     def __init__(self, image: np.array):
         super().__init__()
         self.ModifyPipelineData = True
-        self.list_images = [image]
+        self.list_images = image
 
-    def append(self, new_output):
-        self.list_images = [*self.list_images, *new_output.list_images]
+    # def append(self, new_output):
+    #     self.list_images = [*self.list_images, *new_output.list_images]
 
 
 
@@ -118,23 +119,34 @@ class exposure_correction(SequentialStepsClass):
         output.__class__.__name__ = 'exposure_correction'
         return output
 
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.ndimage import gaussian_filter
+from skimage import exposure
+from tifffile import imsave
+import copy
+
 class illumination_correction_output(StepOutputsClass):
     def __init__(self, images: list):
         super().__init__()
         self.ModifyPipelineData = True
+        # Store the images directly as a list of corrected images
         self.corrected_images = images
 
     def append(self, new_output):
-        self.corrected_images.extend(new_output.corrected_images)
+        if new_output and isinstance(new_output, illumination_correction_output):
+            self.corrected_images.extend(new_output.corrected_images)
 
-class illumination_correction(SequentialStepsClass):
+class illumination_correction(IndependentStepClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.has_run = False  # Flag to indicate whether the correction has run
 
     def main(self, list_images: list, FISHChannel, cytoChannel, nucChannel, sigma: float = 50, output_dir: str = None, 
-             save_images: bool = False, display_plots: bool = False, show_final_projection: bool = False, 
-             show_illumination_profile: bool = False, max_images: int = None, **kwargs):
+            save_images: bool = False, display_plots: bool = False, show_final_projection: bool = False, 
+            show_illumination_profile: bool = False, max_images: int = None, **kwargs):
         """Perform illumination correction on multiple images using nuclear and cyto channels."""
         
         if self.has_run:
@@ -143,11 +155,15 @@ class illumination_correction(SequentialStepsClass):
 
         print("Starting illumination correction...")
 
+        # Make a deep copy of the original images to avoid overwriting
+        original_images = copy.deepcopy(list_images)
+
         corrected_images = []
 
         # Limit the number of images to process, if specified
         if max_images is not None:
             list_images = list_images[:max_images]
+            original_images = original_images[:max_images]  # Ensure consistency
             print(f"Limiting the number of images to process to {max_images}")
 
         # Ensure the output directory exists if save_images is True
@@ -161,39 +177,38 @@ class illumination_correction(SequentialStepsClass):
         print("Calculating average illumination profile...")
         illumination_profile = self.average_illumination_profile(list_images, cytoChannel, nucChannel, sigma)
 
-        if show_illumination_profile:
-            self.show_illumination_profile(illumination_profile)
+        if show_illumination_profile and display_plots:
+            self.show_illumination_profile(illumination_profile, show_illumination_profile, display_plots)
 
         # Step 2: Correct each image based on the illumination profile
         print("Starting image correction...")
         for idx, image in enumerate(list_images):
             print(f"Processing image {idx + 1}/{len(list_images)}...")
-            corrected_image = image.copy()
-            corrected_image = self.correct_image(corrected_image, FISHChannel, illumination_profile, display_plots=display_plots)
-
-            if show_final_projection:
-                self.show_corrected_max_projection(image, corrected_image, FISHChannel)
-
+            corrected_image = self.correct_image(image, FISHChannel, illumination_profile)
             corrected_images.append(corrected_image)
 
             if save_images:
                 unique_filename = os.path.join(output_dir, f'corrected_image_{idx}.tif')
                 try:
                     imsave(unique_filename, corrected_image, plugin='tifffile')
-                    print(f"Corrected 3D image saved: {unique_filename}")
+                    print(f"Corrected image saved: {unique_filename}")
                 except Exception as e:
                     print(f"Failed to save image {idx}: {e}")
                     continue
 
+            if show_final_projection and display_plots:
+                # Use the original image from the deep copy for comparison
+                self.show_corrected_max_projection(original_images[idx], corrected_image, FISHChannel, display_plots)
+
         # Create an output instance and return it
-        output = illumination_correction_output(images=corrected_images)  # Pass the list of corrected images
-        output.__class__.__name__ = 'illumination_correction'
+        output = illumination_correction_output(images=corrected_images)
         print("illumination_correction step completed.")
 
         # Mark the correction as completed
         self.has_run = True
 
         return output
+
 
     def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma):
         """Compute the averaged illumination profile across all images."""
@@ -229,11 +244,8 @@ class illumination_correction(SequentialStepsClass):
 
         return illumination_profile_smooth
 
-    def correct_image(self, image, FISHChannel, illumination_profile, display_plots: bool = False):
+    def correct_image(self, image, FISHChannel, illumination_profile, correction_strength=0.6):
         """Apply the estimated illumination correction to the entire 3D FISH stack."""
-        # Remove extra dimensions from the illumination profile if necessary
-        illumination_profile = np.squeeze(illumination_profile)
-
         # Add a small value to the illumination profile to prevent division by small numbers
         epsilon = 1e-6  # Small regularization factor to avoid division by zero or small numbers
         illumination_profile = illumination_profile + epsilon
@@ -241,53 +253,67 @@ class illumination_correction(SequentialStepsClass):
         # Compute the inverse of the illumination profile for brightening
         correction_factor = 1.0 / illumination_profile
 
-        # Iterate over each FISH channel
-        for f in FISHChannel:  # FISH channels to be corrected
-            # Correct each z-slice in the FISH channel
-            for z in range(image.shape[0]):  # Iterate over z-stack
-                rna_slice = np.squeeze(image[z, :, :, f])
+        # Scale the correction factor to control the strength of the correction
+        correction_factor = np.power(correction_factor, correction_strength)
 
-                # Step 1: Apply the correction factor to brighten dim regions
+        # Make sure the correction factor has the same dimensions as rna_slice
+        correction_factor = np.squeeze(correction_factor)
+
+        # Correct each channel in FISHChannel
+        for f in FISHChannel:
+            for z in range(image.shape[0]):
+                rna_slice = image[z, :, :, f]
+                # Apply the correction factor to brighten dim regions
                 rna_corrected = rna_slice * correction_factor
-
-                # Step 2: Rescale intensity to a standard range (optional)
-                rna_corrected = exposure.rescale_intensity(rna_corrected, out_range=(0, 1))
-
-                # Step 3: Apply adaptive histogram equalization (CLAHE) (optional)
-                rna_corrected = exposure.equalize_adapthist(rna_corrected)
-
-                # Rescale back to the original intensity range
-                image[z, :, :, f] = exposure.rescale_intensity(
-                    rna_corrected, out_range=(np.min(image[z, :, :, f]), np.max(image[z, :, :, f]))
-                )
+                # Rescale the corrected slice to the original intensity range
+                image[z, :, :, f] = exposure.rescale_intensity(rna_corrected, out_range=(rna_slice.min(), rna_slice.max()))
 
         return image
+    
 
-    def show_corrected_max_projection(self, original_image, corrected_image, FISHChannel):
-        """Display the max projection of the corrected 3D FISH stack alongside the original."""
-        for f in FISHChannel:
-            # Original max projection
-            original_max_projection = np.max(original_image[:, :, :, f], axis=0)
-            # Corrected max projection
-            corrected_max_projection = np.max(corrected_image[:, :, :, f], axis=0)
+    def show_corrected_max_projection(self, original_image, corrected_image, FISHChannel, display_plots: bool = False):
+        """Display the max projection of the corrected 3D FISH stack alongside the original and their difference."""
+        if display_plots:
+            plt.ioff()  # Turn off interactive mode
+            for f in FISHChannel:
+                # Make sure we are working with copies of the images to avoid any unintentional modifications
+                original_max_projection = np.max(original_image[:, :, :, f], axis=0).copy()
+                corrected_max_projection = np.max(corrected_image[:, :, :, f], axis=0).copy()
 
-            # Display side-by-side before and after
-            fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-            axes[0].imshow(original_max_projection, cmap='gray')
-            axes[0].set_title(f'Original max projection for channel {f}')
-            axes[1].imshow(corrected_max_projection, cmap='gray')
-            axes[1].set_title(f'Corrected max projection for channel {f}')
-            plt.show()
+                # Apply contrast stretching to improve visibility
+                original_max_projection = exposure.rescale_intensity(
+                    original_max_projection, in_range=(np.percentile(original_max_projection, 1), np.percentile(original_max_projection, 99))
+                )
+                corrected_max_projection = exposure.rescale_intensity(
+                    corrected_max_projection, in_range=(np.percentile(corrected_max_projection, 1), np.percentile(corrected_max_projection, 99))
+                )
 
-    def show_illumination_profile(self, illumination_profile):
+                # Display side-by-side before and after
+                fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+                axes[0].imshow(original_max_projection, cmap='hot')
+                axes[0].set_title(f'Original max projection for channel {f}')
+                axes[0].axis('off')  # Turn off axis ticks and grid lines
+
+                axes[1].imshow(corrected_max_projection, cmap='hot')
+                axes[1].set_title(f'Corrected max projection for channel {f}')
+                axes[1].axis('off')  # Turn off axis ticks and grid lines
+
+                plt.tight_layout()
+                plt.show()  # Force the display of the plot
+
+
+    def show_illumination_profile(self, illumination_profile, show_illumination_profile: bool = False, display_plots: bool = False):
         """Display the reconstructed illumination profile as a heatmap."""
-        # Squeeze to ensure it's 2D
-        illumination_profile_2d = np.squeeze(illumination_profile)
-        
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(illumination_profile_2d, cmap='viridis', cbar=True)
-        plt.title('Reconstructed Illumination Profile')
-        plt.show()
+        if show_illumination_profile and display_plots:
+            plt.ioff()  # Turn off interactive mode
+            illumination_profile_2d = np.squeeze(illumination_profile)
+            plt.figure(figsize=(8, 6))
+            sns.heatmap(illumination_profile_2d, cmap='hot', cbar=True)
+            plt.title('Reconstructed Illumination Profile')
+            plt.tight_layout()
+            plt.show()  # Force the display of the plot
+            plt.clf()  # Clear the figure to avoid overlap
+
 
 
 

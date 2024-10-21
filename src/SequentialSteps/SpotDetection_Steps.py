@@ -30,7 +30,7 @@ def add_indepenedent_params_to_df(df, independent_params):
             df[key] = [value]*len(df)
         return df
     
-def compute_snr_spots(image, spots, voxel_size, spot_radius):
+def compute_snr_spots(image, spots, voxel_size, spot_radius, display_plots: bool = False):
     """Compute signal-to-noise ratio (SNR) based on spot coordinates.
 
     .. math::
@@ -131,70 +131,55 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
     radius_signal = np.ceil(radius_signal_).astype(np.uint16)
     radius_background = np.ceil(radius_background_).astype(np.uint16)
 
-    # loop over spots
     snr_spots = []
-    for spot in spots:
+    max_signals = []
 
-        # extract spot images
+    # Loop over each spot
+    for spot in spots:
+        # Extract spot coordinates
         spot_y = spot[ndim - 2]
         spot_x = spot[ndim - 1]
         radius_signal_yx = radius_signal[-1]
         radius_background_yx = radius_background[-1]
         edge_background_yx = radius_background_yx - radius_signal_yx
+
         if ndim == 3:
             spot_z = spot[0]
             radius_background_z = radius_background[0]
+            # Compute max signal for the current spot
             max_signal = image_to_process[spot_z, spot_y, spot_x]
+            # Extract background region
             spot_background_, _ = detection.get_spot_volume(
                 image_to_process, spot_z, spot_y, spot_x,
                 radius_background_z, radius_background_yx)
             spot_background = spot_background_.copy()
 
-            # # discard spot if cropped at the border (along y and x dimensions)
-            # expected_size = (2 * radius_background_yx + 1) ** 2
-            # actual_size = spot_background.shape[1] * spot_background.shape[2]
-            # if expected_size != actual_size:
-            #     continue
-
-            # remove signal from background crop
-            spot_background[:,
-                            edge_background_yx:-edge_background_yx,
-                            edge_background_yx:-edge_background_yx] = -1
+            # Remove signal region from the background crop
+            spot_background[:, edge_background_yx:-edge_background_yx, edge_background_yx:-edge_background_yx] = -1
             spot_background = spot_background[spot_background >= 0]
 
         else:
+            # For 2D images
             max_signal = image_to_process[spot_y, spot_x]
             spot_background_, _ = detection.get_spot_surface(
                 image_to_process, spot_y, spot_x, radius_background_yx)
             spot_background = spot_background_.copy()
 
-            # # discard spot if cropped at the border
-            # expected_size = (2 * radius_background_yx + 1) ** 2
-            # if expected_size != spot_background.size:
-            #     continue
-
-            # remove signal from background crop
-            spot_background[edge_background_yx:-edge_background_yx,
-                            edge_background_yx:-edge_background_yx] = -1
+            # Remove signal region from the background crop
+            spot_background[edge_background_yx:-edge_background_yx, edge_background_yx:-edge_background_yx] = -1
             spot_background = spot_background[spot_background >= 0]
 
-        # compute mean background
+        # Compute mean and standard deviation of the background
         mean_background = np.mean(spot_background)
-
-        # compute standard deviation background
         std_background = np.std(spot_background)
 
-        # compute SNR
-        snr = (max_signal - mean_background) / std_background
+        # Compute SNR
+        snr = (max_signal - mean_background) / (std_background + 1e-8)  # Add small value to avoid division by zero
         snr_spots.append(snr)
+        max_signals.append(max_signal)
 
-    #  average SNR
-    if len(snr_spots) == 0:
-        snr = 0.
-    else:
-        snr = np.median(snr_spots)
-
-    return snr_spots
+    # Return both SNRs and max_signals for further analysis
+    return snr_spots, max_signals
 
 
 #%% Output Classes
@@ -240,6 +225,16 @@ class Trackpy_SpotDetection_Output(StepOutputsClass):
     def append(self, newOutput):
         self.id = [*self.id, *newOutput.id]
         self.trackpy_features = pd.concat([self.trackpy_features, newOutput.trackpy_features])
+
+class illumination_correction_output(StepOutputsClass):
+    def __init__(self, id, corrected_image):
+        super().__init__()
+        self.id = [id]
+        self.corrected_image = corrected_image
+
+    def append(self, newOutput):
+        self.id = [*self.id, *newOutput.id]
+        self.corrected_image = pd.concat([self.corrected_image, newOutput.corrected_image])        
 
 
 #%% Step Classes
@@ -472,7 +467,7 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
             print(canidate_spots.shape)
 
         # Compute SNR of the detected spots (2D array of coordinates)
-        snr_spots = compute_snr_spots(
+        snr_spots, max_signal = compute_snr_spots(
             image=rna.astype(np.float64), 
             spots=canidate_spots.astype(np.float64), 
             voxel_size=voxel_size_nm, 
@@ -485,6 +480,14 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
             plt.show()
         print(f'median SNR: {np.median(snr_spots)}')
         print(f'mean SNR: {np.mean(snr_spots)}')
+        if display_plots:
+            plt.scatter(max_signal, snr_spots, color='blue', alpha=0.5, s=3)
+            plt.xlabel('Max signal')
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.ylabel('SNR')
+            plt.title('SNR vs max signal')
+            plt.show()        
 
         if self.snr_threshold is None and self.snr_ratio is not None:
             self.snr_threshold = np.median(snr_spots)*self.snr_ratio
@@ -493,6 +496,7 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
         if self.snr_threshold is not None:
             good_spots = [True if snr > self.snr_threshold else False for snr in snr_spots]
             canidate_spots = canidate_spots[good_spots, :]
+            print(f'Number of spots after SNR filtering: {canidate_spots.shape[0]}')
 
         # decompose dense regions
         try: # TODO fix this try 
@@ -593,9 +597,11 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
             print("\r shape: {0}".format(spots_out.shape))
             print("\r dtype: {0}".format(spots_out.dtype))
 
-        # Extract cells and associated spots
-        image_contrasted = stack.rescale(rna,channel_to_stretch=0)
-        image_contrasted = np.max(image_contrasted, axis=0) if len(image_contrasted.shape) == 3 else image_contrasted
+        # # Extract cells and associated spots
+        # image_contrasted = np.max(rna, axis=0) if len(rna.shape) == 3 else rna
+        # image_contrasted = stack.rescale(image_contrasted,channel_to_stretch=None)
+        # print(image_contrasted.shape)
+
 
         # extract fov results
         other_images = {}
@@ -633,7 +639,7 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                 plot.plot_cell(
                     ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
                     rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
-                    image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask,
+                    image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask, rescale=True, contrast=True,
                     title="Cell {0}".format(i), 
                     path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
 
