@@ -119,6 +119,340 @@ class exposure_correction(SequentialStepsClass):
         output.__class__.__name__ = 'exposure_correction'
         return output
 
+# import os
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# from scipy.ndimage import gaussian_filter
+# from skimage import exposure
+# from tifffile import imsave
+# import copy
+# from scipy.optimize import curve_fit
+
+# class illumination_correction_output(StepOutputsClass):
+#     def __init__(self, images: list):
+#         super().__init__()
+#         self.ModifyPipelineData = True
+#         # Store the images directly as a list of corrected images
+#         self.corrected_images = images
+
+#     def append(self, new_output):
+#         if new_output and isinstance(new_output, illumination_correction_output):
+#             self.corrected_images.extend(new_output.corrected_images)
+
+# class illumination_correction(IndependentStepClass):
+#     def __init__(self, **kwargs):
+#         super().__init__(**kwargs)
+#         self.has_run = False  # Flag to indicate whether the correction has run
+
+#     def main(self, list_images: list, FISHChannel, cytoChannel, nucChannel, sigma: float = 200, output_dir: str = None, 
+#             save_images: bool = False, display_plots: bool = False, show_final_projection: bool = False, 
+#             show_illumination_profile: bool = False, max_images: int = None, **kwargs):
+#         """Perform illumination correction on multiple images using nuclear and cyto channels."""
+        
+#         if self.has_run:
+#             print("illumination_correction has already been executed. Exiting.")
+#             return None
+
+#         print("Starting illumination correction...")
+
+#         # Make a deep copy of the original images to avoid overwriting
+#         original_images = copy.deepcopy(list_images)
+
+#         corrected_images = []
+
+#         # Limit the number of images to process, if specified
+#         if max_images is not None:
+#             list_images = list_images[:max_images]
+#             original_images = original_images[:max_images]  # Ensure consistency
+#             print(f"Limiting the number of images to process to {max_images}")
+
+#         # Ensure the output directory exists if save_images is True
+#         if save_images:
+#             if output_dir is None:
+#                 raise ValueError("An output directory must be specified when 'save_images' is set to True.")
+#             if not os.path.exists(output_dir):
+#                 os.makedirs(output_dir)
+
+#         # Step 1: Compute the average illumination profile across all images
+#         print("Calculating average illumination profile...")
+#         illumination_profile = self.average_illumination_profile(list_images, cytoChannel, nucChannel, sigma)
+
+#         if show_illumination_profile and display_plots:
+#             self.show_illumination_profile(illumination_profile, show_illumination_profile, display_plots)
+
+#         # Step 2: Correct each image based on the illumination profile
+#         print("Starting image correction...")
+#         for idx, image in enumerate(list_images):
+#             print(f"Processing image {idx + 1}/{len(list_images)}...")
+#             corrected_image = self.correct_image(image, FISHChannel, cytoChannel, nucChannel, illumination_profile)
+#             corrected_images.append(corrected_image)
+
+#             if save_images:
+#                 unique_filename = os.path.join(output_dir, f'corrected_image_{idx}.tif')
+#                 try:
+#                     imsave(unique_filename, corrected_image, plugin='tifffile')
+#                     print(f"Corrected image saved: {unique_filename}")
+#                 except Exception as e:
+#                     print(f"Failed to save image {idx}: {e}")
+#                     continue
+
+#             if show_final_projection and display_plots:
+#                 # Use the original image from the deep copy for comparison
+#                 self.show_corrected_max_projection(original_images[idx], corrected_image, FISHChannel, display_plots)
+
+#         # Step 3: Compute the average illumination profile across all corrected images
+#         print("Calculating average corrected illumination profile...")
+#         corrected_illumination_profile = self.average_corrected_illumination_profile(corrected_images, cytoChannel, nucChannel, sigma)
+
+#         if show_illumination_profile and display_plots:
+#             self.show_illumination_profile(corrected_illumination_profile, show_illumination_profile, display_plots)        
+
+#         # Create an output instance and return it
+#         output = illumination_correction_output(images=corrected_images)
+#         print("illumination_correction step completed.")
+
+#         # Mark the correction as completed
+#         self.has_run = True
+
+#         return output
+
+#     def gaussian_2d(x, y, x0, y0, sigma_x, sigma_y, amplitude, offset):
+#         """2D Gaussian function."""
+#         return offset + amplitude * np.exp(-(((x - x0) ** 2) / (2 * sigma_x ** 2) + ((y - y0) ** 2) / (2 * sigma_y ** 2)))
+
+#     def fit_gaussian_2d(self, illumination_profile):
+#         """Fit a 2D Gaussian to the illumination profile."""
+#         y = np.arange(illumination_profile.shape[0])
+#         x = np.arange(illumination_profile.shape[1])
+#         x, y = np.meshgrid(x, y)
+#         xdata = np.vstack((x.ravel(), y.ravel()))
+#         ydata = illumination_profile.ravel()
+
+#         # Initial guess for parameters: center, width, amplitude, offset
+#         initial_guess = (illumination_profile.shape[1] / 2, illumination_profile.shape[0] / 2, 
+#                         illumination_profile.shape[1] / 4, illumination_profile.shape[0] / 4, 
+#                         np.max(illumination_profile), np.min(illumination_profile))
+
+#         # Fit the Gaussian model to the data
+#         popt, _ = curve_fit(lambda xy, x0, y0, sigma_x, sigma_y, amplitude, offset: 
+#                             self.gaussian_2d(xy[0], xy[1], x0, y0, sigma_x, sigma_y, amplitude, offset),
+#                             xdata, ydata, p0=initial_guess)
+
+#         # Create a fitted illumination profile
+#         fitted_profile = self.gaussian_2d(x, y, *popt).reshape(illumination_profile.shape)
+#         return fitted_profile
+
+#     def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma):
+#         """Compute the averaged illumination profile across all images."""
+#         avg_cyto_projection = None
+#         avg_nuc_projection = None
+#         num_images = len(list_images)
+
+#         # Iterate over each image to calculate the max projection and sum them up
+#         for image in list_images:
+#             cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
+#             nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
+
+#             # Initialize or accumulate the projections
+#             if avg_cyto_projection is None:
+#                 avg_cyto_projection = cyto_projection
+#                 avg_nuc_projection = nuc_projection
+#             else:
+#                 avg_cyto_projection += cyto_projection
+#                 avg_nuc_projection += nuc_projection
+
+#         # Average the projections
+#         avg_cyto_projection /= num_images
+#         avg_nuc_projection /= num_images
+
+#         # Estimate the illumination profile based on the averaged projections
+#         illumination_profile = (avg_cyto_projection + avg_nuc_projection) / 2
+
+#         # Apply Gaussian fitting to the illumination profile
+#         fitted_illumination_profile = fit_gaussian_2d(illumination_profile)
+
+#         # Normalize the fitted illumination profile so that its maximum value is 1
+#         fitted_illumination_profile /= np.max(fitted_illumination_profile)
+
+#         return fitted_illumination_profile
+
+#     # def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma):
+#     #     """Compute the averaged illumination profile across all images."""
+#     #     avg_cyto_projection = None
+#     #     avg_nuc_projection = None
+#     #     num_images = len(list_images)
+
+#     #     # Iterate over each image to calculate the max projection and sum them up
+#     #     for image in list_images:
+#     #         cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
+#     #         nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
+            
+#     #         # Initialize or accumulate the projections
+#     #         if avg_cyto_projection is None:
+#     #             avg_cyto_projection = cyto_projection
+#     #             avg_nuc_projection = nuc_projection
+#     #         else:
+#     #             avg_cyto_projection += cyto_projection
+#     #             avg_nuc_projection += nuc_projection
+
+#     #     # Average the projections
+#     #     avg_cyto_projection /= num_images
+#     #     avg_nuc_projection /= num_images
+
+#     #     # Estimate the illumination profile based on the averaged projections
+#     #     illumination_profile = (avg_cyto_projection + avg_nuc_projection) / 2
+
+#     #     # Apply Gaussian filter to smooth the illumination profile
+#     #     illumination_profile_smooth = gaussian_filter(illumination_profile, sigma=sigma)
+
+#     #     # Normalize the illumination profile so that its maximum value is 1
+#     #     illumination_profile_smooth = illumination_profile_smooth / np.max(illumination_profile_smooth)
+
+#     #     return illumination_profile_smooth
+
+
+#     def correct_image(self, image, FISHChannel, cytoChannel, nucChannel, illumination_profile_smooth):
+#         """Apply the estimated illumination correction to the entire 3D FISH stack."""
+#         # Add a small value to the illumination profile to prevent division by small numbers
+#         epsilon = 1e-6  # Small regularization factor to avoid division by zero or small numbers
+#         illumination_profile = illumination_profile_smooth + epsilon
+
+#         # Compute the inverse of the illumination profile for brightening
+#         correction_factor = 1.0 / illumination_profile
+
+#         # Normalize so the mean of the correction factor is 1
+#         correction_factor /= np.mean(correction_factor)
+
+#         # Make sure the correction factor has the same dimensions as the slices
+#         correction_factor = np.squeeze(correction_factor)
+
+#         # Check if the image has 4 dimensions [Z, Y, X, C], if not, add the channel dimension
+#         if image.ndim == 3:
+#             image = np.expand_dims(image, axis=-1)  # Adds a new axis at the end to represent the channel
+
+#         # Correct each channel in FISHChannel, cytoChannel, nucChannel
+#         for c in range(image.shape[3]):
+#             for z in range(image.shape[0]):
+#                 channel_slice = image[z, :, :, c]
+#                 # Apply the correction factor to brighten dim regions
+#                 channel_corrected = channel_slice * correction_factor
+#                 # Rescale the corrected slice to the original intensity range
+#                 image[z, :, :, c] = exposure.rescale_intensity(channel_corrected, out_range=(channel_slice.min(), channel_slice.max()))
+
+#         return image
+
+
+
+
+#     # def correct_image(self, image, FISHChannel, cytoChannel, nucChannel, illumination_profile_smooth):
+#     #     """Apply the estimated illumination correction to the entire 3D FISH stack."""
+#     #     # Add a small value to the illumination profile to prevent division by small numbers
+#     #     epsilon = 1e-6  # Small regularization factor to avoid division by zero or small numbers
+#     #     illumination_profile = illumination_profile_smooth + epsilon
+
+#     #     # Compute the inverse of the illumination profile for brightening
+#     #     correction_factor = 1.0 / illumination_profile
+
+#     #     # Normalize so the mean of the correction factor is 1
+#     #     correction_factor /= np.mean(correction_factor)
+
+#     #     # Make sure the correction factor has the same dimensions as the slices
+#     #     correction_factor = np.squeeze(correction_factor)
+
+#     #     # Check if the image has 4 dimensions [Z, Y, X, C], if not, add the channel dimension
+#     #     if image.ndim == 3:
+#     #         image = np.expand_dims(image, axis=-1)  # Adds a new axis at the end to represent the channel
+
+#     #     # Correct each channel in FISHChannel, cytoChannel, nucChannel
+#     #     for c in range(image.shape[3]):
+#     #         for z in range(image.shape[0]):
+#     #             channel_slice = image[z, :, :, c]
+#     #             # Apply the correction factor to brighten dim regions
+#     #             channel_corrected = channel_slice * correction_factor
+#     #             # Rescale the corrected slice to the original intensity range
+#     #             image[z, :, :, c] = exposure.rescale_intensity(channel_corrected, out_range=(channel_slice.min(), channel_slice.max()))
+
+#     #     return image
+
+
+#     def show_corrected_max_projection(self, original_image, corrected_image, FISHChannel, display_plots: bool = False):
+#         """Display the max projection of the corrected 3D FISH stack alongside the original and their difference."""
+#         if display_plots:
+#             plt.ioff()  # Turn off interactive mode
+#             for f in FISHChannel:
+#                 # Make sure we are working with copies of the images to avoid any unintentional modifications
+#                 original_max_projection = np.max(original_image[:, :, :, f], axis=0).copy()
+#                 corrected_max_projection = np.max(corrected_image[:, :, :, f], axis=0).copy()
+
+#                 # Apply contrast stretching to improve visibility
+#                 original_max_projection = exposure.rescale_intensity(
+#                     original_max_projection, in_range=(np.percentile(original_max_projection, 1), np.percentile(original_max_projection, 99))
+#                 )
+#                 corrected_max_projection = exposure.rescale_intensity(
+#                     corrected_max_projection, in_range=(np.percentile(corrected_max_projection, 1), np.percentile(corrected_max_projection, 99))
+#                 )
+
+#                 # Display side-by-side before and after
+#                 fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+#                 axes[0].imshow(original_max_projection, cmap='hot')
+#                 axes[0].set_title(f'Original max projection for channel {f}')
+#                 axes[0].axis('off')  # Turn off axis ticks and grid lines
+
+#                 axes[1].imshow(corrected_max_projection, cmap='hot')
+#                 axes[1].set_title(f'Corrected max projection for channel {f}')
+#                 axes[1].axis('off')  # Turn off axis ticks and grid lines
+
+#                 plt.tight_layout()
+#                 plt.show()  # Force the display of the plot
+
+
+#     def show_illumination_profile(self, illumination_profile, show_illumination_profile: bool = False, display_plots: bool = False):
+#         """Display the reconstructed illumination profile as a heatmap."""
+#         if show_illumination_profile and display_plots:
+#             plt.ioff()  # Turn off interactive mode
+#             illumination_profile_2d = np.squeeze(illumination_profile)
+#             plt.figure(figsize=(8, 6))
+#             sns.heatmap(illumination_profile_2d, cmap='hot', cbar=True)
+#             plt.title('Reconstructed Illumination Profile')
+#             plt.tight_layout()
+#             plt.show()  # Force the display of the plot
+#             plt.clf()  # Clear the figure to avoid overlap
+
+#     def average_corrected_illumination_profile(self, corrected_images, cytoChannel, nucChannel, sigma):
+#         """Compute the averaged illumination profile across all images."""
+#         avg_cyto_projection = None
+#         avg_nuc_projection = None
+#         num_images = len(corrected_images)
+
+#         # Iterate over each image to calculate the max projection and sum them up
+#         for image in corrected_images:
+#             cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
+#             nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
+            
+#             # Initialize or accumulate the projections
+#             if avg_cyto_projection is None:
+#                 avg_cyto_projection = cyto_projection
+#                 avg_nuc_projection = nuc_projection
+#             else:
+#                 avg_cyto_projection += cyto_projection
+#                 avg_nuc_projection += nuc_projection
+
+#         # Average the projections
+#         avg_cyto_projection /= num_images
+#         avg_nuc_projection /= num_images
+
+#         # Estimate the illumination profile based on the averaged projections
+#         illumination_profile = (avg_cyto_projection + avg_nuc_projection) / 2
+
+#         # Apply Gaussian filter to smooth the illumination profile
+#         corrected_illumination_profile_smooth = gaussian_filter(illumination_profile, sigma=sigma)
+
+#         # Normalize the illumination profile so that its maximum value is 1
+#         corrected_illumination_profile_smooth = corrected_illumination_profile_smooth / np.max(corrected_illumination_profile_smooth)
+
+#         return corrected_illumination_profile_smooth
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -127,6 +461,7 @@ from scipy.ndimage import gaussian_filter
 from skimage import exposure
 from tifffile import imsave
 import copy
+from scipy.optimize import curve_fit
 
 class illumination_correction_output(StepOutputsClass):
     def __init__(self, images: list):
@@ -146,7 +481,7 @@ class illumination_correction(IndependentStepClass):
 
     def main(self, list_images: list, FISHChannel, cytoChannel, nucChannel, sigma: float = 200, output_dir: str = None, 
             save_images: bool = False, display_plots: bool = False, show_final_projection: bool = False, 
-            show_illumination_profile: bool = False, max_images: int = None, **kwargs):
+            show_illumination_profile: bool = False, max_images: int = None, alpha: float = 0.5, **kwargs):
         """Perform illumination correction on multiple images using nuclear and cyto channels."""
         
         if self.has_run:
@@ -175,7 +510,7 @@ class illumination_correction(IndependentStepClass):
 
         # Step 1: Compute the average illumination profile across all images
         print("Calculating average illumination profile...")
-        illumination_profile = self.average_illumination_profile(list_images, cytoChannel, nucChannel, sigma)
+        illumination_profile = self.average_illumination_profile(list_images, cytoChannel, nucChannel, sigma, alpha=alpha)
 
         if show_illumination_profile and display_plots:
             self.show_illumination_profile(illumination_profile, show_illumination_profile, display_plots)
@@ -216,40 +551,72 @@ class illumination_correction(IndependentStepClass):
 
         return output
 
+    def gaussian_2d(self, x, y, x0, y0, sigma_x, sigma_y, amplitude, offset):
+        """2D Gaussian function."""
+        return offset + amplitude * np.exp(-(((x - x0) ** 2) / (2 * sigma_x ** 2) + ((y - y0) ** 2) / (2 * sigma_y ** 2)))
 
-    def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma):
+    def fit_gaussian_2d(self, illumination_profile, sigma_smooth=200):
+        """Fit a 2D Gaussian to the illumination profile and apply additional smoothing."""
+        y = np.arange(illumination_profile.shape[0])
+        x = np.arange(illumination_profile.shape[1])
+        x, y = np.meshgrid(x, y)
+        xdata = np.vstack((x.ravel(), y.ravel()))
+        ydata = illumination_profile.ravel()
+
+        # Initial guess for parameters: center, width, amplitude, offset
+        initial_guess = (illumination_profile.shape[1] / 2, illumination_profile.shape[0] / 2, 
+                        illumination_profile.shape[1] / 4, illumination_profile.shape[0] / 4, 
+                        np.max(illumination_profile), np.min(illumination_profile))
+
+        # Fit the Gaussian model to the data
+        popt, _ = curve_fit(lambda xy, x0, y0, sigma_x, sigma_y, amplitude, offset: 
+                            self.gaussian_2d(xy[0], xy[1], x0, y0, sigma_x, sigma_y, amplitude, offset),
+                            xdata, ydata, p0=initial_guess)
+
+        # Create a fitted illumination profile
+        fitted_profile = self.gaussian_2d(x, y, *popt).reshape(illumination_profile.shape)
+
+        # Apply additional Gaussian smoothing to the fitted profile
+        smoothed_fitted_profile = gaussian_filter(fitted_profile, sigma=sigma_smooth)
+
+        return smoothed_fitted_profile
+
+    def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma, sigma_smooth=200, alpha=0.9):
         """Compute the averaged illumination profile across all images."""
         avg_cyto_projection = None
-        avg_nuc_projection = None
+        #avg_nuc_projection = None
         num_images = len(list_images)
 
         # Iterate over each image to calculate the max projection and sum them up
         for image in list_images:
             cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
-            nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
-            
+            #nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
+
             # Initialize or accumulate the projections
             if avg_cyto_projection is None:
                 avg_cyto_projection = cyto_projection
-                avg_nuc_projection = nuc_projection
+                #avg_nuc_projection = nuc_projection
             else:
                 avg_cyto_projection += cyto_projection
-                avg_nuc_projection += nuc_projection
+                #avg_nuc_projection += nuc_projection
 
         # Average the projections
         avg_cyto_projection /= num_images
-        avg_nuc_projection /= num_images
+        #avg_nuc_projection /= num_images
 
         # Estimate the illumination profile based on the averaged projections
-        illumination_profile = (avg_cyto_projection + avg_nuc_projection) / 2
+        original_illumination_profile = avg_cyto_projection #(avg_cyto_projection + avg_nuc_projection) / 2
 
-        # Apply Gaussian filter to smooth the illumination profile
-        illumination_profile_smooth = gaussian_filter(illumination_profile, sigma=sigma)
+        # Apply Gaussian fitting with additional smoothing
+        fitted_illumination_profile = self.fit_gaussian_2d(original_illumination_profile, sigma_smooth=sigma_smooth)
 
-        # Normalize the illumination profile so that its maximum value is 1
-        #illumination_profile_smooth = illumination_profile_smooth / np.max(illumination_profile_smooth)
+        # Blend the original and fitted illumination profiles
+        #blended_profile = alpha * fitted_illumination_profile + (1 - alpha) * original_illumination_profile
 
-        return illumination_profile_smooth
+        # Normalize the blended illumination profile so that its maximum value is 1
+        fitted_illumination_profile /= np.max(fitted_illumination_profile)
+
+        return fitted_illumination_profile
 
     def correct_image(self, image, FISHChannel, cytoChannel, nucChannel, illumination_profile_smooth):
         """Apply the estimated illumination correction to the entire 3D FISH stack."""
@@ -259,6 +626,9 @@ class illumination_correction(IndependentStepClass):
 
         # Compute the inverse of the illumination profile for brightening
         correction_factor = 1.0 / illumination_profile
+
+        # Normalize so the mean of the correction factor is 1
+        correction_factor /= np.median(correction_factor)
 
         # Make sure the correction factor has the same dimensions as the slices
         correction_factor = np.squeeze(correction_factor)
@@ -277,7 +647,6 @@ class illumination_correction(IndependentStepClass):
                 image[z, :, :, c] = exposure.rescale_intensity(channel_corrected, out_range=(channel_slice.min(), channel_slice.max()))
 
         return image
-
 
     def show_corrected_max_projection(self, original_image, corrected_image, FISHChannel, display_plots: bool = False):
         """Display the max projection of the corrected 3D FISH stack alongside the original and their difference."""
@@ -309,14 +678,13 @@ class illumination_correction(IndependentStepClass):
                 plt.tight_layout()
                 plt.show()  # Force the display of the plot
 
-
     def show_illumination_profile(self, illumination_profile, show_illumination_profile: bool = False, display_plots: bool = False):
         """Display the reconstructed illumination profile as a heatmap."""
         if show_illumination_profile and display_plots:
             plt.ioff()  # Turn off interactive mode
             illumination_profile_2d = np.squeeze(illumination_profile)
             plt.figure(figsize=(8, 6))
-            sns.heatmap(illumination_profile_2d, cmap='hot', cbar=True)
+            sns.heatmap(illumination_profile_2d, cmap='hot', cbar=True, vmin=0.75, vmax=1.2)
             plt.title('Reconstructed Illumination Profile')
             plt.tight_layout()
             plt.show()  # Force the display of the plot
@@ -325,36 +693,38 @@ class illumination_correction(IndependentStepClass):
     def average_corrected_illumination_profile(self, corrected_images, cytoChannel, nucChannel, sigma):
         """Compute the averaged illumination profile across all images."""
         avg_cyto_projection = None
-        avg_nuc_projection = None
+        #avg_nuc_projection = None
         num_images = len(corrected_images)
 
         # Iterate over each image to calculate the max projection and sum them up
         for image in corrected_images:
             cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
-            nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
+            #nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
             
             # Initialize or accumulate the projections
             if avg_cyto_projection is None:
                 avg_cyto_projection = cyto_projection
-                avg_nuc_projection = nuc_projection
+                #avg_nuc_projection = nuc_projection
             else:
                 avg_cyto_projection += cyto_projection
-                avg_nuc_projection += nuc_projection
+                #avg_nuc_projection += nuc_projection
 
         # Average the projections
         avg_cyto_projection /= num_images
-        avg_nuc_projection /= num_images
+        #avg_nuc_projection /= num_images
 
         # Estimate the illumination profile based on the averaged projections
-        illumination_profile = (avg_cyto_projection + avg_nuc_projection) / 2
+        illumination_profile = avg_cyto_projection #(avg_cyto_projection + avg_nuc_projection) / 2
 
         # Apply Gaussian filter to smooth the illumination profile
         corrected_illumination_profile_smooth = gaussian_filter(illumination_profile, sigma=sigma)
 
         # Normalize the illumination profile so that its maximum value is 1
-        #corrected_illumination_profile_smooth = illumination_profile_smooth / np.max(illumination_profile_smooth)
+        corrected_illumination_profile_smooth = corrected_illumination_profile_smooth / np.max(corrected_illumination_profile_smooth)
 
         return corrected_illumination_profile_smooth
+
+
 
 
 
