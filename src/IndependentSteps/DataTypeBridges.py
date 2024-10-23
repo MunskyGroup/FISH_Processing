@@ -276,12 +276,15 @@ class FFF2NativeDataType(IndependentStepClass):
                 count += 1
                 search_params = [fov, tp]
                 if already_made_masks:
-                    cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0]
-                    cyto_mask_name = [f for f in mask_cyto if all(v in f for v in search_params)][0]
-                    nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0]
-                    self.cell_masks.append(tifffile.imread(os.path.join(self.local_folder, cell_mask_name)))
-                    self.cyto_masks.append(tifffile.imread(os.path.join(self.local_folder, cyto_mask_name)))
-                    self.nuc_masks.append(tifffile.imread(os.path.join(self.local_folder, nuc_mask_name)))
+                    cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0] if len(mask_cells) > 0 else None
+                    cyto_mask_name = [f for f in mask_cyto if all(v in f for v in search_params)][0] if len(mask_cyto) > 0 else None
+                    nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0] if len(mask_nuclei) > 0 else None
+                    if cell_mask_name is not None:
+                        self.cell_masks.append(tifffile.imread(os.path.join(self.local_folder, cell_mask_name)))
+                    if cyto_mask_name is not None:
+                        self.cyto_masks.append(tifffile.imread(os.path.join(self.local_folder, cyto_mask_name))) 
+                    if nuc_mask_name is not None:
+                        self.nuc_masks.append(tifffile.imread(os.path.join(self.local_folder, nuc_mask_name))) 
 
 
 
