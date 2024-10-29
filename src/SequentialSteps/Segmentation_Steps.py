@@ -6,9 +6,53 @@ import matplotlib.pyplot as plt
 from cellpose import models
 from skimage.io import imread
 import skimage as sk
+import bigfish
+import bigfish.stack as stack
+# import bigfish.segmentation as segmentation
+import bigfish.multistack as multistack
+import bigfish.plot as plot
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 from src import StepOutputsClass, SequentialStepsClass
+
+
+#%% Useful functions
+def remove_lonely_cells(cellmask, nucmask):
+    # check to make sure there is only one nuc label per cell label
+    # if not, remove both the cell and nuc labels
+    for label in np.unique(cellmask):
+        if label == 0:
+            continue
+        pixels = nucmask[cellmask == label].flatten()
+        # remove zero pixels
+        pixels = pixels[pixels != 0]
+        if len(np.unique(pixels)) > 2:
+            print('Removing cell with multiple nuclei, label:', label)
+            nucmask[cellmask == label] = 0
+            cellmask[cellmask == np.unique(pixels)] = 0
+            
+    for label in np.unique(nucmask):
+        if label == 0:
+            continue
+        pixels = cellmask[nucmask == label].flatten()
+        if len(np.unique(pixels)) > 2:
+            print('Removing nucleus with multiple cells, label:', label)
+            nucmask[nucmask == label] = 0
+            cellmask[nucmask == label] = 0
+    return cellmask, nucmask
+
+def confirm_labels(nucmask, cellmask):
+    # relabels all the cells masks so they agree with the nuclei masks
+    # this is done by checking the nuclei mask for each cell and assigning the cell the label of the nucleus
+    bad_labels = [] # list of [nuc_label, cell_label]
+    for label in np.unique(nucmask):
+        if label == 0:
+            continue
+        nuc_label = np.argmax(np.bincount(nucmask[cellmask == label].flatten()))
+        cellmask[cellmask == label] = nuc_label
+
+
+
 
 #%% Output Classes
 class CellSegmentationOutput(StepOutputsClass):
@@ -124,25 +168,21 @@ class SimpleCellposeSegmentaion(SequentialStepsClass):
                                                                              cellpose_model_type,
                                                                              cellpose_diameter)
 
-            if cellpose_min_size is None:
-                cellpose_min_size = np.pi * (cellpose_diameter / 4) ** 2
-
             if not cellpose_do_3D:
                 image = np.max(image, axis=0)
             
-            print(nucChannel)
-            print(cytoChannel)
-            print(image.shape)
+            # print(nucChannel)
+            # print(cytoChannel)
+            # print(image.shape)
             
             nuc_channel = nucChannel[0] if nucChannel is not None else 0
             cyto_channel = cytoChannel[0] if cytoChannel is not None else 0
 
-            print('Nuclei Channel: ', nuc_channel)
-            print('Cyto Channel: ', cyto_channel)
+            # print('Nuclei Channel: ', nuc_channel)
+            # print('Cyto Channel: ', cyto_channel)
 
 
             if nucChannel is not None:
-                
                 nucmodel = models.Cellpose(model_type=nuc_model_type, gpu=True)
                 channels = [[0, nuc_channel]]
                 nuc_mask, flows, styles, diams = nucmodel.eval(image, 
@@ -154,7 +194,9 @@ class SimpleCellposeSegmentaion(SequentialStepsClass):
                                                             do_3D=cellpose_do_3D,
                                                             min_size=nuc_min_size, 
                                                             flow_threshold=nuc_flow_threshold, 
-                                                            cellprob_threshold=nuc_cellprob_threshold)
+                                                            cellprob_threshold=nuc_cellprob_threshold,
+                                                            # net_avg=True, 
+                                                            augment=True)
             
             if cytoChannel is not None:
                 cytomodel = models.Cellpose(model_type=cyto_model_type, gpu=True)
@@ -168,24 +210,24 @@ class SimpleCellposeSegmentaion(SequentialStepsClass):
                                                             do_3D=cellpose_do_3D,
                                                             min_size=cyto_min_size, 
                                                             flow_threshold=cyto_flow_threshold, 
-                                                            cellprob_threshold=cyto_cellprob_threshold)
+                                                            cellprob_threshold=cyto_cellprob_threshold,
+                                                            # net_avg=True, 
+                                                            augment=True)
 
-            # nuc_mask = masks[0]
-            # cell_mask = masks[1]
-            
-            # print('-----------------------------------------------')
-            # print(mask.shape)
-            # print('-----------------------------------------------')
-            cyto_mask = cell_mask[nuc_mask>0] if cell_mask is not None and nuc_mask is not None else None
+            # cyto_mask = cell_mask[nuc_mask>0] if cell_mask is not None and nuc_mask is not None else None
+            if nuc_mask is not None and cell_mask is not None:
+                nuc_mask, cell_mask = multistack.match_nuc_cell(nuc_mask, cell_mask, single_nuc=False, cell_alone=True)
+
+            cyto_mask = cell_mask if cell_mask is not None else None
+            cyto_mask[nuc_mask > 0] = 0 if cyto_mask is not None else None
 
             number_detected_cells = np.max(cell_mask) + 1 if cell_mask is not None else np.max(nuc_mask) + 1
-
 
             if display_plots:
                 num_sub_plots = 1
                 if nuc_mask is not None:
                     num_sub_plots += 2
-                if cyto_mask is not None:
+                if cell_mask is not None:
                     num_sub_plots += 2
                 fig, axs = plt.subplots(1, num_sub_plots, figsize=(12, 5))
                 i = 0
@@ -230,7 +272,6 @@ class SimpleCellposeSegmentaion(SequentialStepsClass):
                 if self.step_output_dir is not None:
                     plt.savefig(os.path.join(self.step_output_dir, f'{image_name}_segmentation.png'))
                 plt.show()
-
 
             return CellSegmentationOutput(list_cell_masks=cell_mask,
                                             list_nuc_masks=nuc_mask,

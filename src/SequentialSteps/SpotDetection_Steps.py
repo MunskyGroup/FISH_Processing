@@ -628,6 +628,7 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
             foci_coord = cell_results["foci"]
             ts_coord = cell_results["transcription_site"]
             image_contrasted = cell_results["image"]
+            
             if verbose:
                 print("cell {0}".format(i))
                 print("\r number of rna {0}".format(len(rna_coord)))
@@ -764,7 +765,7 @@ class TrackPy_SpotDetection(SequentialStepsClass):
                 spots_nm[:, 1] = spots_nm[:, 1]*voxel_size_yx
 
             # Get cluster 
-            spots_nm, clusters = detection.detect_clusters(spots_nm, 
+            spots_px, clusters = detection.detect_clusters(spots_px, 
                                                 voxel_size=(voxel_size_z, voxel_size_yx, voxel_size_yx) if len(fish.shape) == 3 else (voxel_size_yx, voxel_size_yx), 
                                                 radius=CLUSTER_RADIUS, 
                                                 nb_min_spots=MIN_NUM_SPOT_FOR_CLUSTER)
@@ -773,7 +774,7 @@ class TrackPy_SpotDetection(SequentialStepsClass):
 
             # Extract Cell level results
             if nuc_label is not None or cell_label is not None:
-                cellresults = self.extract_cell_level_results(spots_nm, clusters, nuc_label, cell_label, fish, nuc, 
+                cellresults = self.extract_cell_level_results(spots_px, clusters, nuc_label, cell_label, fish, nuc, 
                                                     verbose, display_plots)
                 cellresults['timepoint'] = [map_id_imgprops[id]['tp_num']]*len(cellresults)
                 cellresults['fov'] = [map_id_imgprops[id]['fov_num']]*len(cellresults)
