@@ -28,29 +28,22 @@ class Pipeline:
         self.finalizationSteps = finalizationSteps
         self.sequentialSteps = sequentialSteps
 
-        self.experiment.pipeline_init()
-        self.dataContainer.pipeline_init()
-        self.settings.pipeline_init()
-        self.scope.pipeline_init()
-
-        self.check_requirements()
-
     def check_requirements(self):
-        # inspects each steps main function to see if it has the required parameters
-        no_default_params = []
-        for step in self.independentSteps + self.finalizationSteps + self.sequentialSteps:
-            step_func = step.main
-            sig = inspect.signature(step_func)
-            no_default_params.append([param.name for param in sig.parameters.values() if param.default is param.empty])
+        self.get_parameters()
 
-        # make the list of lists into a single list
-        no_default_params = [item for sublist in no_default_params for item in sublist]
+        self.experiment.validate_parameters()
+        self.scope.validate_parameters()
+        self.settings.validate_parameters()
 
-        # make the list unique
-        no_default_params = list(set(no_default_params))
+        # check if all required parameters are present
+        exp_params = self.experiment.get_parameters()
+        scope_params = self.scope.get_parameters()
+        settings_params = self.settings.get_parameters()
 
-        print('The following parameters are required in the run the pipeline')
-        print(no_default_params)
+        # check if all no default parameters are present
+        for param in self.no_default_params:
+            if param not in exp_params and param not in scope_params and param not in settings_params:
+                raise ValueError(f'{param} is required to run the pipeline')
 
     def display_all_params(self):
         # inspects each steps main function to see if it has the required parameters
@@ -133,6 +126,13 @@ class Pipeline:
         self.dataContainer.temp_folder_name = str('temp_results_' + self.experiment.initial_data_location.name)
         if not os.path.exists(self.dataContainer.temp_folder_name) and self.settings.save_files:
             os.makedirs(self.dataContainer.temp_folder_name)
+        
+        self.experiment.pipeline_init()
+        self.dataContainer.pipeline_init()
+        self.settings.pipeline_init()
+        self.scope.pipeline_init()
+
+        self.check_requirements()
 
     def run_up_to(self, step_name):
         all_steps = self.independentSteps + self.sequentialSteps + self.finalizationSteps
@@ -170,7 +170,6 @@ class Pipeline:
                     pickle.dump(self, open('pipeline.pkl', 'wb'))
 
     def run_single_step(self, step, modify_kwargs: dict = None):
-
         if modify_kwargs is not None:
             self.modify_kwargs(modify_kwargs)
 
@@ -228,6 +227,83 @@ class Pipeline:
         self.experiment.__dict__ = kwargs_experiment
         self.scope.__dict__ = kwargs_scope
         self.settings.__dict__ = kwargs_settings
+
+    def get_parameters(self):
+        # inspects each steps main function to see if it has the required parameters
+        no_default_params = []
+        all_params = []
+        for step in self.independentSteps + self.finalizationSteps + self.sequentialSteps:
+            step_func = step.main
+            sig = inspect.signature(step_func)
+            no_default_params.append([param.name for param in sig.parameters.values() if param.default is param.empty])
+            all_params.append([param.name for param in sig.parameters.values()])
+
+        # make the list of lists into a single list
+        no_default_params = [item for sublist in no_default_params for item in sublist]
+        all_params = [item for sublist in all_params for item in sublist]
+
+        # make the list unique
+        no_default_params = list(set(no_default_params))
+        all_params = list(set(all_params))
+
+        self.no_default_params = no_default_params
+        self.all_params = all_params
+
+
+class MultiPipeline:
+    """
+    Goal: To handle multiple pipelines and link them together to acheive more complicated tasks
+
+    Given: 
+    - A list of pipelines
+    - A list of Datasets
+    
+    How:
+    - Each pipeline will be run in sequence with all datasets
+    - The calculated parameters will be saved
+    - The prameters will be averaged and passed to the next pipeline in the sequence
+    """
+
+    def __init__(self, pipelines: list, datasets_locations: list):
+        self.pipelines = pipelines
+        self.datasets_locations = datasets_locations
+        self.saved_results = {}
+    
+
+    def run(self):
+        # run each pipeline with each dataset
+        for p, pipeline in enumerate(self.pipelines):
+
+            pipeline.clear_data()
+            for dataset_loc in self.datasets_locations:
+                pipeline.set_dataset(dataset_loc)
+                pipeline.execute_independent_steps()
+                pipeline.execute_sequential_steps()
+                pipeline.execute_finalization_steps()
+                pipeline.save_outputs()
+            
+            self.average_parameters(pipeline)
+
+            self.load_results(self.pipelines[p+1])
+
+
+
+
+
+class DataCatastaphous:
+    """
+    Goal: To handle multiple pipelines and link them together to acheive more complicated tasks
+
+    How:
+    - Each pipeline will be run in sequence
+    - The outputs of each pipeline will be stored in a dictionary of location
+    - Parameters from previous steps will be passed to the next pipeline
+    - 
+    
+    """
+    def __init__(self):
+        pass
+
 
 
 
