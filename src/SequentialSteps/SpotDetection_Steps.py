@@ -13,11 +13,149 @@ import pathlib
 from bigfish import stack, detection, multistack, plot
 import trackpy as tp
 import tifffile
+from abc import abstractmethod
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler
 from src.Util import Plots, SpotDetection
+
+#%% Output Classes
+class SpotDetectionOutputClass(StepOutputsClass):
+    def __init__(self, df_cellresults, df_spotresults, df_clusterresults):
+        self.df_cellresults = df_cellresults
+        self.df_spotresults = df_spotresults
+        self.df_clusterresults = df_clusterresults
+
+    def append(self, newOutput):
+        self.img_id = [*self.img_id, *newOutput.img_id]
+    
+        if self.df_cellresults is None:
+            self.df_cellresults = newOutput.df_cellresults
+        else:
+            self.df_cellresults = pd.concat([self.df_cellresults, newOutput.df_cellresults])
+
+        self.df_spotresults = pd.concat([self.df_spotresults, newOutput.df_spotresults])
+        self.df_clusterresults = pd.concat([self.df_clusterresults, newOutput.df_clusterresults])
+
+
+#%% Abstract Class
+class SpotDetection(SequentialStepsClass):
+
+    def main(self, image, masks, nucChannel, cytoChannel, FISHChannel, **kwargs) -> SpotDetectionOutputClass:
+        spots, clusters = self.get_detected_spots(**kwargs)
+        spots, clusters = self.get_spot_properties(spots, clusters, **kwargs)
+        cell_results = self.extract_cell_level_results(spots, clusters, masks)
+        return SpotDetectionOutputClass(cell_results, spots, clusters)
+
+
+    @abstractmethod
+    def get_detected_spots(self, **kwargs) -> pd.DataFrame:
+        pass
+
+    def get_spot_properties(self, **kwargs) -> pd.DataFrame:
+        pass
+
+    def extract_cell_level_results(self, spots, clusters, masks) -> pd.DataFrame:
+        pass
+                # convert masks to max projection
+        if nuc_label is not None and len(nuc_label.shape) != 2:
+            nuc_label = np.max(nuc_label, axis=0)
+        if cell_label is not None and len(cell_label.shape) != 2:
+            cell_label = np.max(cell_label, axis=0)
+
+        # remove transcription sites
+        spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
+        if verbose:
+            print("detected spots (without transcription sites)")
+            print("\r shape: {0}".format(spots_no_ts.shape))
+            print("\r dtype: {0}".format(spots_no_ts.dtype))
+
+        # get spots inside and outside nuclei
+        spots_in, spots_out = multistack.identify_objects_in_region(nuc_label, spots, ndim=3)
+        if verbose:
+            print("detected spots (inside nuclei)")
+            print("\r shape: {0}".format(spots_in.shape))
+            print("\r dtype: {0}".format(spots_in.dtype), "\n")
+            print("detected spots (outside nuclei)")
+            print("\r shape: {0}".format(spots_out.shape))
+            print("\r dtype: {0}".format(spots_out.dtype))
+
+        # # Extract cells and associated spots
+        # image_contrasted = np.max(rna, axis=0) if len(rna.shape) == 3 else rna
+        # image_contrasted = stack.rescale(image_contrasted,channel_to_stretch=None)
+        # print(image_contrasted.shape)
+
+
+        # extract fov results
+        other_images = {}
+        other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
+        fov_results = multistack.extract_cell(
+            cell_label=cell_label.astype("uint16") if cell_label is not None else nuc_label.astype("uint16"),
+            ndim=3,
+            nuc_label=nuc_label.astype("uint16"),
+            rna_coord=spots_no_ts,
+            others_coord={"foci": foci, "transcription_site": ts},
+            image=np.max(rna, axis=0).astype("uint16"),
+            others_image=other_images,)
+        if verbose:
+            print("number of cells identified: {0}".format(len(fov_results)))
+
+        # cycle through cells and save the results
+        for i, cell_results in enumerate(fov_results):
+            # get cell results
+            cell_mask = cell_results["cell_mask"]
+            cell_coord = cell_results["cell_coord"]
+            nuc_mask = cell_results["nuc_mask"]
+            nuc_coord = cell_results["nuc_coord"]
+            rna_coord = cell_results["rna_coord"]
+            foci_coord = cell_results["foci"]
+            ts_coord = cell_results["transcription_site"]
+            image_contrasted = cell_results["image"]
+            
+            if verbose:
+                print("cell {0}".format(i))
+                print("\r number of rna {0}".format(len(rna_coord)))
+                print("\r number of foci {0}".format(len(foci_coord)))
+                print("\r number of transcription sites {0}".format(len(ts_coord)))
+
+            # plot individual cells
+            if display_plots:
+                plot.plot_cell(
+                    ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
+                    rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
+                    image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask, rescale=True, contrast=True,
+                    title="Cell {0}".format(i), 
+                    path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
+
+        df = multistack.summarize_extraction_results(fov_results, ndim=3)
+        return df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #%% Useful Functions
 def add_indepenedent_params_to_df(df, independent_params):
@@ -182,51 +320,9 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius, display_plots: bool
     return snr_spots, max_signals
 
 
-#%% Output Classes
-class SpotDetectionOutputClass(StepOutputsClass):
-    def __init__(self, img_id, df_cellresults, df_spotresults, df_clusterresults):
-        self.img_id = [img_id]
-        self.df_cellresults = df_cellresults
-        self.df_spotresults = df_spotresults
-        self.df_clusterresults = df_clusterresults
-
-    def append(self, newOutput):
-        self.img_id = [*self.img_id, *newOutput.img_id]
-    
-        if self.df_cellresults is None:
-            self.df_cellresults = newOutput.df_cellresults
-        else:
-            self.df_cellresults = pd.concat([self.df_cellresults, newOutput.df_cellresults])
-
-        self.df_spotresults = pd.concat([self.df_spotresults, newOutput.df_spotresults])
-        self.df_clusterresults = pd.concat([self.df_clusterresults, newOutput.df_clusterresults])
 
 
-class SpotDetectionStepOutputClass(StepOutputsClass):
-    def __init__(self, id, individual_threshold_spot_detection, avg_number_of_spots_per_cell_each_ch, dfFISH):
-        self.individual_threshold_spot_detection = [individual_threshold_spot_detection]
-        self.img_id = [id]
-        self.avg_number_of_spots_per_cell_each_ch = [avg_number_of_spots_per_cell_each_ch]
-        self.dfFISH = dfFISH
-
-    def append(self, newOutputs):
-        self.individual_threshold_spot_detection = self.individual_threshold_spot_detection + newOutputs.individual_threshold_spot_detection
-        self.img_id = self.img_id + newOutputs.img_id
-        self.avg_number_of_spots_per_cell_each_ch = self.avg_number_of_spots_per_cell_each_ch + newOutputs.avg_number_of_spots_per_cell_each_ch
-        self.dfFISH = newOutputs.dfFISH  # I believe it does this in place :(
-
-
-class Trackpy_SpotDetection_Output(StepOutputsClass):
-    def __init__(self, id, trackpy_features):
-        super().__init__()
-        self.id = [id]
-        self.trackpy_features = trackpy_features
-
-    def append(self, newOutput):
-        self.id = [*self.id, *newOutput.id]
-        self.trackpy_features = pd.concat([self.trackpy_features, newOutput.trackpy_features])
-
-class illumination_correction_output(StepOutputsClass):
+class illumination_correction_output(StepOutputsClass): # TODO: move this thing
     def __init__(self, id, corrected_image):
         super().__init__()
         self.id = [id]
@@ -238,7 +334,7 @@ class illumination_correction_output(StepOutputsClass):
 
 
 #%% Step Classes
-class BIGFISH_SpotDetection(SequentialStepsClass):
+class BIGFISH_SpotDetection(SpotDetection):
     """
     A class for detecting RNA spots in FISH images using the BIGFISH library.
     Methods
@@ -573,80 +669,6 @@ class BIGFISH_SpotDetection(SequentialStepsClass):
                                     path_output=os.path.join(self.step_output_dir, f'cluster_{self.image_name}') if self.step_output_dir is not None else None)
         return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx
 
-    def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
-        # convert masks to max projection
-        if nuc_label is not None and len(nuc_label.shape) != 2:
-            nuc_label = np.max(nuc_label, axis=0)
-        if cell_label is not None and len(cell_label.shape) != 2:
-            cell_label = np.max(cell_label, axis=0)
-
-        # remove transcription sites
-        spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
-        if verbose:
-            print("detected spots (without transcription sites)")
-            print("\r shape: {0}".format(spots_no_ts.shape))
-            print("\r dtype: {0}".format(spots_no_ts.dtype))
-
-        # get spots inside and outside nuclei
-        spots_in, spots_out = multistack.identify_objects_in_region(nuc_label, spots, ndim=3)
-        if verbose:
-            print("detected spots (inside nuclei)")
-            print("\r shape: {0}".format(spots_in.shape))
-            print("\r dtype: {0}".format(spots_in.dtype), "\n")
-            print("detected spots (outside nuclei)")
-            print("\r shape: {0}".format(spots_out.shape))
-            print("\r dtype: {0}".format(spots_out.dtype))
-
-        # # Extract cells and associated spots
-        # image_contrasted = np.max(rna, axis=0) if len(rna.shape) == 3 else rna
-        # image_contrasted = stack.rescale(image_contrasted,channel_to_stretch=None)
-        # print(image_contrasted.shape)
-
-
-        # extract fov results
-        other_images = {}
-        other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
-        fov_results = multistack.extract_cell(
-            cell_label=cell_label.astype("uint16") if cell_label is not None else nuc_label.astype("uint16"),
-            ndim=3,
-            nuc_label=nuc_label.astype("uint16"),
-            rna_coord=spots_no_ts,
-            others_coord={"foci": foci, "transcription_site": ts},
-            image=np.max(rna, axis=0).astype("uint16"),
-            others_image=other_images,)
-        if verbose:
-            print("number of cells identified: {0}".format(len(fov_results)))
-
-        # cycle through cells and save the results
-        for i, cell_results in enumerate(fov_results):
-            # get cell results
-            cell_mask = cell_results["cell_mask"]
-            cell_coord = cell_results["cell_coord"]
-            nuc_mask = cell_results["nuc_mask"]
-            nuc_coord = cell_results["nuc_coord"]
-            rna_coord = cell_results["rna_coord"]
-            foci_coord = cell_results["foci"]
-            ts_coord = cell_results["transcription_site"]
-            image_contrasted = cell_results["image"]
-            
-            if verbose:
-                print("cell {0}".format(i))
-                print("\r number of rna {0}".format(len(rna_coord)))
-                print("\r number of foci {0}".format(len(foci_coord)))
-                print("\r number of transcription sites {0}".format(len(ts_coord)))
-
-            # plot individual cells
-            if display_plots:
-                plot.plot_cell(
-                    ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
-                    rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
-                    image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask, rescale=True, contrast=True,
-                    title="Cell {0}".format(i), 
-                    path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
-
-        df = multistack.summarize_extraction_results(fov_results, ndim=3)
-        return df
-
     def get_spot_properties(self, rna, spot, voxel_size_yx, voxel_size_z, spot_yx, spot_z):
         pass
 
@@ -854,201 +876,134 @@ class TrackPy_SpotDetection(SequentialStepsClass):
         output = Trackpy_SpotDetection_Output(id=id, trackpy_features=trackpy_features)
         return output
     
-    def extract_cell_level_results(self, spots, clusters, nuc_label, cell_label, rna, nuc, verbose, display_plots):
-        # convert masks to max projection
-        if nuc_label is not None and len(nuc_label.shape) != 2:
-            nuc_label = np.max(nuc_label, axis=0)
-        if cell_label is not None and len(cell_label.shape) != 2:
-            cell_label = np.max(cell_label, axis=0)
 
-        # remove transcription sites
-        spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_label, ndim=3)
-        if verbose:
-            print("detected spots (without transcription sites)")
-            print("\r shape: {0}".format(spots_no_ts.shape))
-            print("\r dtype: {0}".format(spots_no_ts.dtype))
+# class SpotDetectionStepClass_Luis(SequentialStepsClass):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-        # get spots inside and outside nuclei
-        spots_in, spots_out = multistack.identify_objects_in_region(nuc_label, spots, ndim=3)
-        if verbose:
-            print("detected spots (inside nuclei)")
-            print("\r shape: {0}".format(spots_in.shape))
-            print("\r dtype: {0}".format(spots_in.dtype), "\n")
-            print("detected spots (outside nuclei)")
-            print("\r shape: {0}".format(spots_out.shape))
-            print("\r dtype: {0}".format(spots_out.dtype))
+#     def main(self,
+#              id: int,
+#              list_images: list[np.array],
+#              cytoChannel: list[int],
+#              nucChannel: list[int],
+#              FISHChannel: list[int],
+#              list_image_names: list,
+#              temp_folder_name: Union[str, pathlib.Path],
+#              threshold_for_spot_detection: float,
+#              segmentation_successful: list[bool],
+#              CLUSTER_RADIUS: float,
+#              minimum_spots_cluster: float,
+#              list_cell_masks: list[np.array],
+#              list_nuc_masks: list[np.array],
+#              list_cyto_masks: list[np.array],
+#              voxel_size_z: float,
+#              voxel_size_yx: float,
+#              psf_z: float,
+#              psf_yx: float,
+#              save_all_images: bool,
+#              filtered_folder_name: Union[str, pathlib.Path],
+#              show_plots: bool = True,
+#              display_spots_on_multiple_z_planes: bool = False,
+#              use_log_filter_for_spot_detection: bool = False,
+#              save_files: bool = True,
+#              **kwargs) -> SpotDetectionStepOutputClass:
 
-        # extract fov results
-        other_images = {}
-        other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
-        fov_results = multistack.extract_cell(
-            cell_label=cell_label.astype("uint16") if cell_label is not None else nuc_label.astype("uint16"),
-            ndim=3,
-            nuc_label=nuc_label.astype("uint16"),
-            rna_coord=spots_no_ts,
-            others_coord={"foci": foci, "transcription_site": ts},
-            image=np.max(rna, axis=0).astype("uint16"),
-            others_image=other_images,)
-        if verbose:
-            print("number of cells identified: {0}".format(len(fov_results)))
+#         img = list_images[id]
+#         list_cell_masks = list_cell_masks[id]
+#         list_nuc_masks = list_nuc_masks[id]
+#         list_cyto_masks = list_cyto_masks[id]
+#         file_name = list_image_names[id]
+#         temp_folder_name = temp_folder_name
+#         segmentation_successful = segmentation_successful[id]
+#         list_voxels = [voxel_size_z, voxel_size_yx]
+#         list_psfs = [psf_z, psf_yx]
 
-        # cycle through cells and save the results
-        for i, cell_results in enumerate(fov_results):
-            # get cell results
-            cell_mask = cell_results["cell_mask"]
-            cell_coord = cell_results["cell_coord"]
-            nuc_mask = cell_results["nuc_mask"]
-            nuc_coord = cell_results["nuc_coord"]
-            rna_coord = cell_results["rna_coord"]
-            foci_coord = cell_results["foci"]
-            ts_coord = cell_results["transcription_site"]
-            image_contrasted = cell_results["image"]
-            if verbose:
-                print("cell {0}".format(i))
-                print("\r number of rna {0}".format(len(rna_coord)))
-                print("\r number of foci {0}".format(len(foci_coord)))
-                print("\r number of transcription sites {0}".format(len(ts_coord)))
+#         temp_file_name = file_name[:file_name.rfind(
+#             '.')]  # slicing the name of the file. Removing after finding '.' in the string.
+#         temp_original_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
+#                                                                     'ori_' + temp_file_name + '.png')
 
-            # plot individual cells
-            if display_plots:
-                plot.plot_cell(
-                    ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
-                    rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
-                    image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask,
-                    title="Cell {0}".format(i), 
-                    path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
+#         temp_segmentation_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
+#                                                                         'seg_' + temp_file_name + '.png')
+#         # Modified Luis's Code
+#         if segmentation_successful:
+#             temp_detection_img_name = pathlib.Path().absolute().joinpath(temp_folder_name, 'det_' + temp_file_name)
+#             dataframe_FISH, list_fish_images, thresholds_spot_detection = (
+#                 SpotDetection(img,
+#                               FISHChannel,
+#                               cytoChannel,
+#                               nucChannel,
+#                               cluster_radius=CLUSTER_RADIUS,
+#                               minimum_spots_cluster=minimum_spots_cluster,
+#                               list_cell_masks=list_cell_masks,
+#                               list_nuc_masks=list_nuc_masks,
+#                               list_cyto_masks_no_nuclei=list_cyto_masks,
+#                               dataframe=self.dataframe,
+#                               image_counter=id,
+#                               list_voxels=list_voxels,
+#                               list_psfs=list_psfs,
+#                               show_plots=show_plots,
+#                               image_name=temp_detection_img_name,
+#                               save_all_images=save_all_images,
+#                               display_spots_on_multiple_z_planes=display_spots_on_multiple_z_planes,
+#                               use_log_filter_for_spot_detection=use_log_filter_for_spot_detection,
+#                               threshold_for_spot_detection=threshold_for_spot_detection,
+#                               save_files=save_files,
+#                               **kwargs).get_dataframe())
 
-        df = multistack.summarize_extraction_results(fov_results, ndim=3)
-        return df
+#             self.dataframe = dataframe_FISH
+#             # print(dataframe)
 
+#             print('    Intensity threshold for spot detection : ', str(thresholds_spot_detection))
+#             # Create the image with labels.
+#             df_test = self.dataframe.loc[self.dataframe['image_id'] == id]
+#             test_cells_ids = np.unique(df_test['cell_id'].values)
+#             # Saving the average number of spots per cell
+#             list_number_of_spots_per_cell_for_each_spot_type = []
+#             list_max_number_of_spots_per_cell_for_each_spot_type = []
+#             for sp in range(len(FISHChannel)):
+#                 detected_spots = np.asarray([len(self.dataframe.loc[(self.dataframe['cell_id'] == cell_id_test) & (
+#                         self.dataframe['spot_type'] == sp) & (self.dataframe['is_cell_fragmented'] != -1)].spot_id)
+#                                              for i, cell_id_test in enumerate(test_cells_ids)])
+#                 average_number_of_spots_per_cell = int(np.mean(detected_spots))
+#                 max_number_of_spots_per_cell = int(np.max(detected_spots))
+#                 list_number_of_spots_per_cell_for_each_spot_type.append(average_number_of_spots_per_cell)
+#                 list_max_number_of_spots_per_cell_for_each_spot_type.append(max_number_of_spots_per_cell)
+#             print('    Average detected spots per cell :        ', list_number_of_spots_per_cell_for_each_spot_type)
+#             print('    Maximum detected spots per cell :        ', list_max_number_of_spots_per_cell_for_each_spot_type)
+#             #list_average_spots_per_cell.append(list_number_of_spots_per_cell_for_each_spot_type)
+#             # saving FISH images
+#             if save_all_images:
+#                 for j in range(len(FISHChannel)):
+#                     filtered_image_path = pathlib.Path().absolute().joinpath(filtered_folder_name, 'filter_Ch_' + str(
+#                         FISHChannel[j]) + '_' + temp_file_name + '.tif')
+#                     tifffile.imwrite(filtered_image_path, list_fish_images[j])
+#             # Create the image with labels.
+#             df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == id]
+#             df_labels = df_subset.drop_duplicates(subset=['cell_id'])
+#             # Plotting cells 
+#             if save_files:
+#                 Plots().plotting_masks_and_original_image(image=img,
+#                                                           list_cell_masks=list_cell_masks,
+#                                                           list_nuc_masks=list_nuc_masks,
+#                                                           channels_with_cytosol=cytoChannel,
+#                                                           channels_with_nucleus=nucChannel,
+#                                                           image_name=temp_segmentation_img_name,
+#                                                           show_plots=show_plots,
+#                                                           df_labels=df_labels)
+#             # del list_cell_masks, list_nuc_masks, list_cyto_masks_no_nuclei, list_fish_images,df_subset,df_labels
+#         else:
+#             raise Exception('Segmentation was not successful, so spot detection was not performed.')
 
-class SpotDetectionStepClass_Luis(SequentialStepsClass):
-    def __init__(self) -> None:
-        super().__init__()
+#         # OUTPUTS:
+#         output = SpotDetectionStepOutputClass(id=id,
+#                                               individual_threshold_spot_detection=thresholds_spot_detection,
+#                                               avg_number_of_spots_per_cell_each_ch=list_number_of_spots_per_cell_for_each_spot_type,
+#                                               dfFISH=self.dataframe)
+#         return output
 
-    def main(self,
-             id: int,
-             list_images: list[np.array],
-             cytoChannel: list[int],
-             nucChannel: list[int],
-             FISHChannel: list[int],
-             list_image_names: list,
-             temp_folder_name: Union[str, pathlib.Path],
-             threshold_for_spot_detection: float,
-             segmentation_successful: list[bool],
-             CLUSTER_RADIUS: float,
-             minimum_spots_cluster: float,
-             list_cell_masks: list[np.array],
-             list_nuc_masks: list[np.array],
-             list_cyto_masks: list[np.array],
-             voxel_size_z: float,
-             voxel_size_yx: float,
-             psf_z: float,
-             psf_yx: float,
-             save_all_images: bool,
-             filtered_folder_name: Union[str, pathlib.Path],
-             show_plots: bool = True,
-             display_spots_on_multiple_z_planes: bool = False,
-             use_log_filter_for_spot_detection: bool = False,
-             save_files: bool = True,
-             **kwargs) -> SpotDetectionStepOutputClass:
-
-        img = list_images[id]
-        list_cell_masks = list_cell_masks[id]
-        list_nuc_masks = list_nuc_masks[id]
-        list_cyto_masks = list_cyto_masks[id]
-        file_name = list_image_names[id]
-        temp_folder_name = temp_folder_name
-        segmentation_successful = segmentation_successful[id]
-        list_voxels = [voxel_size_z, voxel_size_yx]
-        list_psfs = [psf_z, psf_yx]
-
-        temp_file_name = file_name[:file_name.rfind(
-            '.')]  # slicing the name of the file. Removing after finding '.' in the string.
-        temp_original_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
-                                                                    'ori_' + temp_file_name + '.png')
-
-        temp_segmentation_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
-                                                                        'seg_' + temp_file_name + '.png')
-        # Modified Luis's Code
-        if segmentation_successful:
-            temp_detection_img_name = pathlib.Path().absolute().joinpath(temp_folder_name, 'det_' + temp_file_name)
-            dataframe_FISH, list_fish_images, thresholds_spot_detection = (
-                SpotDetection(img,
-                              FISHChannel,
-                              cytoChannel,
-                              nucChannel,
-                              cluster_radius=CLUSTER_RADIUS,
-                              minimum_spots_cluster=minimum_spots_cluster,
-                              list_cell_masks=list_cell_masks,
-                              list_nuc_masks=list_nuc_masks,
-                              list_cyto_masks_no_nuclei=list_cyto_masks,
-                              dataframe=self.dataframe,
-                              image_counter=id,
-                              list_voxels=list_voxels,
-                              list_psfs=list_psfs,
-                              show_plots=show_plots,
-                              image_name=temp_detection_img_name,
-                              save_all_images=save_all_images,
-                              display_spots_on_multiple_z_planes=display_spots_on_multiple_z_planes,
-                              use_log_filter_for_spot_detection=use_log_filter_for_spot_detection,
-                              threshold_for_spot_detection=threshold_for_spot_detection,
-                              save_files=save_files,
-                              **kwargs).get_dataframe())
-
-            self.dataframe = dataframe_FISH
-            # print(dataframe)
-
-            print('    Intensity threshold for spot detection : ', str(thresholds_spot_detection))
-            # Create the image with labels.
-            df_test = self.dataframe.loc[self.dataframe['image_id'] == id]
-            test_cells_ids = np.unique(df_test['cell_id'].values)
-            # Saving the average number of spots per cell
-            list_number_of_spots_per_cell_for_each_spot_type = []
-            list_max_number_of_spots_per_cell_for_each_spot_type = []
-            for sp in range(len(FISHChannel)):
-                detected_spots = np.asarray([len(self.dataframe.loc[(self.dataframe['cell_id'] == cell_id_test) & (
-                        self.dataframe['spot_type'] == sp) & (self.dataframe['is_cell_fragmented'] != -1)].spot_id)
-                                             for i, cell_id_test in enumerate(test_cells_ids)])
-                average_number_of_spots_per_cell = int(np.mean(detected_spots))
-                max_number_of_spots_per_cell = int(np.max(detected_spots))
-                list_number_of_spots_per_cell_for_each_spot_type.append(average_number_of_spots_per_cell)
-                list_max_number_of_spots_per_cell_for_each_spot_type.append(max_number_of_spots_per_cell)
-            print('    Average detected spots per cell :        ', list_number_of_spots_per_cell_for_each_spot_type)
-            print('    Maximum detected spots per cell :        ', list_max_number_of_spots_per_cell_for_each_spot_type)
-            #list_average_spots_per_cell.append(list_number_of_spots_per_cell_for_each_spot_type)
-            # saving FISH images
-            if save_all_images:
-                for j in range(len(FISHChannel)):
-                    filtered_image_path = pathlib.Path().absolute().joinpath(filtered_folder_name, 'filter_Ch_' + str(
-                        FISHChannel[j]) + '_' + temp_file_name + '.tif')
-                    tifffile.imwrite(filtered_image_path, list_fish_images[j])
-            # Create the image with labels.
-            df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == id]
-            df_labels = df_subset.drop_duplicates(subset=['cell_id'])
-            # Plotting cells 
-            if save_files:
-                Plots().plotting_masks_and_original_image(image=img,
-                                                          list_cell_masks=list_cell_masks,
-                                                          list_nuc_masks=list_nuc_masks,
-                                                          channels_with_cytosol=cytoChannel,
-                                                          channels_with_nucleus=nucChannel,
-                                                          image_name=temp_segmentation_img_name,
-                                                          show_plots=show_plots,
-                                                          df_labels=df_labels)
-            # del list_cell_masks, list_nuc_masks, list_cyto_masks_no_nuclei, list_fish_images,df_subset,df_labels
-        else:
-            raise Exception('Segmentation was not successful, so spot detection was not performed.')
-
-        # OUTPUTS:
-        output = SpotDetectionStepOutputClass(id=id,
-                                              individual_threshold_spot_detection=thresholds_spot_detection,
-                                              avg_number_of_spots_per_cell_each_ch=list_number_of_spots_per_cell_for_each_spot_type,
-                                              dfFISH=self.dataframe)
-        return output
-
-    def first_run(self, id):
-        self.dataframe = None
+#     def first_run(self, id):
+#         self.dataframe = None
 
 
 
