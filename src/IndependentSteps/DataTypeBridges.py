@@ -67,6 +67,7 @@ class DataTypeBridge(IndependentStepClass):
         H5_location = os.path.join(location, H5_name)
         f = h5py.File(H5_location, 'r')
         images = da.from_array(f['raw_images'])
+        images = images.rechunk((1, 1, -1, -1, -1, -1))
         
         masks = None
         if load_in_mask:

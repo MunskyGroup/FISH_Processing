@@ -112,3 +112,8 @@ Pipelines/Standard_Pipeline/settings.txt
 *.png
 config_nas.yml
 config_cluster.yml
+*.zip
+*.h5
+*.sld
+*.tif
+*.log

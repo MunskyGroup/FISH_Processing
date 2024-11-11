@@ -82,8 +82,6 @@ class Parameters(ABC):
     def validate_parameters(self):
         pass
 
-    # def todict(self): # TODO I dont know why this no longer works but we have a fix
-    #     return self.__dict__
     def todict(self):
         return {field.name: getattr(self, field.name) for field in fields(self)}
 
@@ -142,7 +140,6 @@ class Experiment(Parameters):
 
     """
     initial_data_location: str = field(default=None, repr=False)
-    number_of_images_to_process: int = None  # This will be all images to process and will be the product of the number of tp and number of FOVs
     index_dict: dict = None
     nucChannel: int = None
     cytoChannel: int = None
@@ -156,6 +153,23 @@ class Experiment(Parameters):
         if kwargs is not None:
             for key, value in kwargs.items():
                 setattr(self, key, value)
+
+    def validate_parameters(self):
+        if self.initial_data_location is None:
+            raise ValueError("initial_data_location must be set")
+        
+        if self.nucChannel is None:
+            print("nucChannel not set")
+
+        if self.cytoChannel is None:
+            print("cytoChannel not set")
+
+        if self.FISHChannel is None:
+            print("FISHChannel not set")
+
+        
+        
+
 
 
 @dataclass

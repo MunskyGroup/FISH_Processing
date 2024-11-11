@@ -24,10 +24,9 @@ class StepClass(ABC):
         no_default_params = []
         all_params = []
         for step in steps:
-            step_func = step.main
-            sig = inspect.signature(step_func)
-            no_default_params.append([param.name for param in sig.parameters.values() if param.default is param.empty])
-            all_params.append([param.name for param in sig.parameters.values()])
+            _1, _2 = step.get_paramaters()
+            no_default_params.extend(_1)
+            all_params.extend(_2)
 
         return list(set(no_default_params)), list(set(all_params))
     
@@ -37,7 +36,7 @@ class StepClass(ABC):
     def __str__(self):
         return self.__class__.__name__
 
-    def load_in_attributes(self, id: int = None):
+    def load_in_attributes(self, t: int = None, p: int = None):
         """
         This is where the magic happens. This function will load in all the attributes of the class and return them as a dictionary.
         This allows all the bs that I decided to force on my code to not matter, and user can just write whatever they want in the main functions
@@ -45,26 +44,26 @@ class StepClass(ABC):
         """
 
         params = Parameters.get_parameters()
-        
+        if t is None != p is None:
+            raise ValueError('t and p must be both None or both not None')
 
-        if id is not None: # TODO This will need to be changed for Dask arrays
-            params[id] =  id
-            params['image'] = self.data.list_images[id]
-            params['image_name'] = os.path.splitext(self.data.list_image_names[id])[0]
+        if t is not None and p is not None: # TODO This will need to be changed for Dask arrays
+            params['fov'] = p
+            params['timepoint'] = t
+            params['image'] = self.data.images[p, t, :, :, :, :]
             try:
-                params['cell_mask'] = self.data.masks_complete_cells[id]
+                params['cell_mask'] = self.params.masks[p, t, params['cytoChannel'], :, :, :] if self.params.masks.shape[1] > 1 else self.params.masks[p, 0, params['cytoChannel'], :, :, :]
             except AttributeError:
                 params['cell_mask'] = None
             try:
-                params['nuc_mask'] = self.data.masks_nuclei[id]
+                params['nuc_mask'] = self.params.masks[p, t, params['nucChannel'], :, :, :] if self.params.masks.shape[1] > 1 else self.params.masks[p, 0, params['nucChannel'], :, :, :]
             except AttributeError:
                 params['nuc_mask'] = None
-            try:
-                params['cyto_mask'] = self.data.masks_cytosol[id]
-            except AttributeError:
-                params['cyto_mask'] = None
+
+            if params['cell_mask'] is not None and params['nuc_mask'] is not None:
+                params['cyto_mask'] = params['cell_mask']
+                params['cyto_mask'][params['nuc_mask'] >= 1] = 0
         
-        print(params)
         return params
     
     def create_step_output_dir(self, output_location = None, **kwargs):
@@ -74,50 +73,113 @@ class StepClass(ABC):
         else:
             self.step_output_dir = None
 
+    def get_paramaters(self):
+            step_func = self.main
+            sig = inspect.signature(step_func)
+            no_default_params = [param.name for param in sig.parameters.values() if param.default is param.empty]
+            all_params = [param.name for param in sig.parameters.values()]
+            return no_default_params, all_params
+    
     @abstractmethod
     def main(self, **kwargs):
         pass
 
-    def run(self, id: int = None):
-        kwargs = self.load_in_attributes(id)
+    def run(self, p: int = None, t:int = None):
+        kwargs = self.load_in_attributes(p, t)
         return self.main(**kwargs) 
 
 class SequentialStepsClass(StepClass):
+    order = 'pt'
     _instances = []
+
     def __init__(self):
         super().__init__()
         SequentialStepsClass._instances.append(self)
         self.is_first_run = True
 
     def execute(self):
-        self.num_chunks_to_run = Parameters.get_parameters()['num_chunks_to_run']
-        for id in range(self.num_chunks_to_run):
-            for step in SequentialStepsClass._instances:
-                print('++++++++++++++++++++++++++++')
-                print('Running : ', step)
-                print('++++++++++++++++++++++++++++')
-                step.run(id)
-
-    def run(self, id: int = None):
-        self.num_chunks_to_run = Parameters.get_parameters()['num_chunks_to_run']
-        if id is None:  # allows for pipelineSteps to be run a pre or postPipeline
-            for id in range(self.num_chunks_to_run):
-                print('')
-                print(' ###################### ')
-                print('        IMAGE : ' + str(id))
-                print(' ###################### ')
-                params = self.load_in_attributes(id)
-                self.create_step_output_dir(**params)
-                self.on_first_run(id)
-                output = self.main(**params)
+        params = Parameters.get_parameters()
+        number_of_chunks = params['num_chunks_to_run']
+        count = 0
+        if SequentialStepsClass.order == 'tp':
+            for t in range(params['images'].shape[1]):
+                for p in range(params['images'].shape[0]):
+                    print(' ###################### ')
+                    print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
+                    print(' ###################### ')
+                    print('')
+                    for step in SequentialStepsClass._instances:
+                        print('++++++++++++++++++++++++++++')
+                        print('Running : ', step)
+                        print('++++++++++++++++++++++++++++')
+                        step.run(p, t)
+                    count += 1
+                    if count >= number_of_chunks:
+                        break
+        elif SequentialStepsClass.order == 'pt':
+            for p in range(params['images'].shape[0]):
+                for t in range(params['images'].shape[1]):
+                    print(' ###################### ')
+                    print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
+                    print(' ###################### ')
+                    print('')
+                    for step in SequentialStepsClass._instances:
+                        print('++++++++++++++++++++++++++++')
+                        print('Running : ', step)
+                        print('++++++++++++++++++++++++++++')
+                        step.run(p, t)
+                    count += 1
+                    if count >= number_of_chunks:
+                        break
         else:
+            raise ValueError('Order must be either "pt" or "tp"')
+
+    def run(self, p:int = None, t:int = None):
+        if p is None and t is None:
+            number_of_chunks = Parameters.get_parameters()['num_chunks_to_run']
+            count = 0
+            if SequentialStepsClass.order == 'tp':
+                print('++++++++++++++++++++++++++++')
+                print('Running : ', self)
+                print('++++++++++++++++++++++++++++')
+                print('')
+                for t in range(params['images'].shape[1]):
+                    for p in range(params['images'].shape[0]):
+                        print(' ###################### ')
+                        print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
+                        print(' ###################### ')
+                        params = self.load_in_attributes(p, t)
+                        self.create_step_output_dir(**params)
+                        self.on_first_run()
+                        output = self.main(**params)
+                        count += 1
+                        if count >= number_of_chunks:
+                            break
+            elif SequentialStepsClass.order == 'pt':
+                print('++++++++++++++++++++++++++++')
+                print('Running : ', self)
+                print('++++++++++++++++++++++++++++')
+                print('')
+                for p in range(params['images'].shape[0]):
+                    for t in range(params['images'].shape[1]):
+                        print(' ###################### ')
+                        print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
+                        print(' ###################### ')
+                        params = self.load_in_attributes(p, t)
+                        self.create_step_output_dir(**params)
+                        self.on_first_run()
+                        output = self.main(**params)
+                        count += 1
+                        if count >= number_of_chunks:
+                            break
+        elif p is not None and t is not None:
             print('')
             print(' ###################### ')
-            print('        IMAGE : ' + str(id))
+            print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
             print(' ###################### ')
-            params = self.load_in_attributes(id)
+            params = self.load_in_attributes(p, t)
             self.create_step_output_dir(**params)
-            self.on_first_run(id)
+            self.on_first_run()
             output = self.main(**params)
         
         return output
@@ -125,16 +187,16 @@ class SequentialStepsClass(StepClass):
     def main(self, **kwargs):
         pass
 
-    def on_first_run(self, id: int):
+    def on_first_run(self):
         if self.is_first_run:
-            self.first_run(id)
+            self.first_run()
             self.is_first_run = False
             return True
         else:
             return False
     
     @abstractmethod
-    def first_run(self, id: int):
+    def first_run(self):
         pass
 
 class FinalizingStepClass(StepClass):
