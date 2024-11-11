@@ -12,12 +12,9 @@ __version__ = "0.0.1"
 
 #Importing modules
 
-from .PipelineSettings import Settings
-from .Experiment import Experiment #ExperimentClass
-from .Microscope import ScopeClass
-from .GeneralStep import StepClass, SequentialStepsClass, finalizingStepClass, IndependentStepClass   #GeneralStepClasses
+from .Parameters import Settings, Experiment, ScopeClass, DataContainer
+from .GeneralStep import StepClass, SequentialStepsClass, FinalizingStepClass, IndependentStepClass   #GeneralStepClasses
 from .GeneralOutput import OutputClass, StepOutputsClass, PipelineOutputsClass, PrePipelineOutputsClass # GeneralOutputClasses
-from .DataContainer import DataContainer
 from .Pipeline import Pipeline
 from .SingleStepCompiler import SingleStepCompiler
 from .Send_To_Cluster import run_on_cluster

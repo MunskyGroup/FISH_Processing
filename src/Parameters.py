@@ -17,8 +17,6 @@ class Parameters(ABC):
     Alls children class will be singletons and will be stored in the _instances list.
     """
     _instances = []
-    # def __init__(self):
-    #     Parameters._instances.append(self)
 
     def __new__(cls, *args, **kwargs):
         for instance in cls._instances:
@@ -165,7 +163,6 @@ class DataContainer(Parameters):
     local_dataset_location: pathlib.Path = None
     total_num_chunks: int = None
     images: da = None
-    dataset: Dataset = None
     masks: da = None
 
     def __init__(self, **kwargs):

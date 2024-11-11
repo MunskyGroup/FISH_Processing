@@ -16,10 +16,12 @@ class OutputClass(ABC):
         return cls._instances
     
     def __new__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            # If no instance exists, create and store it
-            cls._instances.append(super().__new__(cls))
-        return cls._instances[-1]  # Return the existing instance if it exists
+        for instance in cls._instances:
+            if isinstance(instance, cls):
+                return instance
+        instance = super().__new__(cls)
+        cls._instances.append(instance)
+        return instance
     
     @abstractmethod
     def __init__(self, value=None):

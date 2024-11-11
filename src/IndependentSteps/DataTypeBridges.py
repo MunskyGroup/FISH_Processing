@@ -13,6 +13,9 @@ from dask import array as da
 from ndstorage import NDTiffDataset, NDTiffPyramidDataset
 from ndtiff import Dataset
 
+import h5py
+import json
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -40,91 +43,41 @@ class DataTypeBridge(IndependentStepClass):
     def __init__(self):
         super().__init__()
 
-    @abstractmethod
     def main(self, initial_data_location, connection_config_location, 
-             download_data_from_NAS, load_in_mask, index_dict: dict = None, 
+             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, index_dict: dict = None, 
              **kwargs):
-        pass
+        h5_name = os.path.basename(initial_data_location) + '.h5'
+        folder = os.path.basename(initial_data_location)
+        self.download_folder_from_NAS(initial_data_location, folder, connection_config_location, download_data_from_NAS)
+        self.convert_folder_to_H5(folder, h5_name, nucChannel, cytoChannel)
+        self.load_in_dataset(folder, h5_name, load_in_mask)
 
     def download_folder_from_NAS(self, remote_folder_path, local_folder_path, connection_config_location, download_data_from_NAS):
         if not os.path.exists(local_folder_path) and download_data_from_NAS:
             nas = NASConnection(pathlib.Path(connection_config_location))
-            os.makedirs(local_folder_path, exist_ok=True)   
+            os.makedirs(local_folder_path, exist_ok=True)
             nas.copy_folder(remote_folder_path=pathlib.Path(remote_folder_path), 
                         local_folder_path=local_folder_path)
 
-    def convert_folder_to_NDTIFF(self, local_folder):
-        pass
+    @abstractmethod
+    def convert_folder_to_H5(self, folder, h5_name, nucChannel, cytoChannel):
+        ...
 
-    def load_in_dataset(self, local_folder_path, load_in_mask, index_dict) -> DataContainer:
-        ds = pycro.Dataset(local_folder_path)
-        images = ds.as_array()
-        if load_in_mask:
-            # find files in folder containing 'masks'
-            mask_files = [f for f in os.listdir(local_folder_path) if 'masks' in f]
-            if len(mask_files) == 0:
-                print('No mask files found in folder')
-
-            if len(mask_files) > 1:
-                raise ValueError('Multiple mask files found in folder. Please ensure only one mask file is present')
-            
-            else:
-                masks = dask_imread.imread(os.path.join(local_folder_path, mask_files[0]))
-
-
-
-        # get the experiment params
-        experiment = None
-        for instance in Parameters.get_parameters():
-            if instance.__class__.__name__ == 'Experiment':
-                experiment = instance
-                break
-        if experiment is None:
-            raise ValueError('Experiment class not found in parameters')
+    def load_in_dataset(self, location, H5_name, load_in_mask) -> DataContainer:
+        H5_location = os.path.join(location, H5_name)
+        f = h5py.File(H5_location, 'r')
+        images = da.from_array(f['raw_images'])
         
-        if index_dict is None:
-            # find the axes of the dataset
-            axes = ds.axes()
-            if 'z' in axes:
-                # find where the len of that axes is equal to the shape of the image
-                z_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['z']]]
-                if len(z_axis) == 0:
-                    raise ValueError('No z axis found in the dataset')
-                if len(z_axis) > 1:
-                    raise ValueError('Cannot destinguish between multiple z axes')
-                z_axis = z_axis[0]
-            if 'time' in axes:
-                time_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['t']]]
-                if len(time_axis) == 0:
-                    raise ValueError('No time axis found in the dataset')
-                if len(time_axis) > 1:
-                    raise ValueError('Cannot destinguish between multiple time axes')
-                time_axis = time_axis[0]
-            if 'channel' in axes:
-                channel_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['c']]]
-                if len(channel_axis) == 0:
-                    raise ValueError('No channel axis found in the dataset')
-                if len(channel_axis) > 1:
-                    raise ValueError('Cannot destinguish between multiple channel axes')
-                channel_axis = channel_axis[0]
-            if 'position' in axes:
-                position_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['p']]]
-                if len(position_axis) == 0:
-                    raise ValueError('No position axis found in the dataset')
-                if len(position_axis) > 1:
-                    raise ValueError('Cannot destinguish between multiple position axes')
-                position_axis = position_axis[0]
+        masks = None
+        if load_in_mask:
+            masks = da.from_array(f['masks'])
 
-            index_dict = {'z': z_axis, 't': time_axis, 'c': channel_axis, 'p': position_axis, 'y': -2, 'x': -1}
-            
-        # this is gonna be the product of the shape of the image at z, c, t, p
-        num_z = images.shape[index_dict['z']] if 'z' in index_dict else 1
-        num_c = images.shape[index_dict['c']] if 'c' in index_dict else 1
-        num_t = images.shape[index_dict['t']] if 't' in index_dict else 1
-        num_p = images.shape[index_dict['p']] if 'p' in index_dict else 1
-        total_num_chuncks = num_z * num_c * num_t * num_p
+        num_chuncks = images.shape[0] * images.shape[1]
 
-        data = DataContainer(local_folder_path, total_num_chuncks, images, ds, masks)
+        data = DataContainer(local_dataset_location = H5_location,
+                            total_num_chunks = num_chuncks,
+                            images = images,
+                            masks = masks)
         return data
         
     def delete_folder(self, folder):
@@ -136,31 +89,24 @@ class Pycromanager2NativeDataType(DataTypeBridge):
     def __init__(self):
         super().__init__()
 
-    def main(self, initial_data_location, connection_config_location, 
-             download_data_from_NAS, load_in_mask, index_dict, **kwargs):
-        local_folder_path = 'Analysis_' + os.path.basename(local_folder_path) + '_' + datetime.now().strftime('%Y-%m-%d')
-        self.download_folder_from_NAS(initial_data_location, local_folder_path, connection_config_location, download_data_from_NAS)
-        self.load_in_dataset(local_folder_path, load_in_mask, index_dict)
+    def convert_folder_to_H5(self, folder, H5_name, nucChannel, cytoChannel):
+        ds = Dataset(folder)
+        
+        imgs = ds.as_array('position', 'time', 'channel', 'z', 'x', 'y')
+
+        da.to_hdf5(os.path.join(folder, H5_name), '/raw_images', imgs)
 
 
 class FFF2NativeDataType(DataTypeBridge):
     def __init__(self):
         super().__init__()
 
-    def main(self, initial_data_location, connection_config_location, 
-             cytoChannel, nucChannel, download_data_from_NAS, load_in_mask, 
-             index_dict: dict = None, **kwargs):
-        temp_folder = 'temp_' + os.path.basename(initial_data_location)
-        local_folder_path = 'Analysis_' + os.path.basename(initial_data_location) + '_' + datetime.now().strftime('%Y-%m-%d')
-        self.download_folder_from_NAS(initial_data_location, temp_folder, connection_config_location, download_data_from_NAS)
-
-        self.convert_folder_to_NDTIFF(temp_folder, local_folder_path, nucChannel, cytoChannel)
-        self.delete_folder(temp_folder)
-
-        self.load_in_dataset(local_folder_path, load_in_mask, index_dict)
-
-    def convert_folder_to_NDTIFF(self, temp_folder, local_folder, nucChannel, cytoChannel): 
-        files = os.listdir(temp_folder)
+    def convert_folder_to_H5(self, folder, H5_name, nucChannel, cytoChannel): 
+        # check if h5 file already exists
+        if os.path.exists(os.path.join(folder, H5_name)):
+            return 'already exists'
+        
+        files = os.listdir(folder)
         tifs = [f for f in files if f.endswith('.tif')]
         logs = [f for f in files if f.endswith('.log')]
         mask_dirs = [f for f in files if f.startswith('masks')]
@@ -168,13 +114,12 @@ class FFF2NativeDataType(DataTypeBridge):
         already_made_masks = False
 
         if len(mask_dirs) > 0:
-            unzipped_mask_dir = [f for f in mask_dirs if os.path.isdir(os.path.join(temp_folder, f))]
             zipped_mask_dir = [f for f in mask_dirs if f.endswith('.zip')]
 
             mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
             if len(zipped_mask_dir) == 1 and len(mask_tifs) == 0:
-                shutil.unpack_archive(os.path.join(temp_folder, zipped_mask_dir[0]), temp_folder)
+                shutil.unpack_archive(os.path.join(folder, zipped_mask_dir[0]), folder)
                 already_made_masks = True
             
             mask_dirs = [f for f in files if f.startswith('masks')]
@@ -189,21 +134,17 @@ class FFF2NativeDataType(DataTypeBridge):
         list_images_names = [f for f in tifs if not f.startswith('masks')]
         list_channels = np.sort(list(set([f.split('_')[-1].split('.')[0] for f in list_images_names])))
         list_roi = np.sort(list(set([f.split('_')[0] for f in list_images_names])))
-        list_names = [f.split('_')[1] for f in list_images_names]
-        z_slices = np.sort(list(set([f.split('_')[2] for f in list_images_names])))
         timepoints = np.sort(list(set([f.split('_')[3] for f in list_images_names])))
 
         number_of_timepoints = len(set(timepoints))
-        number_z_slices = len(set(z_slices))
         number_color_channels = len(set(list_channels))
         number_of_fov = len(set(list_roi))
 
-        number_of_images_to_process = number_of_fov * number_of_timepoints
-
-        os.makedirs(local_folder, exist_ok=True)
+        # os.makedirs(local_folder, exist_ok=True)
         imgs = None
         masks = None
         count = 0
+        img_metadata = {}
         for t in range(number_of_timepoints):
             tp = timepoints[t]
             for r in range(number_of_fov):
@@ -213,50 +154,44 @@ class FFF2NativeDataType(DataTypeBridge):
                     channel = list_channels[c]
                     search_params = [fov, channel, tp]
                     img_name = [f for f in list_images_names if all(v in f for v in search_params)][0]
-                    img = tifffile.imread(os.path.join(temp_folder, img_name))
+                    img = tifffile.imread(os.path.join(folder, img_name))
                     img = da.from_array(img)
                     # make all the image data floats
                     img = img.astype(np.float32)
 
                     search_params = [fov]
                     log_name = [f for f in logs if all(v in f for v in search_params)][0]
-                    with open(os.path.join(temp_folder, log_name), 'r') as f:
+                    with open(os.path.join(folder, log_name), 'r') as f:
                         log = f.readlines()
-                    # img_metadata = {'log': log}
-                    img_metadata = {'testing': 'bullshit'}
+
+                    if fov not in img_metadata:
+                        img_metadata[fov] = {}
+                    img_metadata[fov][tp] = log
 
                     if imgs is None:
                         imgs = da.zeros((number_of_fov, number_of_timepoints, number_color_channels, img.shape[0], img.shape[1], img.shape[2]), dtype=np.float32)
 
                     if masks is None:
-                        masks = da.zeros((number_of_fov, number_of_timepoints, number_color_channels, 1, img.shape[1], img.shape[2]), dtype=np.float32)
-                        # tp = int(''.join(filter(str.isdigit, tp)))
-                        # fov = int(''.join(filter(str.isdigit, fov)))
-                        # channel = int(''.join(filter(str.isdigit, channel)))
-                        # z = z
-
-                        # img_coords = {'time': int(tp), 'channel': int(channel), 'position': int(fov), 'z': int(z)}
-                        
+                        masks = da.zeros((number_of_fov, 1, number_color_channels, 1, img.shape[1], img.shape[2]), dtype=np.float32)
 
                     imgs[r, t, c, :, :, :] = img
 
                     search_params = [fov, tp]
                     if already_made_masks:
                         cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0] if len(mask_cells) > 0 else None
-                        cyto_mask_name = [f for f in mask_cyto if all(v in f for v in search_params)][0] if len(mask_cyto) > 0 else None
                         nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0] if len(mask_nuclei) > 0 else None
                         if cell_mask_name is not None:
-                            masks[r, t, cytoChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(temp_folder, cell_mask_name)))
+                            masks[r, 0, cytoChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(folder, cell_mask_name)))
                         if nuc_mask_name is not None:
-                            masks[r, t, nucChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(temp_folder, nuc_mask_name)))
+                            masks[r, 0, nucChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(folder, nuc_mask_name)))
                     count += 1
 
-        # # save dask arrays
-        # imgs = imgs
-        # masks = masks.compute()
+        da.to_hdf5(os.path.join(folder, H5_name), '/raw_images', imgs)
+        da.to_hdf5(os.path.join(folder, H5_name), '/masks', masks)
 
-        da.to_hdf5(os.path.join(local_folder, 'data.hdf5'), '/images', imgs)
-        da.to_hdf5(os.path.join(local_folder, 'data.hdf5'), '/masks', masks)
+        metadata_str = json.dumps(img_metadata)
+        with h5py.File(os.path.join(folder, H5_name), 'a') as h5f:
+            h5f.create_dataset(f'/metadata', data=metadata_str)
 
                 
 
@@ -265,9 +200,10 @@ class FFF2NativeDataType(DataTypeBridge):
 
 
 if __name__ == '__main__':
-    from src import Experiment, Settings, ScopeClass, DataContainer
+    from src import Experiment, Settings, ScopeClass, DataContainer, Parameters
+    import matplotlib.pyplot as plt
     experiment = Experiment(nucChannel=0, cytoChannel=1)
-    settings = Settings()
+    settings = Settings(load_in_mask=True)
     scope = ScopeClass()
     data = DataContainer()
 
@@ -275,6 +211,13 @@ if __name__ == '__main__':
 
     FFF2NativeDataType().run()
 
+    print(data.images.shape)
+    print(data.masks.shape)
+    print(data.local_dataset_location)
+
+    plt.imshow(data.images[0, 0, 0, 0, :, :])
+
+    print(Parameters.Parameters.get_parameters())
 
 
 
