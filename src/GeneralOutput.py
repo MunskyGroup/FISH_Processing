@@ -1,18 +1,41 @@
+from typing import List, Dict, Any, Union
+from abc import ABC, abstractmethod
 # Many of the output classes will be the same, so we can create a base class and then inherit from it
 # however, they will have differences on if they modify a PipelineDataClass or if they are the final output
 
 # The Step Classes will be similar however they will have differences on the inputs they act on 
-class OutputClass:
+class OutputClass(ABC):
+    """ This class will be used to generate singletons for the output classes. """
+    _instances = []
     def __init__(self):
-        pass
+        OutputClass._instances.append(self)
 
+    @classmethod
+    def get_all_instances(cls):
+        # Class method to return all instances of the parent class
+        return cls._instances
+    
+    def __new__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            # If no instance exists, create and store it
+            cls._instances.append(super().__new__(cls))
+        return cls._instances[-1]  # Return the existing instance if it exists
+    
+    @abstractmethod
+    def __init__(self, value=None):
+        if not hasattr(self, '_initialized'):
+            self._initialized = True  # Mark the instance as initialized
+            self.value = value
+        else:
+            self.append()
+
+    @abstractmethod
     def append(self):
         pass
 
 
 class StepOutputsClass(OutputClass):
     # this will be the final output of the pipeline, this will be the final output of the pipeline
-
     def __init__(self):
         super().__init__()
 
@@ -37,7 +60,7 @@ class PipelineOutputsClass(OutputClass):
 class PrePipelineOutputsClass(OutputClass):
     # this will be the final output of the pipeline, this will be the final output of the pipeline
     def __init__(self):
-        pass
+        super().__init__()
 
     def append(self, newOutputs):
         setattr(self, newOutputs.__class__.__name__, newOutputs)

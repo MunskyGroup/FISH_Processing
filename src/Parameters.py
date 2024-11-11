@@ -1,39 +1,115 @@
 from dataclasses import dataclass, fields, field
+from typing import Union
 from abc import ABC, abstractmethod
 import pathlib
 import numpy as np
 import os
+from pycromanager import Dataset
+import dask.array as da
+import dask.dataframe as dd
+import dask.bag as db
+
 
 @dataclass
 class Parameters(ABC):
     """
     This class is used to store the parameters of the pipeline.
+    Alls children class will be singletons and will be stored in the _instances list.
     """
-    @abstractmethod
-    def __post_init__(self):
-        pass
+    _instances = []
+    # def __init__(self):
+    #     Parameters._instances.append(self)
 
-    @abstractmethod
-    def pipeline_init(self):
-        pass
+    def __new__(cls, *args, **kwargs):
+        for instance in cls._instances:
+            if isinstance(instance, cls):
+                return instance
+        instance = super().__new__(cls)
+        cls._instances.append(instance)
+        return instance
+        
+    @classmethod
+    def get_all_instances(cls):
+        # Class method to return all instances of the parent class
+        return cls._instances
 
-    @abstractmethod
-    def pipeline_init(self):
-        pass
+    @classmethod
+    def clear_instances(cls):
+        # Class method to clear all instances of the parent class
+        cls._instances = []
 
-    @abstractmethod
-    def to_dict(self):
-        pass
+    @classmethod
+    def validate(cls):
+        # make sure settings, scope, experiemnt, and datacontainer are all initialized
+        if len(cls._instances) >= 4:
+            raise ValueError(f"Settings, ScopeClass, Experiment, and DataContainer must all be initialized")
+        # makes sure ScopeClass is in _instances
+        if not any(isinstance(instance, ScopeClass) for instance in cls._instances):
+            raise ValueError(f"ScopeClass must be initialized")
+        # makes sure Experiment is in _instances
+        if not any(isinstance(instance, Experiment) for instance in cls._instances):
+            raise ValueError(f"Experiment must be initialized")
+        # makes sure DataContainer is in _instances
+        if not any(isinstance(instance, DataContainer) for instance in cls._instances):
+            raise ValueError(f"DataContainer must be initialized")
+        # makes sure Settings is in _instances
+        if not any(isinstance(instance, Settings) for instance in cls._instances):
+            raise ValueError(f"Settings must be initialized")
 
-    @abstractmethod
+        # Class method to validate all instances of the parent class
+        for instance in cls._instances:
+            instance.validate_parameters()
+
+    @classmethod
+    def update_parameters(cls, **kwargs):
+        # Class method to update all instances of the parent class
+        for instance in cls._instances:
+            for key, value in kwargs.items():
+                # check if the key exists in the instance
+                if hasattr(instance, key):
+                    setattr(instance, key, value)
+                    print(f'Overwriting {key} in {instance.__class__.__name__}')
+                    del kwargs[key]
+        # if there are any kwargs left, add them to the settings class
+        if kwargs:
+            print(f'Adding leftover kwargs to Settings')
+            # find the settings instance
+            for instance in cls._instances:
+                if instance.__class__.__name__ == 'Settings':
+                    for key, value in kwargs.items():
+                        setattr(instance, key, value)
+                        print(f'Adding {key} to {instance.__class__.__name__}')
+                        del kwargs[key]
+
     def validate_parameters(self):
         pass
 
+    # def todict(self): # TODO I dont know why this no longer works but we have a fix
+    #     return self.__dict__
+    def todict(self):
+        return {field.name: getattr(self, field.name) for field in fields(self)}
+
+    @classmethod
     def get_parameters(self):
-        return self.__dict__
+        # Get all the parameters of all instances of the class
+        params = {}
+        for instance in Parameters._instances:
+            # check for duplicates and raise an error if found
+            duplicate_keys = set(params.keys()).intersection(set(instance.todict().keys()))
+            if duplicate_keys:
+                if duplicate_keys != {'kwargs'}:
+                    raise ValueError(f"Duplicate parameter found: {duplicate_keys}")
+            params.update(instance.todict())
+        return params
+    
+    @classmethod
+    def pipeline_init(cls):
+        for instance in cls._instances:
+            instance.pipeline_init()
+
 
 @dataclass
-class ScopeClass:
+class ScopeClass(Parameters):
     """
     Class to store the parameters of the microscope.
     Attributes:
@@ -48,21 +124,11 @@ class ScopeClass:
     spot_z: int = 500
     spot_yx: int = 360
     microscope_saving_format: str = 'pycromanager'
-    kwargs: dict = None
 
     def __init__(self, **kwargs):
-        # Loop over all fields defined in the dataclass
-        for f in fields(self):
-            # Set the attribute with the value from kwargs, or the default if not provided
-            setattr(self, f.name, kwargs.get(f.name, f.default))
-
-    def __post_init__(self):
-        if self.kwargs is not None:
-            for key, value in self.kwargs.items():
+        if kwargs is not None: # TODO this needs to be moved up but it has issues being in parmaeters class
+            for key, value in kwargs.items():
                 setattr(self, key, value)
-
-    def to_dict(self):
-        return self.__dict__
 
 
 @dataclass
@@ -79,98 +145,117 @@ class Experiment(Parameters):
     """
     initial_data_location: str = field(default=None, repr=False)
     number_of_images_to_process: int = None  # This will be all images to process and will be the product of the number of tp and number of FOVs
-    number_of_channels: int = None
-    number_of_timepoints: int = None
-    number_of_Z: int = None
-    number_of_FOVs: int = None
-    nucChannel: list[int] = None
-    cytoChannel: list[int] = None
-    FISHChannel: list[int] = None
+    index_dict: dict = None
+    nucChannel: int = None
+    cytoChannel: int = None
+    FISHChannel: Union[list[int], int] = None
     voxel_size_z: int = 300  # This is voxel
     independent_params: dict = None
     kwargs: dict = None
     timestep_s: float = None
 
     def __init__(self, **kwargs):
-        # Loop over all fields defined in the dataclass
-        for f in fields(self):
-            # Set the attribute with the value from kwargs, or the default if not provided
-            setattr(self, f.name, kwargs.get(f.name, f.default))
-
-    def __post_init__(self):
-
-        if self.kwargs is not None:
-            for key, value in self.kwargs.items():
+        if kwargs is not None:
+            for key, value in kwargs.items():
                 setattr(self, key, value)
-
-    def pipeline_init(self):
-        self.initial_data_location = pathlib.Path(self.initial_data_location)
 
 
 @dataclass
 class DataContainer(Parameters):
-    local_data_folder: pathlib.Path = None
-    local_mask_folder: pathlib.Path = None
-    total_num_imgs: int = None  # this is the same as the experiment.number_of_images_to_process
-    list_image_names: list[str] = None
-    paths_to_images: list[pathlib.Path] = None
-    list_images: list[np.ndarray] = None
-    list_nuc_masks: list[np.ndarray] = None
-    list_cell_masks: list[np.ndarray] = None
-    list_cyto_mask: list[np.ndarray] = None
-    num_img_2_run: int = None
+    local_dataset_location: pathlib.Path = None
+    total_num_chunks: int = None
+    images: da = None
+    dataset: Dataset = None
+    masks: da = None
 
-    def pipeline_init(self):
-        if self.num_img_2_run is None:
-            self.num_img_2_run = self.total_num_imgs
+    def __init__(self, **kwargs):
+        if kwargs is not None:
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
-        # if we dont have a local mask folder make one with the masks saved to it ================================
-        if (self.local_mask_folder is None):
-            self.save_masks_as_file = True
-        else:
-            self.save_masks_as_file = False
-
-    def append(self, output):
-        attributes = output.__dict__.keys()
-
-        # if its a default pipeline data field
-        for attr in attributes:
-            if hasattr(self, attr):
-                if getattr(output, attr) is not None and len(getattr(output, attr)) != 0:
-                    setattr(self, attr, getattr(output, attr))
-            else:
-                setattr(self, attr, getattr(output, attr))
-        
-        # if it comes from a step
-        if hasattr(self, output.__class__.__name__):
-            getattr(self, output.__class__.__name__).append(output)
-        else:
-            setattr(self, output.__class__.__name__, output)
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if name == 'total_num_chunks':
+            for instance in Parameters._instances:
+                if isinstance(instance, Settings):
+                    instance.num_chunks_to_run = min(instance.num_chunks_to_run, value)
 
 
 repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 @dataclass
 class Settings(Parameters):
-    return_data_to_NAS: int = 1
+    return_data_to_NAS: bool = True
     NUMBER_OF_CORES: int = 4
-    save_files: int = 1
-    user_select_number_of_images_to_run: int = 100_000  # TODO: This is bad but I want it to select all and am too lazy
-                                                        # to deal with it rn
-    download_data_from_NAS: int = 0  # 0 for local, 1 for NAS
+    save_files: bool = True
+    num_chunks_to_run: int = 100_000
+    download_data_from_NAS: bool = True  # 0 for local, 1 for NAS
     connection_config_location: str = str(os.path.join(repo_path, 'config_nas.yml')) #r"C:\Users\Jack\Desktop\config_nas.yml" # r"/home/formanj/FISH_Processing_JF/FISH_Processing/config.yml"
     share_name: str = 'share'
     display_plots: bool = True
     load_in_mask: bool = False
-    kwargs: dict = None
 
     def __init__(self, **kwargs):
-        # Loop over all fields defined in the dataclass
-        for f in fields(self):
-            # Set the attribute with the value from kwargs, or the default if not provided
-            setattr(self, f.name, kwargs.get(f.name, f.default))
-
-    def __post_init__(self):
-        if self.kwargs is not None:
-            for key, value in self.kwargs.items():
+        if kwargs is not None:
+            for key, value in kwargs.items():
                 setattr(self, key, value)
+
+
+class GeneratedOutputs(Parameters):
+    _instance = None
+
+    def __init__(self, **kwargs):
+        if kwargs is not None:
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    def clear_outputs(self):
+        GeneratedOutputs._instances = []
+
+    def get_outputs(self):
+        from . import OutputClass
+        self.outputs = OutputClass._instances
+        return self.outputs
+    
+    def todict(self):
+        for key in self.__dict__.keys():
+            try:
+                step_dict = getattr(self.data, key).__dict__
+                kwargs_data = {**kwargs_data, **step_dict}
+                kwargs_data.pop(key)
+            except AttributeError:
+                pass
+        
+        return kwargs_data
+
+
+#%% Required Params
+class required_params(ABC):
+    @abstractmethod
+    def validate_parameter(self):
+        ...
+
+
+# class Index_Dict(dict, required_params): # TODO Deal with this bs
+#     required_keys = {'x', 'y'}
+#     optional_keys = {'p', 'z', 'c'}
+
+#     def __init__(self, *args, **kwargs):
+#         # check if it none
+#         if self is not None:
+#             super().__init__(*args, **kwargs)
+#             self.validate_parameter()
+
+#     def validate_parameter(self):
+#         if not self.required_keys.issubset(self.keys()):
+#             raise ValueError(f"Missing required keys: {self.required_keys - set(self.keys())}")
+#         if not self.keys().issubset(self.required_keys.union(self.optional_keys)):
+#             raise ValueError(f"Invalid keys: {set(self.keys()) - self.required_keys.union(self.optional_keys)}")
+        
+#     # when the class is called, it will return the dict
+#     def __call__(self):
+#         return self
+    
+#     # when the class is updated from None
+#     def __setitem__(self, key, value):
+#         super().__setitem__(key, value)
+#         self.validate_parameter()

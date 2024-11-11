@@ -6,10 +6,17 @@ import numpy as np
 import os
 import sys
 import inspect
+from datetime import datetime
+from abc import ABC, abstractmethod
+import dask_image.imread as dask_imread
+from dask import array as da
+from ndstorage import NDTiffDataset, NDTiffPyramidDataset
+from ndtiff import Dataset
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import IndependentStepClass
+from src import IndependentStepClass, DataContainer, Parameters
 from src.Util import Utilities, NASConnection
 
 
@@ -28,193 +35,146 @@ def get_first_executing_folder():
 
     return None
 
+#%% Abstract Class
+class DataTypeBridge(IndependentStepClass):
+    def __init__(self):
+        super().__init__()
 
+    @abstractmethod
+    def main(self, initial_data_location, connection_config_location, 
+             download_data_from_NAS, load_in_mask, index_dict: dict = None, 
+             **kwargs):
+        pass
+
+    def download_folder_from_NAS(self, remote_folder_path, local_folder_path, connection_config_location, download_data_from_NAS):
+        if not os.path.exists(local_folder_path) and download_data_from_NAS:
+            nas = NASConnection(pathlib.Path(connection_config_location))
+            os.makedirs(local_folder_path, exist_ok=True)   
+            nas.copy_folder(remote_folder_path=pathlib.Path(remote_folder_path), 
+                        local_folder_path=local_folder_path)
+
+    def convert_folder_to_NDTIFF(self, local_folder):
+        pass
+
+    def load_in_dataset(self, local_folder_path, load_in_mask, index_dict) -> DataContainer:
+        ds = pycro.Dataset(local_folder_path)
+        images = ds.as_array()
+        if load_in_mask:
+            # find files in folder containing 'masks'
+            mask_files = [f for f in os.listdir(local_folder_path) if 'masks' in f]
+            if len(mask_files) == 0:
+                print('No mask files found in folder')
+
+            if len(mask_files) > 1:
+                raise ValueError('Multiple mask files found in folder. Please ensure only one mask file is present')
+            
+            else:
+                masks = dask_imread.imread(os.path.join(local_folder_path, mask_files[0]))
+
+
+
+        # get the experiment params
+        experiment = None
+        for instance in Parameters.get_parameters():
+            if instance.__class__.__name__ == 'Experiment':
+                experiment = instance
+                break
+        if experiment is None:
+            raise ValueError('Experiment class not found in parameters')
+        
+        if index_dict is None:
+            # find the axes of the dataset
+            axes = ds.axes()
+            if 'z' in axes:
+                # find where the len of that axes is equal to the shape of the image
+                z_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['z']]]
+                if len(z_axis) == 0:
+                    raise ValueError('No z axis found in the dataset')
+                if len(z_axis) > 1:
+                    raise ValueError('Cannot destinguish between multiple z axes')
+                z_axis = z_axis[0]
+            if 'time' in axes:
+                time_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['t']]]
+                if len(time_axis) == 0:
+                    raise ValueError('No time axis found in the dataset')
+                if len(time_axis) > 1:
+                    raise ValueError('Cannot destinguish between multiple time axes')
+                time_axis = time_axis[0]
+            if 'channel' in axes:
+                channel_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['c']]]
+                if len(channel_axis) == 0:
+                    raise ValueError('No channel axis found in the dataset')
+                if len(channel_axis) > 1:
+                    raise ValueError('Cannot destinguish between multiple channel axes')
+                channel_axis = channel_axis[0]
+            if 'position' in axes:
+                position_axis = [i for i, ax in enumerate(axes) if len(ax) == images.shape[index_dict['p']]]
+                if len(position_axis) == 0:
+                    raise ValueError('No position axis found in the dataset')
+                if len(position_axis) > 1:
+                    raise ValueError('Cannot destinguish between multiple position axes')
+                position_axis = position_axis[0]
+
+            index_dict = {'z': z_axis, 't': time_axis, 'c': channel_axis, 'p': position_axis, 'y': -2, 'x': -1}
+            
+        # this is gonna be the product of the shape of the image at z, c, t, p
+        num_z = images.shape[index_dict['z']] if 'z' in index_dict else 1
+        num_c = images.shape[index_dict['c']] if 'c' in index_dict else 1
+        num_t = images.shape[index_dict['t']] if 't' in index_dict else 1
+        num_p = images.shape[index_dict['p']] if 'p' in index_dict else 1
+        total_num_chuncks = num_z * num_c * num_t * num_p
+
+        data = DataContainer(local_folder_path, total_num_chuncks, images, ds, masks)
+        return data
+        
+    def delete_folder(self, folder):
+        shutil.rmtree(folder)
 
 
 #%% Data Bridges
-class Pycromanager2NativeDataType(IndependentStepClass):
+class Pycromanager2NativeDataType(DataTypeBridge):
     def __init__(self):
-        self.experiment = None
-        self.pipelineSettings = None
-        self.terminatorScope = None
-        self.pipelineData = None
+        super().__init__()
 
-    def run(self, data, settings, scope, experiment):
-
-        connection_config_location = settings.connection_config_location
-        self.experiment = experiment
-        self.pipelineSettings = settings
-        self.terminatorScope = scope
-        self.pipelineData = data
-
-        (self.local_data_dir, self.masks_dir, self.list_files_names, self.list_images_all_fov, self.list_images, \
-         self.number_of_fov, self.number_color_channels, self.number_z_slices, self.number_of_timepoints,
-         self.list_tps, self.list_nZ, self.number_of_imgs, self.map_id_imgprops) = self.convert_to_standard_format(
-            data_folder_path=pathlib.Path(experiment.initial_data_location),
-            path_to_config_file=connection_config_location,
-            download_data_from_NAS=settings.download_data_from_NAS,
-            use_metadata=1,
-            is_format_FOV_Z_Y_X_C=1)
-
-        # return extracted data to the experiment storage
-        experiment.number_of_channels = self.number_color_channels
-        experiment.number_of_timepoints = self.number_of_timepoints
-        experiment.number_of_Z = self.number_z_slices
-        experiment.number_of_FOVs = self.number_of_fov
-        experiment.number_of_Timepoints = self.number_of_timepoints
-        experiment.number_of_images_to_process = experiment.number_of_FOVs * experiment.number_of_timepoints
-        experiment.list_initial_z_slices_per_image = self.list_nZ
-        experiment.list_timepoints = self.list_tps
-        experiment.map_id_imgprops = self.map_id_imgprops
-
-        # PipelineData 
-        data.local_data_folder = self.local_data_dir
-        data.total_num_imgs = experiment.number_of_images_to_process
-        data.list_image_names = self.list_files_names
-        data.list_images = self.list_images
-        data.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
-                                        self.experiment.number_of_images_to_process)
-
-    def convert_to_standard_format(self, data_folder_path, path_to_config_file, download_data_from_NAS, use_metadata,
-                                   is_format_FOV_Z_Y_X_C):
-        path_to_masks_dir = None
-        # Creating a folder to store all plots
-        destination_folder = pathlib.Path().absolute().joinpath('temp_' + data_folder_path.name + '_sf')
-        if pathlib.Path.exists(destination_folder):
-            shutil.rmtree(str(destination_folder))
-            destination_folder.mkdir(parents=True, exist_ok=True)
-        else:
-            destination_folder.mkdir(parents=True, exist_ok=True)
-
-        local_data_dir, _, _, _, list_files_names_all_fov, list_images_all_fov = Utilities().read_images_from_folder(
-            path_to_config_file=path_to_config_file, data_folder_path=data_folder_path, 
-            path_to_masks_dir=path_to_masks_dir, download_data_from_NAS=download_data_from_NAS)
-        
-        if not download_data_from_NAS:
-            local_data_dir = data_folder_path
-        
-        # Downloading data
-        if use_metadata == True:
-            try:
-                metadata = pycro.Dataset(str(local_data_dir))
-                # print(metadata.axes)
-                number_z_slices = max(metadata.axes['z']) + 1
-                number_color_channels = max(metadata.axes['channel']) + 1
-                number_of_fov = max(metadata.axes['position']) + 1
-                number_of_tp = max(metadata.axes['time']) + 1
-                detected_metadata = True
-                print('Number of z slices: ', str(number_z_slices), '\n',
-                      'Number of color channels: ', str(number_color_channels), '\n'
-                                                                                'Number of FOV: ', str(number_of_fov),
-                      '\n',
-                      'Number of TimePoints', str(number_of_tp), '\n', '\n', '\n')
-            except:
-                raise ValueError('The metadata file is not found. Please check the path to the metadata file.')
-            counter = 0
-            list_images_standard_format = []
-            list_files_names = []
-            list_tps = []
-            list_zs = []
-            map_id_imgprops = {}
-            number_of_imgs = number_of_fov * number_of_tp
-            number_of_files = len(list_files_names_all_fov)
-            number_of_X = None
-            number_of_Y = None
-            for i in range(number_of_files):
-                for tp in range(number_of_tp):
-                    for fov in range(number_of_fov):
-                        if not (number_of_X is None):
-                            temp_image = np.zeros((number_z_slices, number_of_Y, number_of_X, number_color_channels))
-                        for z in range(number_z_slices):
-                            for c in range(number_color_channels):
-                                if number_of_X is None:
-                                    temp_image = metadata.read_image(position=fov, time=tp, z=z, channel=c)
-                                    number_of_X = temp_image.shape[1]
-                                    number_of_Y = temp_image.shape[0]
-                                    temp_image = np.zeros(
-                                        (number_z_slices, number_of_Y, number_of_X, number_color_channels))
-                                temp_image[z, :, :, c] = metadata.read_image(position=fov, time=tp, z=z, channel=c)
-                                list_tps.append(tp)
-                                list_zs.append(z)
-
-                        list_images_standard_format.append(temp_image)
-                        list_files_names.append(
-                            list_files_names_all_fov[i].split(".")[0] + '_tp_' + str(tp) + '_fov_' + str(fov) + '.tif')
-                        tifffile.imsave(str(destination_folder.joinpath(list_files_names[-1])),
-                                        list_images_standard_format[-1])
-                        map_id_imgprops[counter] = {'fov_num': fov, 'tp_num': tp}
-                        counter += 1
-        masks_dir = None
-        return (destination_folder, masks_dir, list_files_names, list_images_all_fov, list_images_standard_format,
-                number_of_fov, number_color_channels, number_z_slices, number_of_tp, list_tps, list_zs, number_of_imgs,
-                map_id_imgprops)
+    def main(self, initial_data_location, connection_config_location, 
+             download_data_from_NAS, load_in_mask, index_dict, **kwargs):
+        local_folder_path = 'Analysis_' + os.path.basename(local_folder_path) + '_' + datetime.now().strftime('%Y-%m-%d')
+        self.download_folder_from_NAS(initial_data_location, local_folder_path, connection_config_location, download_data_from_NAS)
+        self.load_in_dataset(local_folder_path, load_in_mask, index_dict)
 
 
-class FFF2NativeDataType(IndependentStepClass):
+class FFF2NativeDataType(DataTypeBridge):
     def __init__(self):
-        self.experiment = None
-        self.pipelineSettings = None
-        self.terminatorScope = None
-        self.pipelineData = None
+        super().__init__()
 
-    def run(self, data, settings, scope, experiment):
-    
-            connection_config_location = settings.connection_config_location
-            self.experiment = experiment
-            self.pipelineSettings = settings
-            self.terminatorScope = scope
-            self.pipelineData = data
-            self.load_in_mask = settings.load_in_mask
-    
-            # download the folder from NAS
-            self.local_folder = 'temp_' + os.path.basename(experiment.initial_data_location)
-            if not os.path.exists(self.local_folder):
-                nas = NASConnection(pathlib.Path(settings.connection_config_location))
-                os.makedirs(self.local_folder, exist_ok=True)   
-                nas.copy_files(remote_folder_path=pathlib.Path(experiment.initial_data_location), 
-                            local_folder_path=self.local_folder, 
-                            file_extension=['.tif', '.zip', '.tiff', '.log'])
+    def main(self, initial_data_location, connection_config_location, 
+             cytoChannel, nucChannel, download_data_from_NAS, load_in_mask, 
+             index_dict: dict = None, **kwargs):
+        temp_folder = 'temp_' + os.path.basename(initial_data_location)
+        local_folder_path = 'Analysis_' + os.path.basename(initial_data_location) + '_' + datetime.now().strftime('%Y-%m-%d')
+        self.download_folder_from_NAS(initial_data_location, temp_folder, connection_config_location, download_data_from_NAS)
 
-            # convert data to standard format
-            self.convert_to_standard_format()
+        self.convert_folder_to_NDTIFF(temp_folder, local_folder_path, nucChannel, cytoChannel)
+        self.delete_folder(temp_folder)
 
-            # return extracted data to the experiment storage
-            experiment.number_of_channels = self.number_color_channels
-            experiment.number_of_timepoints = self.number_of_timepoints
-            experiment.number_of_Z = self.number_z_slices
-            experiment.number_of_FOVs = self.number_of_fov
-            experiment.number_of_images_to_process = experiment.number_of_FOVs * experiment.number_of_timepoints
-            experiment.list_timepoints = range(self.number_of_timepoints)
-            experiment.map_id_imgprops = self.map_id_imgprops
-    
-            # PipelineData 
-            data.local_data_folder = self.local_folder
-            data.total_num_imgs = experiment.number_of_images_to_process
-            data.list_image_names = [f.split('.')[0] for f in self.tifs]
-            data.list_images = self.list_images
-            data.list_nuc_masks = self.nuc_masks
-            data.list_cell_masks = self.cell_masks
-            data.list_cyto_masks = self.cyto_masks
-            data.num_img_2_run = min(self.pipelineSettings.user_select_number_of_images_to_run,
-                                            self.experiment.number_of_images_to_process)
-            
-    def convert_to_standard_format(self):
-        self.mask_dir = None
-        files = os.listdir(self.local_folder)
-        self.tifs = [f for f in files if f.endswith('.tif')]
+        self.load_in_dataset(local_folder_path, load_in_mask, index_dict)
+
+    def convert_folder_to_NDTIFF(self, temp_folder, local_folder, nucChannel, cytoChannel): 
+        files = os.listdir(temp_folder)
+        tifs = [f for f in files if f.endswith('.tif')]
         logs = [f for f in files if f.endswith('.log')]
         mask_dirs = [f for f in files if f.startswith('masks')]
 
         already_made_masks = False
 
-        if self.load_in_mask:
-            unzipped_mask_dir = [f for f in mask_dirs if os.path.isdir(os.path.join(self.local_folder, f))]
+        if len(mask_dirs) > 0:
+            unzipped_mask_dir = [f for f in mask_dirs if os.path.isdir(os.path.join(temp_folder, f))]
             zipped_mask_dir = [f for f in mask_dirs if f.endswith('.zip')]
 
             mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
             if len(zipped_mask_dir) == 1 and len(mask_tifs) == 0:
-                shutil.unpack_archive(os.path.join(self.local_folder, zipped_mask_dir[0]), self.local_folder)
+                shutil.unpack_archive(os.path.join(temp_folder, zipped_mask_dir[0]), temp_folder)
                 already_made_masks = True
             
             mask_dirs = [f for f in files if f.startswith('masks')]
@@ -226,89 +186,94 @@ class FFF2NativeDataType(IndependentStepClass):
             already_made_masks = True
     
         # create list of images
-        list_images_names = [f for f in self.tifs if not f.startswith('masks')]
-        self.list_channels = np.sort(list(set([f.split('_')[-1].split('.')[0] for f in list_images_names])))
-        self.list_roi = np.sort(list(set([f.split('_')[0] for f in list_images_names])))
-        self.list_names = [f.split('_')[1] for f in list_images_names]
-        self.z_slices = np.sort(list(set([f.split('_')[2] for f in list_images_names])))
-        self.timepoints = np.sort(list(set([f.split('_')[3] for f in list_images_names])))
+        list_images_names = [f for f in tifs if not f.startswith('masks')]
+        list_channels = np.sort(list(set([f.split('_')[-1].split('.')[0] for f in list_images_names])))
+        list_roi = np.sort(list(set([f.split('_')[0] for f in list_images_names])))
+        list_names = [f.split('_')[1] for f in list_images_names]
+        z_slices = np.sort(list(set([f.split('_')[2] for f in list_images_names])))
+        timepoints = np.sort(list(set([f.split('_')[3] for f in list_images_names])))
 
-        self.number_of_timepoints = len(set(self.timepoints))
-        self.number_z_slices = len(set(self.z_slices))
-        self.number_color_channels = len(set(self.list_channels))
-        self.number_of_fov = len(set(self.list_roi))
+        number_of_timepoints = len(set(timepoints))
+        number_z_slices = len(set(z_slices))
+        number_color_channels = len(set(list_channels))
+        number_of_fov = len(set(list_roi))
 
-        self.number_of_images_to_process = self.number_of_fov * self.number_of_timepoints
+        number_of_images_to_process = number_of_fov * number_of_timepoints
 
-        self.list_images = []
-
-        x = None
-        y = None
-        self.cyto_masks = []
-        self.nuc_masks = []
-        self.cell_masks = []
-        self.map_id_imgprops = {}
+        os.makedirs(local_folder, exist_ok=True)
+        imgs = None
+        masks = None
         count = 0
-        for t in range(self.number_of_timepoints):
-            tp = self.timepoints[t]
-            for r in range(self.number_of_fov):
-                fov = self.list_roi[r]
-                if x is not None:
-                    temp_img = np.zeros((self.number_z_slices, y, x, self.number_color_channels))
-                for c in range(self.number_color_channels):
-                    channel = self.list_channels[c]
+        for t in range(number_of_timepoints):
+            tp = timepoints[t]
+            for r in range(number_of_fov):
+                fov = list_roi[r]
+
+                for c in range(number_color_channels):
+                    channel = list_channels[c]
                     search_params = [fov, channel, tp]
-                    # print(search_params)
                     img_name = [f for f in list_images_names if all(v in f for v in search_params)][0]
-                    img = tifffile.imread(os.path.join(self.local_folder, img_name))
-                    if x is None:
-                        y = img.shape[1]
-                        z = img.shape[0]
-                        x = img.shape[2]
-                        self.number_z_slices = z
-                        temp_img = np.zeros((self.number_z_slices, y, x, self.number_color_channels))
-                    else:
-                        assert x == img.shape[2]
-                        assert y == img.shape[1]
-                    temp_img[:, :, :, c] = img
-                self.list_images.append(temp_img)
-                self.map_id_imgprops[count] = {'fov_num': fov, 'tp_num': tp}
-                count += 1
-                search_params = [fov, tp]
-                if already_made_masks:
-                    cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0] if len(mask_cells) > 0 else None
-                    cyto_mask_name = [f for f in mask_cyto if all(v in f for v in search_params)][0] if len(mask_cyto) > 0 else None
-                    nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0] if len(mask_nuclei) > 0 else None
-                    if cell_mask_name is not None:
-                        self.cell_masks.append(tifffile.imread(os.path.join(self.local_folder, cell_mask_name)))
-                    if cyto_mask_name is not None:
-                        self.cyto_masks.append(tifffile.imread(os.path.join(self.local_folder, cyto_mask_name))) 
-                    if nuc_mask_name is not None:
-                        self.nuc_masks.append(tifffile.imread(os.path.join(self.local_folder, nuc_mask_name))) 
+                    img = tifffile.imread(os.path.join(temp_folder, img_name))
+                    img = da.from_array(img)
+                    # make all the image data floats
+                    img = img.astype(np.float32)
 
+                    search_params = [fov]
+                    log_name = [f for f in logs if all(v in f for v in search_params)][0]
+                    with open(os.path.join(temp_folder, log_name), 'r') as f:
+                        log = f.readlines()
+                    # img_metadata = {'log': log}
+                    img_metadata = {'testing': 'bullshit'}
 
+                    if imgs is None:
+                        imgs = da.zeros((number_of_fov, number_of_timepoints, number_color_channels, img.shape[0], img.shape[1], img.shape[2]), dtype=np.float32)
 
+                    if masks is None:
+                        masks = da.zeros((number_of_fov, number_of_timepoints, number_color_channels, 1, img.shape[1], img.shape[2]), dtype=np.float32)
+                        # tp = int(''.join(filter(str.isdigit, tp)))
+                        # fov = int(''.join(filter(str.isdigit, fov)))
+                        # channel = int(''.join(filter(str.isdigit, channel)))
+                        # z = z
 
+                        # img_coords = {'time': int(tp), 'channel': int(channel), 'position': int(fov), 'z': int(z)}
+                        
 
+                    imgs[r, t, c, :, :, :] = img
+
+                    search_params = [fov, tp]
+                    if already_made_masks:
+                        cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0] if len(mask_cells) > 0 else None
+                        cyto_mask_name = [f for f in mask_cyto if all(v in f for v in search_params)][0] if len(mask_cyto) > 0 else None
+                        nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0] if len(mask_nuclei) > 0 else None
+                        if cell_mask_name is not None:
+                            masks[r, t, cytoChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(temp_folder, cell_mask_name)))
+                        if nuc_mask_name is not None:
+                            masks[r, t, nucChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(temp_folder, nuc_mask_name)))
+                    count += 1
+
+        # # save dask arrays
+        # imgs = imgs
+        # masks = masks.compute()
+
+        da.to_hdf5(os.path.join(local_folder, 'data.hdf5'), '/images', imgs)
+        da.to_hdf5(os.path.join(local_folder, 'data.hdf5'), '/masks', masks)
+
+                
+
+        # save the data to a NDTIFF Dataset
 
 
 
 if __name__ == '__main__':
     from src import Experiment, Settings, ScopeClass, DataContainer
-    experiment = Experiment()
+    experiment = Experiment(nucChannel=0, cytoChannel=1)
     settings = Settings()
     scope = ScopeClass()
     data = DataContainer()
 
     experiment.initial_data_location = r'smFISH_images\Eric_smFISH_images\20230511\DUSP1_DexTimeConcSweep_10nM_75min_041223'
 
-    FFF2NativeDataType().run(data, settings, scope, experiment)
-    print(data.list_images[0].shape)
-    print(len(data.list_images))
-    print(len(data.list_nuc_masks))
-    print(len(data.list_cell_masks))
-    print(len(data.list_cyto_masks))
-    print(data.list_nuc_masks[4].shape)
+    FFF2NativeDataType().run()
 
 
 

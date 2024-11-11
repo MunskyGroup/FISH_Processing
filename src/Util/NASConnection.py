@@ -204,3 +204,45 @@ class NASConnection():
                 self.conn.storeFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name) ) ,  file_obj )
                 print ('The file was uploaded to NAS in location:', str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name))  )
         return None
+    
+    def copy_folder(self, remote_folder_path, local_folder_path, timeout=600):
+        '''
+        This method downloads all files from a NAS directory. 
+        Will not download directories.
+        
+        Parameters
+        
+        remote_folder_path : str, Pathlib obj
+            The path in the remote folder to download.
+        local_folder_path : str, Pathlib obj
+            The path in the local computer where the files will be copied.
+        timeout : int, optional
+            Time in seconds to maintain a connection with the NAS. The default is 60 seconds.
+        '''
+        # Connecting to NAS
+        is_connected = self.conn.connect(str(self.server_name),timeout=timeout)
+        if is_connected == True:
+            print('Connection established')
+        else:
+            print('Connection failed')
+        # Converting the paths to a Pathlib object
+        if type(local_folder_path) == str:
+            local_folder_path = pathlib.Path(local_folder_path)
+        if type(remote_folder_path)==str:
+            remote_folder_path = pathlib.Path(remote_folder_path)
+        # Making the local directory
+        if not (os.path.exists(local_folder_path)) :
+            os.makedirs(str(local_folder_path))
+        # Iterate in the folder to download all tif files
+        list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
+        for file in list_dir:
+            if (file.filename not in ['.', '..'] and not file.isDirectory):
+                print ('File Downloaded :', file.filename)
+                fileobj = open(file.filename,'wb')
+                self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj)
+                fileobj.close()
+                # moving files in the local computer
+                shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
+        print('Files downloaded to: ' + str(local_folder_path))
+        return None
+        

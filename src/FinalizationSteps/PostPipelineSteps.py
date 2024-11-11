@@ -8,7 +8,7 @@ import trackpy as tp
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src import Settings, Experiment, ScopeClass, DataContainer, finalizingStepClass
+from src import Settings, Experiment, ScopeClass, DataContainer, FinalizingStepClass
 from src.Util.Plots import Plots
 from src.Util.Metadata import Metadata
 from src.Util.ReportPDF import ReportPDF
@@ -25,7 +25,7 @@ from src.Util.NASConnection import NASConnection
 # from Util import Plots, Metadata, ReportPDF
 
 #%% Jack
-class BuildPDFReport(finalizingStepClass):
+class BuildPDFReport(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -66,7 +66,7 @@ class BuildPDFReport(finalizingStepClass):
         self.pdf.output(os.path.join(analysis_location, 'pdf_pipeline_summary.pdf'))
 
 
-class SaveSpotDetectionResults(finalizingStepClass):
+class SaveSpotDetectionResults(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -76,7 +76,7 @@ class SaveSpotDetectionResults(finalizingStepClass):
         df_spotresults.to_csv(os.path.join(analysis_location, 'spot_results.csv'))
         df_clusterresults.to_csv(os.path.join(analysis_location, 'cluster_results.csv'))
 
-class SaveMasksToAnalysis(finalizingStepClass):
+class SaveMasksToAnalysis(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -97,7 +97,7 @@ class SaveMasksToAnalysis(finalizingStepClass):
                 pickle.dump(map_id_imgprops, f)
 
 
-class SendAnalysisToNAS(finalizingStepClass):
+class SendAnalysisToNAS(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -109,7 +109,7 @@ class SendAnalysisToNAS(finalizingStepClass):
 
 
 
-class TrackPyAnlaysis(finalizingStepClass):
+class TrackPyAnlaysis(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -265,7 +265,7 @@ class TrackPyAnlaysis(finalizingStepClass):
         
 
 
-class DeleteTempFiles(finalizingStepClass):
+class DeleteTempFiles(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -285,7 +285,7 @@ class DeleteTempFiles(finalizingStepClass):
 
 
 #%% Luis
-class SavePDFReport(finalizingStepClass):
+class SavePDFReport(FinalizingStepClass):
     def __init__(self) -> None:
         super().__init__()
 
@@ -394,7 +394,7 @@ class SavePDFReport(finalizingStepClass):
 
 
 # TODO: Complete the lower postPipelineSteps
-class Luis_Additional_Plots(finalizingStepClass):
+class Luis_Additional_Plots(FinalizingStepClass):
     def __init__(self):
         super().__init__()
 
@@ -434,7 +434,7 @@ class Luis_Additional_Plots(finalizingStepClass):
                                           save_pdf_report=save_pdf_report)
 
 
-class Send_Data_To_Nas(finalizingStepClass):
+class Send_Data_To_Nas(FinalizingStepClass):
     def __init__(self):
         super().__init__()
 
@@ -457,7 +457,7 @@ class Send_Data_To_Nas(finalizingStepClass):
                                                                                        masks_dir)
 
 
-class Move_Results_To_Analysis_Folder(finalizingStepClass):
+class Move_Results_To_Analysis_Folder(FinalizingStepClass):
     def __init__(self):
         super().__init__()
 

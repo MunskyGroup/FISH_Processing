@@ -1,16 +1,36 @@
 import os
+from abc import ABC, abstractmethod
+import inspect
+
+from .Parameters import Parameters
 # from . import Settings, Experiment, ScopeClass, DataContainer
 
 
-class StepClass:
-    def __init__(self):
-        self.freeze = False
-        self.data = None
-        self.settings = None
-        self.scope = None
-        self.experiment = None
-        self.step_output_dir = None
+class StepClass(ABC):
+    _instances = []
 
+    def __init__(self):
+        StepClass._instances.append(self)
+
+    @classmethod
+    def get_all_instances(cls):
+        # Class method to return all instances of the parent class
+        return cls._instance
+
+    @classmethod
+    def get_all_parameters(cls):
+        # inspects each steps main function to see if it has the required parameters
+        steps = cls.get_all_instances()
+        no_default_params = []
+        all_params = []
+        for step in steps:
+            step_func = step.main
+            sig = inspect.signature(step_func)
+            no_default_params.append([param.name for param in sig.parameters.values() if param.default is param.empty])
+            all_params.append([param.name for param in sig.parameters.values()])
+
+        return list(set(no_default_params)), list(set(all_params))
+    
     def check_setting_requirements(self):
         pass
 
@@ -24,39 +44,28 @@ class StepClass:
         As long as the attributes are unique and saved using a step output class, this function will load them in.
         """
 
-        kwargs_data = self.data.__dict__
-        kwargs_experiment = self.experiment.__dict__
-        kwargs_scope = self.scope.__dict__
-        kwargs_settings = self.settings.__dict__
-
-        for key in kwargs_data:
-            try:
-                step_dict = getattr(self.data, key).__dict__
-                kwargs_data = {**kwargs_data, **step_dict}
-                kwargs_data.pop(key)
-            except AttributeError:
-                pass
+        params = Parameters.get_parameters()
         
-        kwargs_IDspecific = {'id': id}
-        if id is not None:
-            kwargs_IDspecific['image'] = self.data.list_images[id]
-            kwargs_IDspecific['image_name'] = os.path.splitext(self.data.list_image_names[id])[0]
-            try:
-                kwargs_IDspecific['cell_mask'] = self.data.masks_complete_cells[id]
-            except AttributeError:
-                kwargs_IDspecific['cell_mask'] = None
-            try:
-                kwargs_IDspecific['nuc_mask'] = self.data.masks_nuclei[id]
-            except AttributeError:
-                kwargs_IDspecific['nuc_mask'] = None
-            try:
-                kwargs_IDspecific['cyto_mask'] = self.data.masks_cytosol[id]
-            except AttributeError:
-                kwargs_IDspecific['cyto_mask'] = None
-        
-        kwargs = {**kwargs_data, **kwargs_experiment, **kwargs_scope, **kwargs_settings, **kwargs_IDspecific}
 
-        return kwargs
+        if id is not None: # TODO This will need to be changed for Dask arrays
+            params[id] =  id
+            params['image'] = self.data.list_images[id]
+            params['image_name'] = os.path.splitext(self.data.list_image_names[id])[0]
+            try:
+                params['cell_mask'] = self.data.masks_complete_cells[id]
+            except AttributeError:
+                params['cell_mask'] = None
+            try:
+                params['nuc_mask'] = self.data.masks_nuclei[id]
+            except AttributeError:
+                params['nuc_mask'] = None
+            try:
+                params['cyto_mask'] = self.data.masks_cytosol[id]
+            except AttributeError:
+                params['cyto_mask'] = None
+        
+        print(params)
+        return params
     
     def create_step_output_dir(self, output_location = None, **kwargs):
         if output_location is not None:
@@ -65,55 +74,53 @@ class StepClass:
         else:
             self.step_output_dir = None
 
-    def main(self):
+    @abstractmethod
+    def main(self, **kwargs):
         pass
 
-    def run(self, data,
-            settings,
-            scope,
-            experiment):
-        self.data = data
-        self.settings = settings
-        self.scope = scope
-        self.experiment = experiment
-        kwargs = self.load_in_attributes()
-        self.create_step_output_dir(**kwargs)
-        self.check_setting_requirements()
-        return self.main(**kwargs)
-    
-
+    def run(self, id: int = None):
+        kwargs = self.load_in_attributes(id)
+        return self.main(**kwargs) 
 
 class SequentialStepsClass(StepClass):
+    _instances = []
     def __init__(self):
         super().__init__()
-        self.freeze = False
+        SequentialStepsClass._instances.append(self)
         self.is_first_run = True
 
-    def run(self, id: int = None, data = None, settings = None,
-            scope = None, experiment = None):
-        self.data = data
-        self.settings = settings
-        self.scope = scope
-        self.experiment = experiment
+    def execute(self):
+        self.num_chunks_to_run = Parameters.get_parameters()['num_chunks_to_run']
+        for id in range(self.num_chunks_to_run):
+            for step in SequentialStepsClass._instances:
+                print('++++++++++++++++++++++++++++')
+                print('Running : ', step)
+                print('++++++++++++++++++++++++++++')
+                step.run(id)
 
+    def run(self, id: int = None):
+        self.num_chunks_to_run = Parameters.get_parameters()['num_chunks_to_run']
         if id is None:  # allows for pipelineSteps to be run a pre or postPipeline
-            for img_index in range(min(self.settings.user_select_number_of_images_to_run,
-                                       self.experiment.number_of_images_to_process)):
-                kwargs = self.load_in_attributes(img_index)
-                self.create_step_output_dir(**kwargs)
-                self.on_first_run(img_index)
-                single_step_output = self.main(**kwargs)
-                if img_index == 0:
-                    output = single_step_output
-                else:
-                    output.append(single_step_output)
-            return output
+            for id in range(self.num_chunks_to_run):
+                print('')
+                print(' ###################### ')
+                print('        IMAGE : ' + str(id))
+                print(' ###################### ')
+                params = self.load_in_attributes(id)
+                self.create_step_output_dir(**params)
+                self.on_first_run(id)
+                output = self.main(**params)
         else:
-            kwargs = self.load_in_attributes(id)
-            self.create_step_output_dir(**kwargs)
+            print('')
+            print(' ###################### ')
+            print('        IMAGE : ' + str(id))
+            print(' ###################### ')
+            params = self.load_in_attributes(id)
+            self.create_step_output_dir(**params)
             self.on_first_run(id)
-            # print(kwargs)
-            return self.main(**kwargs)
+            output = self.main(**params)
+        
+        return output
 
     def main(self, **kwargs):
         pass
@@ -126,16 +133,32 @@ class SequentialStepsClass(StepClass):
         else:
             return False
     
+    @abstractmethod
     def first_run(self, id: int):
         pass
-        
 
-class finalizingStepClass(StepClass):
+class FinalizingStepClass(StepClass):
+    _instances = []
     def __init__(self):
         super().__init__()
+        FinalizingStepClass._instances.append(self)
 
+    def execute(self):
+        for step in FinalizingStepClass._instances:
+            print('++++++++++++++++++++++++++++')
+            print('Running : ', step)
+            print('++++++++++++++++++++++++++++')
+            step.run()
 
 class IndependentStepClass(StepClass):
+    _instances = []
     def __init__(self):
         super().__init__()
-        self.ModifyPipelineData = False
+        IndependentStepClass._instances.append(self)
+
+    def execute(self):
+        for step in IndependentStepClass._instances:
+            print('++++++++++++++++++++++++++++')
+            print('Running : ', step)
+            print('++++++++++++++++++++++++++++')
+            step.run()
