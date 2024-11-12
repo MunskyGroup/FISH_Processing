@@ -87,6 +87,8 @@ from skimage import exposure
 from tifffile import imsave
 import copy
 from scipy.optimize import curve_fit
+from abc import abstractmethod
+
 
 # append the path two directories before this file
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -95,14 +97,49 @@ from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler, Inde
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
-class filter_output(StepOutputsClass):
+
+#%%
+
+
+class FiltersOutputClass(StepOutputsClass):
     def __init__(self, image: np.array):
         super().__init__()
         self.ModifyPipelineData = True
         self.list_images = image
 
-    # def append(self, new_output):
-    #     self.list_images = [*self.list_images, *new_output.list_images]
+class FilteredImages(SequentialStepsClass):
+    def main(self, da, sigma_dict, display_plots: bool=False, **kwargs) -> FiltersOutputClass:
+        """
+        Main function to run the filters.
+
+        Parameters:
+        - da: Dask array with shape [p, t, c, y, x]
+        - sigma_dict: Dictionary with sigma values per channel {channel_index: sigma_value}
+        - display_plots: Boolean to control plotting
+
+        Returns:
+        - output: FiltersOutputClass object
+        """
+        # Step 1: Apply the filters
+        corrected_images = self.average_illumination_profile(da,sigma_dict, display_plots)
+
+        # Step 2: Create the output object
+        output = FiltersOutputClass(corrected_images)
+
+        return output
+
+    @abstractmethod
+    def average_illumination_profile(self, **kwargs) -> da.array:
+        """
+        Abstract method to be implemented in the child classes.
+
+        Parameters:
+        - kwargs: Dictionary with the required parameters
+
+        Returns:
+        - corrected_images: Dask array with shape [p, t, c, y, x]
+        """
+        pass
 
 
 
@@ -129,97 +166,45 @@ class exposure_correction(SequentialStepsClass):
         output.__class__.__name__ = 'exposure_correction'
         return output
 
-class illumination_correction_output(StepOutputsClass):
-    def __init__(self, images: list):
-        super().__init__()
-        self.ModifyPipelineData = True
-        # Store the images directly as a list of corrected images
-        self.corrected_images = images
+# TODO: remove this?
+# class illumination_correction_output(StepOutputsClass):
+#     def __init__(self, images: list):
+#         super().__init__()
+#         self.ModifyPipelineData = True
+#         # Store the images directly as a list of corrected images
+#         self.corrected_images = images
 
-    def append(self, new_output):
-        if new_output and isinstance(new_output, illumination_correction_output):
-            self.corrected_images.extend(new_output.corrected_images)
+#     def append(self, new_output):
+#         if new_output and isinstance(new_output, illumination_correction_output):
+#             self.corrected_images.extend(new_output.corrected_images)
 
-class illumination_correction(IndependentStepClass):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.has_run = False  # Flag to indicate whether the correction has run
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from skimage import exposure
+from scipy.ndimage import gaussian_filter
+from scipy.optimize import curve_fit
+import dask.array as da
 
-    def main(self, list_images: list, FISHChannel, cytoChannel, nucChannel, sigma: float = 200, output_dir: str = None, 
-            save_images: bool = False, display_plots: bool = False, show_final_projection: bool = False, 
-            show_illumination_profile: bool = False, max_images: int = None, alpha: float = 0.5, **kwargs):
-        """Perform illumination correction on multiple images using nuclear and cyto channels."""
-        
-        if self.has_run:
-            print("illumination_correction has already been executed. Exiting.")
-            return None
+class IlluminationCorrection(IndependentStepClass):
+    def __init__(self, da, sigma_dict, display_plots=False):
+        """
+        Initialize the IlluminationCorrection class.
 
-        print("Starting illumination correction...")
-
-        # Make a deep copy of the original images to avoid overwriting
-        original_images = copy.deepcopy(list_images)
-
-        corrected_images = []
-
-        # Limit the number of images to process, if specified
-        if max_images is not None:
-            list_images = list_images[:max_images]
-            original_images = original_images[:max_images]  # Ensure consistency
-            print(f"Limiting the number of images to process to {max_images}")
-
-        # Ensure the output directory exists if save_images is True
-        if save_images:
-            if output_dir is None:
-                raise ValueError("An output directory must be specified when 'save_images' is set to True.")
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-
-        # Step 1: Compute the average illumination profile across all images
-        print("Calculating average illumination profile...")
-        illumination_profile = self.average_illumination_profile(list_images, cytoChannel, nucChannel, sigma, alpha=alpha)
-
-        if show_illumination_profile and display_plots:
-            self.show_illumination_profile(illumination_profile, show_illumination_profile, display_plots)
-
-        # Step 2: Correct each image based on the illumination profile
-        print("Starting image correction...")
-        for idx, image in enumerate(list_images):
-            print(f"Processing image {idx + 1}/{len(list_images)}...")
-            corrected_image = self.correct_image(image, FISHChannel, cytoChannel, nucChannel, illumination_profile)
-            corrected_images.append(corrected_image)
-
-            if save_images:
-                unique_filename = os.path.join(output_dir, f'corrected_image_{idx}.tif')
-                try:
-                    imsave(unique_filename, corrected_image, plugin='tifffile')
-                    print(f"Corrected image saved: {unique_filename}")
-                except Exception as e:
-                    print(f"Failed to save image {idx}: {e}")
-                    continue
-
-            if show_final_projection and display_plots:
-                # Use the original image from the deep copy for comparison
-                self.show_corrected_max_projection(original_images[idx], corrected_image, FISHChannel, display_plots)
-
-        # Step 3: Compute the average illumination profile across all corrected images
-        print("Calculating average corrected illumination profile...")
-        corrected_illumination_profile = self.average_corrected_illumination_profile(corrected_images, cytoChannel, nucChannel, sigma)
-
-        if show_illumination_profile and display_plots:
-            self.show_illumination_profile(corrected_illumination_profile, show_illumination_profile, display_plots)        
-
-        # Create an output instance and return it
-        output = illumination_correction_output(images=corrected_images)
-        print("illumination_correction step completed.")
-
-        # Mark the correction as completed
-        self.has_run = True
-
-        return output
+        Parameters:
+        - da: Dask array with shape [p, t, c, y, x]
+        - sigma_dict: Dictionary with sigma values per channel {channel_index: sigma_value}
+        - display_plots: Boolean to control plotting
+        """
+        self.da = da
+        self.sigma_dict = sigma_dict
+        self.display_plots = display_plots
 
     def gaussian_2d(self, x, y, x0, y0, sigma_x, sigma_y, amplitude, offset):
         """2D Gaussian function."""
-        return offset + amplitude * np.exp(-(((x - x0) ** 2) / (2 * sigma_x ** 2) + ((y - y0) ** 2) / (2 * sigma_y ** 2)))
+        return offset + amplitude * np.exp(
+            -(((x - x0) ** 2) / (2 * sigma_x ** 2) + ((y - y0) ** 2) / (2 * sigma_y ** 2))
+        )
 
     def fit_gaussian_2d(self, illumination_profile, sigma_smooth=200):
         """Fit a 2D Gaussian to the illumination profile and apply additional smoothing."""
@@ -229,169 +214,179 @@ class illumination_correction(IndependentStepClass):
         xdata = np.vstack((x.ravel(), y.ravel()))
         ydata = illumination_profile.ravel()
 
-        # Initial guess for parameters: center, width, amplitude, offset
-        initial_guess = (illumination_profile.shape[1] / 2, illumination_profile.shape[0] / 2, 
-                        illumination_profile.shape[1] / 4, illumination_profile.shape[0] / 4, 
-                        np.max(illumination_profile), np.min(illumination_profile))
+        # Initial guess for parameters
+        initial_guess = (
+            illumination_profile.shape[1] / 2,
+            illumination_profile.shape[0] / 2,
+            illumination_profile.shape[1] / 4,
+            illumination_profile.shape[0] / 4,
+            np.max(illumination_profile),
+            np.min(illumination_profile),
+        )
 
-        # Fit the Gaussian model to the data
-        popt, _ = curve_fit(lambda xy, x0, y0, sigma_x, sigma_y, amplitude, offset: 
-                            self.gaussian_2d(xy[0], xy[1], x0, y0, sigma_x, sigma_y, amplitude, offset),
-                            xdata, ydata, p0=initial_guess)
+        # Fit Gaussian model
+        popt, _ = curve_fit(
+            lambda xy, x0, y0, sigma_x, sigma_y, amplitude, offset: self.gaussian_2d(
+                xy[0], xy[1], x0, y0, sigma_x, sigma_y, amplitude, offset
+            ),
+            xdata,
+            ydata,
+            p0=initial_guess,
+            maxfev=10000,
+        )
 
-        # Create a fitted illumination profile
+        # Create fitted illumination profile
         fitted_profile = self.gaussian_2d(x, y, *popt).reshape(illumination_profile.shape)
-
-        # Apply additional Gaussian smoothing to the fitted profile
         smoothed_fitted_profile = gaussian_filter(fitted_profile, sigma=sigma_smooth)
 
         return smoothed_fitted_profile
 
-    def average_illumination_profile(self, list_images, cytoChannel, nucChannel, sigma, sigma_smooth=200, alpha=0.9):
-        """Compute the averaged illumination profile across all images."""
-        avg_cyto_projection = None
-        #avg_nuc_projection = None
-        num_images = len(list_images)
+    def average_illumination_profile(self, da, channel, sigma_smooth=200):
+        """Compute the averaged illumination profile for a single channel across all images."""
+        avg_projection = None
+        list_images = da.shape[0]
+        num_images = len(da.shape[0])
 
-        # Iterate over each image to calculate the max projection and sum them up
         for image in list_images:
-            cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
-            #nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
+            if image.ndim < 5 or channel >= image.shape[2]:
+                print(f"Warning: Skipping image with incompatible dimensions for channel {channel}")
+                continue
 
-            # Initialize or accumulate the projections
-            if avg_cyto_projection is None:
-                avg_cyto_projection = cyto_projection
-                #avg_nuc_projection = nuc_projection
+            # Compute mean over positions and time
+            projection = image.mean(axis=(0, 1))[channel].compute()
+            projection = projection.astype(np.float64)
+
+            # Accumulate the projection values
+            if avg_projection is None:
+                avg_projection = projection
             else:
-                avg_cyto_projection += cyto_projection
-                #avg_nuc_projection += nuc_projection
+                avg_projection += projection
 
-        # Average the projections
-        avg_cyto_projection /= num_images
-        #avg_nuc_projection /= num_images
+        if avg_projection is None:
+            raise ValueError("No valid images found for the specified channel.")
 
-        # Estimate the illumination profile based on the averaged projections
-        original_illumination_profile = avg_cyto_projection #(avg_cyto_projection + avg_nuc_projection) / 2
+        # Average the projection
+        avg_projection /= num_images
 
-        # Apply Gaussian fitting with additional smoothing
-        fitted_illumination_profile = self.fit_gaussian_2d(original_illumination_profile, sigma_smooth=sigma_smooth)
+        # Fit and smooth the illumination profile
+        smoothed_profile = self.fit_gaussian_2d(avg_projection, sigma_smooth=sigma_smooth)
 
-        # Blend the original and fitted illumination profiles
-        #blended_profile = alpha * fitted_illumination_profile + (1 - alpha) * original_illumination_profile
+        # Normalize smoothed profile so that its maximum value is 1
+        smoothed_profile /= np.max(smoothed_profile)
 
-        # Normalize the blended illumination profile so that its maximum value is 1
-        fitted_illumination_profile /= np.max(fitted_illumination_profile)
+        return avg_projection, smoothed_profile
 
-        return fitted_illumination_profile
+    def correct_image(self, image, smoothed_profiles):
+        """Apply the calculated illumination correction to each channel independently."""
+        epsilon = 1e-6
+        if image.ndim < 5:
+            raise ValueError("Image must have at least 5 dimensions [p, t, c, y, x]")
 
-    def correct_image(self, image, FISHChannel, cytoChannel, nucChannel, illumination_profile_smooth):
-        """Apply the estimated illumination correction to the entire 3D FISH stack."""
-        # Add a small value to the illumination profile to prevent division by small numbers
-        epsilon = 1e-6  # Small regularization factor to avoid division by zero or small numbers
-        illumination_profile = illumination_profile_smooth + epsilon
+        corrected_image = image.copy()
 
-        # Compute the inverse of the illumination profile for brightening
-        correction_factor = 1.0 / illumination_profile
+        for c in range(image.shape[2]):
+            if c not in smoothed_profiles:
+                print(f"Warning: No illumination profile for channel {c}. Skipping correction for this channel.")
+                continue
 
-        # Normalize so the mean of the correction factor is 1
-        correction_factor /= np.median(correction_factor)
+            correction_factor = 1.0 / (smoothed_profiles[c] + epsilon)
+            correction_factor /= np.median(correction_factor)
 
-        # Make sure the correction factor has the same dimensions as the slices
-        correction_factor = np.squeeze(correction_factor)
+            # Expand correction_factor to match image dimensions
+            correction_factor = correction_factor[np.newaxis, np.newaxis, np.newaxis, :, :]
 
-        # Check if the image has 4 dimensions [Z, Y, X, C], if not, add the channel dimension
-        if image.ndim == 3:
-            image = np.expand_dims(image, axis=-1)  # Adds a new axis at the end to represent the channel
+            # Multiply image by correction factor
+            corrected_channel = corrected_image[:, :, c, :, :] * correction_factor
 
-        # Correct each channel in FISHChannel, cytoChannel, nucChannel
-        for c in range(image.shape[3]):
-            for z in range(image.shape[0]):
-                channel_slice = image[z, :, :, c]
-                # Apply the correction factor to brighten dim regions
-                channel_corrected = channel_slice * correction_factor
-                # Rescale the corrected slice to the original intensity range
-                image[z, :, :, c] = exposure.rescale_intensity(channel_corrected, out_range=(channel_slice.min(), channel_slice.max()))
+            # Rescale intensity
+            min_intensity = corrected_channel.min().compute()
+            max_intensity = corrected_channel.max().compute()
+            corrected_channel = exposure.rescale_intensity(
+                corrected_channel.compute(), out_range=(min_intensity, max_intensity)
+            )
 
-        return image
+            # Assign back to corrected_image
+            corrected_image[:, :, c, :, :] = da.from_array(corrected_channel)
 
-    def show_corrected_max_projection(self, original_image, corrected_image, FISHChannel, display_plots: bool = False):
-        """Display the max projection of the corrected 3D FISH stack alongside the original and their difference."""
-        if display_plots:
-            plt.ioff()  # Turn off interactive mode
-            for f in FISHChannel:
-                # Make sure we are working with copies of the images to avoid any unintentional modifications
-                original_max_projection = np.max(original_image[:, :, :, f], axis=0).copy()
-                corrected_max_projection = np.max(corrected_image[:, :, :, f], axis=0).copy()
+        return corrected_image
 
-                # Apply contrast stretching to improve visibility
-                original_max_projection = exposure.rescale_intensity(
-                    original_max_projection, in_range=(np.percentile(original_max_projection, 1), np.percentile(original_max_projection, 99))
-                )
-                corrected_max_projection = exposure.rescale_intensity(
-                    corrected_max_projection, in_range=(np.percentile(corrected_max_projection, 1), np.percentile(corrected_max_projection, 99))
-                )
+    def process_images(self, list_images):
+        """
+        Main function to process the images.
 
-                # Display side-by-side before and after
-                fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
-                axes[0].imshow(original_max_projection, cmap='hot')
-                axes[0].set_title(f'Original max projection for channel {f}')
-                axes[0].axis('off')  # Turn off axis ticks and grid lines
+        Parameters:
+        - list_images: List of dask arrays with shape [p, t, c, y, x]
 
-                axes[1].imshow(corrected_max_projection, cmap='hot')
-                axes[1].set_title(f'Corrected max projection for channel {f}')
-                axes[1].axis('off')  # Turn off axis ticks and grid lines
+        Returns:
+        - corrected_images: List of corrected images in the same format as input
+        """
+        # Step 1: Compute averaged and smoothed illumination profiles for each channel across all images
+        averaged_profiles = {}
+        smoothed_profiles = {}
+        for channel, sigma in self.sigma_dict.items():
+            print(f"Calculating averaged and smoothed illumination profile for channel {channel} with sigma={sigma}...")
+            avg_profile, smoothed_profile = self.average_illumination_profile(list_images, channel, sigma_smooth=sigma)
+            averaged_profiles[channel] = avg_profile
+            smoothed_profiles[channel] = smoothed_profile
 
-                plt.tight_layout()
-                plt.show()  # Force the display of the plot
+            if self.display_plots:
+                self.show_smoothed_profile(avg_profile, smoothed_profile, channel)
 
-    def show_illumination_profile(self, illumination_profile, show_illumination_profile: bool = False, display_plots: bool = False):
-        """Display the reconstructed illumination profile as a heatmap."""
-        if show_illumination_profile and display_plots:
-            plt.ioff()  # Turn off interactive mode
-            illumination_profile_2d = np.squeeze(illumination_profile)
-            plt.figure(figsize=(8, 6))
-            sns.heatmap(illumination_profile_2d, cmap='hot', cbar=True, vmin=0.75, vmax=1.2)
-            plt.title('Reconstructed Illumination Profile')
+        # Step 2: Apply correction to each image using the smoothed profiles
+        corrected_images = []
+        for idx, image in enumerate(list_images):
+            print(f"Correcting image {idx + 1}/{len(list_images)}...")
+            corrected_image = self.correct_image(image, smoothed_profiles)
+            corrected_images.append(corrected_image)
+
+            if self.display_plots and idx == 0:
+                self.show_corrected_max_projection(image, corrected_image)
+
+        return corrected_images
+
+    def show_smoothed_profile(self, avg_profile, smoothed_profile, channel):
+        """Display averaged and smoothed illumination profiles for a channel."""
+        plt.ioff()
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+        sns.heatmap(avg_profile, cmap='hot', cbar=True, ax=axes[0])
+        axes[0].set_title(f'Averaged Profile - Channel {channel}')
+        axes[0].axis('off')
+        sns.heatmap(smoothed_profile, cmap='hot', cbar=True, ax=axes[1])
+        axes[1].set_title(f'Smoothed Profile - Channel {channel}')
+        axes[1].axis('off')
+        plt.tight_layout()
+        plt.show()
+
+    def show_corrected_max_projection(self, original_image, corrected_image):
+        """Display max projections of the original and corrected images for all channels."""
+        num_channels = original_image.shape[2]
+
+        for channel in range(num_channels):
+            # Compute mean over positions and time
+            original_proj = original_image[:, :, channel, :, :].mean(axis=(0, 1)).compute()
+            corrected_proj = corrected_image[:, :, channel, :, :].mean(axis=(0, 1)).compute()
+
+            # Rescale intensities for visualization
+            original_proj_rescaled = exposure.rescale_intensity(
+                original_proj, in_range=(np.percentile(original_proj, 1), np.percentile(original_proj, 99))
+            )
+            corrected_proj_rescaled = exposure.rescale_intensity(
+                corrected_proj, in_range=(np.percentile(corrected_proj, 1), np.percentile(corrected_proj, 99))
+            )
+
+            # Plotting
+            plt.ioff()
+            fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+            axes[0].imshow(original_proj_rescaled, cmap='hot')
+            axes[0].set_title(f'Original Projection - Channel {channel}')
+            axes[0].axis('off')
+
+            axes[1].imshow(corrected_proj_rescaled, cmap='hot')
+            axes[1].set_title(f'Corrected Projection - Channel {channel}')
+            axes[1].axis('off')
+
             plt.tight_layout()
-            plt.show()  # Force the display of the plot
-            plt.clf()  # Clear the figure to avoid overlap
-
-    def average_corrected_illumination_profile(self, corrected_images, cytoChannel, nucChannel, sigma):
-        """Compute the averaged illumination profile across all images."""
-        avg_cyto_projection = None
-        #avg_nuc_projection = None
-        num_images = len(corrected_images)
-
-        # Iterate over each image to calculate the max projection and sum them up
-        for image in corrected_images:
-            cyto_projection = np.max(image[:, :, :, cytoChannel], axis=0)
-            #nuc_projection = np.max(image[:, :, :, nucChannel], axis=0)
-            
-            # Initialize or accumulate the projections
-            if avg_cyto_projection is None:
-                avg_cyto_projection = cyto_projection
-                #avg_nuc_projection = nuc_projection
-            else:
-                avg_cyto_projection += cyto_projection
-                #avg_nuc_projection += nuc_projection
-
-        # Average the projections
-        avg_cyto_projection /= num_images
-        #avg_nuc_projection /= num_images
-
-        # Estimate the illumination profile based on the averaged projections
-        illumination_profile = avg_cyto_projection #(avg_cyto_projection + avg_nuc_projection) / 2
-
-        # Apply Gaussian filter to smooth the illumination profile
-        corrected_illumination_profile_smooth = gaussian_filter(illumination_profile, sigma=sigma)
-
-        # Normalize the illumination profile so that its maximum value is 1
-        corrected_illumination_profile_smooth = corrected_illumination_profile_smooth / np.max(corrected_illumination_profile_smooth)
-
-        return corrected_illumination_profile_smooth
-
-
-
+            plt.show()
 
 
 class rescale_images(SequentialStepsClass):
