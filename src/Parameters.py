@@ -39,7 +39,7 @@ class Parameters(ABC):
     @classmethod
     def validate(cls):
         # make sure settings, scope, experiemnt, and datacontainer are all initialized
-        if len(cls._instances) >= 4:
+        if len(cls._instances) != 4:
             raise ValueError(f"Settings, ScopeClass, Experiment, and DataContainer must all be initialized")
         # makes sure ScopeClass is in _instances
         if not any(isinstance(instance, ScopeClass) for instance in cls._instances):
@@ -59,16 +59,21 @@ class Parameters(ABC):
             instance.validate_parameters()
 
     @classmethod
-    def update_parameters(cls, **kwargs):
+    def update_parameters(cls, kwargs):
         # Class method to update all instances of the parent class
+        used_keys = []
         for instance in cls._instances:
             for key, value in kwargs.items():
                 # check if the key exists in the instance
                 if hasattr(instance, key):
                     setattr(instance, key, value)
                     print(f'Overwriting {key} in {instance.__class__.__name__}')
-                    del kwargs[key]
+                    used_keys.append(key)
         # if there are any kwargs left, add them to the settings class
+        # remove the used keys
+        for key in used_keys:
+            kwargs.pop(key)
+        
         if kwargs:
             print(f'Adding leftover kwargs to Settings')
             # find the settings instance
@@ -77,13 +82,16 @@ class Parameters(ABC):
                     for key, value in kwargs.items():
                         setattr(instance, key, value)
                         print(f'Adding {key} to {instance.__class__.__name__}')
-                        del kwargs[key]
 
     def validate_parameters(self):
         pass
 
     def todict(self):
         return {field.name: getattr(self, field.name) for field in fields(self)}
+    
+    def reset(self):
+        for field in fields(self):
+            setattr(self, field.name, field.default)
 
     @classmethod
     def get_parameters(self):
@@ -167,9 +175,8 @@ class Experiment(Parameters):
         if self.FISHChannel is None:
             print("FISHChannel not set")
 
-        
-        
-
+        if type(self.FISHChannel) is int:
+            self.FISHChannel = [self.FISHChannel]
 
 
 @dataclass

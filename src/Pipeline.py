@@ -3,8 +3,7 @@ import inspect
 import pickle
 from abc import ABC, abstractmethod
 
-from . import Settings, ScopeClass, Experiment, DataContainer, PipelineOutputsClass, \
-                PrePipelineOutputsClass, StepOutputsClass, OutputClass, Parameters, StepClass
+from . import Settings, ScopeClass, Experiment, DataContainer, OutputClass, Parameters, StepClass
 from .Util.Utilities import Utilities
 
 
@@ -34,7 +33,7 @@ class Pipeline:
                 raise ValueError(f'{param} is required to run the pipeline')
 
     def display_all_params(self):
-        required_params, all_params = StepClass.get_all_parameters()
+        required_params, all_params = StepClass.get_step_parameters()
         print('Required Parameters: ')
         for param in required_params:
             print(param)
@@ -139,7 +138,7 @@ class Pipeline:
         Parameters.update_parameters(modify_kwargs)
 
     def get_step_parameters(self):
-        self.no_default_params, self.all_params = StepClass.get_all_parameters()
+        self.no_default_params, self.all_params = StepClass.get_step_parameters()
 
 class MultiPipeline:
     """

@@ -4,13 +4,14 @@ import numpy as np
 
 from bigfish import detection, plot
 
-from .. import DataContainer, Settings, Experiment, ScopeClass, IndependentStepClass, StepOutputsClass
+from .. import DataContainer, Settings, Experiment, ScopeClass, IndependentStepClass
+from src.GeneralOutput import OutputClass
 
 from src.Util.Utilities import Utilities
 from src.Util.BigFish import BigFISH
 
 #%% Output Directories
-class Make_Analysis_Dir_Output_JF(StepOutputsClass):
+class Make_Analysis_Dir_Output_JF(OutputClass):
     def __init__(self, analysis_dir):
         super().__init__()
         self.analysis_location = analysis_dir
@@ -33,7 +34,7 @@ class Make_Analysis_Dir_JF(IndependentStepClass):
         return Make_Analysis_Dir_Output_JF(analysis_dir)
 
 
-class Make_Output_Dir_Output_JF(StepOutputsClass):
+class Make_Output_Dir_Output_JF(OutputClass):
     def __init__(self, output_dir):
         super().__init__()
         self.output_location = output_dir
@@ -57,7 +58,7 @@ class Make_Output_Dir_JF(IndependentStepClass):
         return Make_Output_Dir_Output_JF(output_dir)
 
 
-class Make_Output_Dir_Output(StepOutputsClass):
+class Make_Output_Dir_Output(OutputClass):
     def __init__(self, output_dir):
         super().__init__()
         self.output_identification_string = output_dir
@@ -93,7 +94,7 @@ class Make_Output_Dir(IndependentStepClass):
         return Make_Output_Dir_Output(output_identification_string)
 
 #%% Consolidate Image Shapes
-class ConsolidateImageShapesOutput(StepOutputsClass):
+class ConsolidateImageShapesOutput(OutputClass):
     def __init__(self, list_images) -> None:
         super().__init__()
         self.ModifyPipelineData = True
@@ -136,7 +137,7 @@ class ConsolidateImageShapes(IndependentStepClass):
         return output
 
 #%% Calculate Sharpness
-class CalculateSharpnessOutput(StepOutputsClass):
+class CalculateSharpnessOutput(OutputClass):
     def __init__(self, list_is_image_sharp, list_images, list_metric_sharpness_images) -> None:
         super().__init__()
         self.ModifyPipelineData = True
@@ -196,7 +197,7 @@ class CalculateSharpness(IndependentStepClass):
         return output
 
 #%% Automatic Spot Detection
-class AutomaticThresholdingOutput_JF(StepOutputsClass):
+class AutomaticThresholdingOutput_JF(OutputClass):
     def __init__(self, list_images, 
                  bigfish_min_threshold, bigfish_max_threshold, 
                  bigfish_mean_threshold, bigfish_std_threshold,
@@ -352,7 +353,7 @@ class AutomaticSpotDetection_JF(IndependentStepClass):
         return threshold
 
 
-class AutomaticThresholdingOutput(StepOutputsClass):
+class AutomaticThresholdingOutput(OutputClass):
     def __init__(self, automatic_spot_detection_threshold) -> None:
         super().__init__()
         self.ModifyPipelineData = False
@@ -447,7 +448,7 @@ class AutomaticSpotDetection(IndependentStepClass):
         return output
 
 #%% Trim Z Slices
-class TrimZSlicesOutput(StepOutputsClass):
+class TrimZSlicesOutput(OutputClass):
     def __init__(self, list_images, list_z_slices_per_image) -> None:
         super().__init__()
         self.ModifyPipelineData = True

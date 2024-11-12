@@ -14,10 +14,11 @@ __version__ = "0.0.1"
 
 from .Parameters import Settings, Experiment, ScopeClass, DataContainer
 from .GeneralStep import StepClass, SequentialStepsClass, FinalizingStepClass, IndependentStepClass   #GeneralStepClasses
-from .GeneralOutput import OutputClass, StepOutputsClass, PipelineOutputsClass, PrePipelineOutputsClass # GeneralOutputClasses
+from .GeneralOutput import OutputClass # GeneralOutputClasses
 from .Pipeline import Pipeline
 from .SingleStepCompiler import SingleStepCompiler
 from .Send_To_Cluster import run_on_cluster
+from .Displays import Display
 
 from . import Util
 from . import SequentialSteps

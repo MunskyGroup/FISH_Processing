@@ -71,12 +71,13 @@ import joypy
 from matplotlib import cm
 from scipy.ndimage import binary_dilation
 
-from src import SequentialStepsClass, StepOutputsClass
+from src import SequentialStepsClass
+from src.GeneralOutput import OutputClass
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 
 # %% Parameter Optimization Steps
-class ParamOptimizer_BIGFISH_SpotDetection_Output(StepOutputsClass):
+class ParamOptimizer_BIGFISH_SpotDetection_Output(OutputClass):
     def __init__(self, array_of_outputs, order_of_index: dict):
         super().__init__()
         self.array_of_outputs = array_of_outputs
