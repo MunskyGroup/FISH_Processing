@@ -47,7 +47,7 @@ class Display:
         fig, axs = plt.subplots(len(positions), masks.shape[2], figsize=(20, 20))
         for i, position in enumerate(positions):
             for j in range(masks.shape[2]):
-                axs[i, j].imshow(masks[position, 0, j])
+                axs[i, j].imshow(masks[position, 0, j, 0])
         plt.show()
 
     def save_all_figures(self):

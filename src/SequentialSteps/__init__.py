@@ -1,5 +1,3 @@
-from .PipelineSteps import (ParamOptimizer_BIGFISH_SpotDetection)
-
 from .SpotDetection_Steps import (BIGFISH_SpotDetection, UFISH_SpotDetection_Step, TrackPy_SpotDetection)
 
 from .Filters import (rescale_images, remove_background, exposure_correction)

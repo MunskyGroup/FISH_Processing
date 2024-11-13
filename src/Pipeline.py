@@ -10,14 +10,8 @@ from .Util.Utilities import Utilities
 
 class Pipeline:
     def __init__(self,
-                 settings: Settings,
-                 scope: ScopeClass,
-                 experiment: Experiment,
                  ) -> None:
-        self.Outputs = OutputClass() # final outputs
-        self.settings = settings
-        self.scope = scope
-        self.experiment = experiment
+        pass
 
     def check_requirements(self):
         self.get_parameters()
@@ -47,16 +41,16 @@ class Pipeline:
         They can modify the pipelineData, they may also create new properties in pipelineData. they will also have the option to freeze the pipelineData in place
 
         '''
-        from src import IndependentStepsClass
-        IndependentStepClass.execute()
+        from src.GeneralStep import IndependentStepClass
+        IndependentStepClass().execute()
 
     def execute_sequential_steps(self):
-        from src import SequentialStepsClass
-        SequentialStepClass.execute()
+        from src.GeneralStep import SequentialStepsClass
+        SequentialStepsClass().execute()
 
     def execute_finalization_steps(self):
-        from src import FinalizationStepsClass
-        FinalizationStepClass.execute()
+        from src.GeneralStep import FinalizingStepClass
+        FinalizingStepClass().execute()
 
     def __post_init__(self):
         self.check_requirements()
@@ -65,74 +59,6 @@ class Pipeline:
         
         Parameters.pipeline_init()
 
-    def run_up_to(self, step_name):
-        all_steps = self.independentSteps + self.sequentialSteps + self.finalizationSteps
-        if not (step_name in [step.__class__.__name__ for step in all_steps]):
-            raise ValueError(f'{step_name} is not a valid step name')
-
-        # remove all steps from step_name and onwards
-        # check if its an independent step step and removes all after
-        if step_name in [step.__class__.__name__ for step in self.independentSteps]:
-            # get the index of the step
-            index = [step.__class__.__name__ for step in self.independentSteps].index(step_name)
-            # remove all steps after the index
-            self.independentSteps = self.independentSteps[:index]
-            self.execute_independent_steps()
-            pickle.dump(self, open('pipeline.pkl', 'wb'))
-        # check if its a sequential step and removes all after
-        else: 
-            self.execute_independent_steps()
-            if step_name in [step.__class__.__name__ for step in self.sequentialSteps]:
-                # get the index of the step
-                index = [step.__class__.__name__ for step in self.sequentialSteps].index(step_name)
-                # remove all steps after the index
-                self.sequentialSteps = self.sequentialSteps[:index]
-                self.execute_sequential_steps()
-                pickle.dump(self, open('pipeline.pkl', 'wb'))
-            # check if its a finalization step and removes all after
-            else:
-                self.execute_sequential_steps()
-                if step_name in [step.__class__.__name__ for step in self.finalizationSteps]:
-                    # get the index of the step
-                    index = [step.__class__.__name__ for step in self.finalizationSteps].index(step_name)
-                    # remove all steps after the index
-                    self.finalizationSteps = self.finalizationSteps[:index]
-                    self.execute_finalization_steps()
-                    pickle.dump(self, open('pipeline.pkl', 'wb'))
-
-    def run_single_step(self, step, modify_kwargs: dict = None):
-        if modify_kwargs is not None:
-            self.modify_kwargs(modify_kwargs)
-
-        stepOutput = None
-
-        if step.__class__.__base__.__name__ == 'SequentialStepsClass':
-            for img_index in range(self.dataContainer.num_img_2_run):
-                print('')
-                print(' ###################### ')
-                print('        IMAGE : ' + str(img_index))
-                print(' ###################### ')
-                print('    Image Name :  ', self.dataContainer.list_image_names[img_index])
-
-                singleImgOutput = step.run(id=img_index, 
-                                        data=self.dataContainer,
-                                        settings=self.settings,
-                                        scope=self.scope,
-                                        experiment=self.experiment)
-                
-                if stepOutput is None:
-                    stepOutput = singleImgOutput
-                else:
-                    stepOutput.append(singleImgOutput)
-
-        else:
-            print(step)
-            stepOutput = step.run(data=self.dataContainer,
-                                  settings=self.settings,
-                                  scope=self.scope,
-                                  experiment=self.experiment)
-            
-        return stepOutput
         
     def modify_kwargs(self, modify_kwargs: dict):
         Parameters.update_parameters(modify_kwargs)

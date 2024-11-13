@@ -183,6 +183,54 @@ class DilationedCytoMask(CellSegmentation):
 
 
 class SimpleCellposeSegmentaion(CellSegmentation):
+    """
+    A class for performing cell segmentation using the Cellpose model.
+    Methods
+    -------
+    main(image, cytoChannel, nucChannel, masks, timepoint, fov, cellpose_model_type, cellpose_diameter, 
+         cellpose_channel_axis, cellpose_invert, cellpose_normalize, do_3D_Segmentation, cellpose_min_size, 
+         cellpose_flow_threshold, cellpose_cellprob_threshold, cellpose_pretrained_model, display_plots, **kwargs)
+        Main method to perform segmentation on the given image.
+    Parameters
+    ----------
+    image : ndarray
+        The input image to be segmented.
+    cytoChannel : int
+        The channel index for cytoplasm.
+    nucChannel : int
+        The channel index for nuclei.
+    masks : list
+        List to store the segmentation masks.
+    timepoint : int
+        The timepoint index for the image.
+    fov : int
+        The field of view index for the image.
+    cellpose_model_type : str or list of str, optional
+        The type of Cellpose model to use. Default is ['cyto3', 'nuclei'].
+    cellpose_diameter : float or list of float, optional
+        The diameter of the cells to be segmented. Default is 180.
+    cellpose_channel_axis : int, optional
+        The axis of the channels in the image. Default is 0.
+    cellpose_invert : bool or list of bool, optional
+        Whether to invert the image for segmentation. Default is False.
+    cellpose_normalize : bool, optional
+        Whether to normalize the image for segmentation. Default is True.
+    do_3D_Segmentation : bool, optional
+        Whether to perform 3D segmentation. Default is False.
+    cellpose_min_size : float or list of float, optional
+        The minimum size of the cells to be segmented. Default is 500.
+    cellpose_flow_threshold : float or list of float, optional
+        The flow threshold for the Cellpose model. Default is 0.
+    cellpose_cellprob_threshold : float or list of float, optional
+        The cell probability threshold for the Cellpose model. Default is 0.
+    cellpose_pretrained_model : str or list of str, optional
+        The path to the pretrained Cellpose model. Default is False.
+    display_plots : bool, optional
+        Whether to display plots of the segmentation results. Default is False.
+    **kwargs : dict
+        Additional keyword arguments.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -193,14 +241,15 @@ class SimpleCellposeSegmentaion(CellSegmentation):
              timepoint: int,
              fov: int,
              cellpose_model_type: str | list[str] = ['cyto3', 'nuclei'], 
-             cellpose_diameter: float | list[float] = 70, 
+             cellpose_diameter: float | list[float] = 180, 
              cellpose_channel_axis: int = 0,
              cellpose_invert: bool | list = False, 
              cellpose_normalize: bool = True, 
              do_3D_Segmentation: bool = False, # This is not implemented
-             cellpose_min_size: float | list[float] = 30, 
+             cellpose_min_size: float | list[float] = 500, 
              cellpose_flow_threshold: float | list[float] = 0, 
              cellpose_cellprob_threshold: float | list[float] = 0,
+             cellpose_pretrained_model: str | list[str] = False,
              display_plots: bool = False,
                **kwargs):
         if image.shape[1] >= 1:
@@ -209,11 +258,13 @@ class SimpleCellposeSegmentaion(CellSegmentation):
         if timepoint == 0:
             nuc_mask = self.segment_nuclei(image, nucChannel, cellpose_min_size, cellpose_flow_threshold,
                                            cellpose_cellprob_threshold, cellpose_model_type, cellpose_diameter,
-                                           cellpose_channel_axis, cellpose_invert, cellpose_normalize, do_3D_Segmentation)
+                                           cellpose_channel_axis, cellpose_invert, cellpose_normalize, do_3D_Segmentation,
+                                           cellpose_pretrained_model)
 
             cell_mask = self.segment_cells(image, cytoChannel, nucChannel, cellpose_min_size, cellpose_flow_threshold,
                                            cellpose_cellprob_threshold, cellpose_model_type, cellpose_diameter,
-                                           cellpose_channel_axis, cellpose_invert, cellpose_normalize, do_3D_Segmentation)
+                                           cellpose_channel_axis, cellpose_invert, cellpose_normalize, do_3D_Segmentation, 
+                                           cellpose_pretrained_model)
 
             nuc_mask, cell_mask = self.align_nuc_cell_masks(nuc_mask, cell_mask)
 
@@ -225,7 +276,8 @@ class SimpleCellposeSegmentaion(CellSegmentation):
              cellpose_flow_threshold, 
              cellpose_cellprob_threshold,
              cellpose_model_type,
-             cellpose_diameter):
+             cellpose_diameter,
+             pretrained_model):
         if isinstance(cellpose_min_size, list):
             nuc_min_size = cellpose_min_size[1]
             cyto_min_size = cellpose_min_size[0]
@@ -261,64 +313,87 @@ class SimpleCellposeSegmentaion(CellSegmentation):
             nuc_diameter = cellpose_diameter
             cyto_diameter = cellpose_diameter
 
-        return nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, nuc_cellprob_threshold, cyto_cellprob_threshold, nuc_model_type, cyto_model_type, nuc_diameter, cyto_diameter
+        if isinstance(pretrained_model, list):
+            nuc_pretrained_model = pretrained_model[1]
+            cyto_pretrained_model = pretrained_model[0]
+        else:
+            nuc_pretrained_model = pretrained_model
+            cyto_pretrained_model = pretrained_model
+
+        return (nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, nuc_cellprob_threshold, 
+                cyto_cellprob_threshold, nuc_model_type, cyto_model_type, nuc_diameter, cyto_diameter, nuc_pretrained_model,
+                cyto_pretrained_model) 
 
     def segment_nuclei(self, image, nucChannel, cellpose_min_size, cellpose_flow_threshold, 
                        cellpose_cellprob_threshold, cellpose_model_type, cellpose_diameter, 
-                       cellpose_channel_axis, cellpose_invert, cellpose_normalize, cellpose_do_3D):
+                       cellpose_channel_axis, cellpose_invert, cellpose_normalize, cellpose_do_3D,
+                       cellpose_pretrained_model):
         if nucChannel is not None:
             (nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, 
             nuc_cellprob_threshold, cyto_cellprob_threshold, nuc_model_type, 
-            cyto_model_type, nuc_diameter, cyto_diameter) = self.unpack_lists(cellpose_min_size, 
+            cyto_model_type, nuc_diameter, cyto_diameter, 
+            nuc_pretrained_model, cyto_pretrained_model) = self.unpack_lists(cellpose_min_size, 
                                                                         cellpose_flow_threshold, 
                                                                         cellpose_cellprob_threshold,
                                                                         cellpose_model_type,
-                                                                        cellpose_diameter)
+                                                                        cellpose_diameter,
+                                                                        cellpose_pretrained_model)
 
-            nucmodel = models.Cellpose(model_type=nuc_model_type, gpu=True)
-            channels = [[0, nucChannel]]
-            nuc_mask, flows, styles, diams = nucmodel.eval(image.compute(), 
-                                                            channels=channels, 
-                                                            diameter=nuc_diameter, 
-                                                            invert=cellpose_invert, 
-                                                            normalize=cellpose_normalize, 
-                                                            channel_axis=cellpose_channel_axis, 
-                                                            do_3D=cellpose_do_3D,
-                                                            min_size=nuc_min_size, 
-                                                            flow_threshold=nuc_flow_threshold, 
-                                                            cellprob_threshold=nuc_cellprob_threshold,
-                                                            # net_avg=True, 
-                                                            augment=True)
-            
+            cp = models.CellposeModel(model_type=nuc_model_type, gpu=True, pretrained_model=nuc_pretrained_model)
+            # nucmodel = models.Cellpose(model_type=nuc_model_type, gpu=True)
+            # if cp is not None:
+            #     nucmodel.cp = cp
+            channels = [0, 0]
+            nuc_image = image[nucChannel, :, :].compute()
+            nuc_mask, flows, styles = cp.eval(nuc_image,
+                                                channels=channels, 
+                                                diameter=nuc_diameter, 
+                                                invert=cellpose_invert, 
+                                                normalize=cellpose_normalize, 
+                                                channel_axis=cellpose_channel_axis, 
+                                                do_3D=cellpose_do_3D,
+                                                min_size=nuc_min_size, 
+                                                flow_threshold=nuc_flow_threshold, 
+                                                cellprob_threshold=nuc_cellprob_threshold,
+                                                # net_avg=True, 
+                                                augment=True)
+
 
             return nuc_mask
         
     def segment_cells(self, image, cytoChannel, nucChannel, cellpose_min_size, cellpose_flow_threshold,
                       cellpose_cellprob_threshold, cellpose_model_type, cellpose_diameter,
-                      cellpose_channel_axis, cellpose_invert, cellpose_normalize, cellpose_do_3D):
+                      cellpose_channel_axis, cellpose_invert, cellpose_normalize, cellpose_do_3D,
+                      cellpose_pretrained_model):
         if cytoChannel is not None:
             (nuc_min_size, cyto_min_size, nuc_flow_threshold, cyto_flow_threshold, 
             nuc_cellprob_threshold, cyto_cellprob_threshold, nuc_model_type,
-            cyto_model_type, nuc_diameter, cyto_diameter) = self.unpack_lists(cellpose_min_size, 
+            cyto_model_type, nuc_diameter, cyto_diameter, 
+            nuc_pretrained_model, cyto_pretrained_model) = self.unpack_lists(cellpose_min_size, 
                                                                         cellpose_flow_threshold, 
                                                                         cellpose_cellprob_threshold,
                                                                         cellpose_model_type,
-                                                                        cellpose_diameter)
+                                                                        cellpose_diameter,
+                                                                        cellpose_pretrained_model)
 
-            cytomodel = models.Cellpose(model_type=cyto_model_type, gpu=True)
-            channels = [[cytoChannel, nucChannel]]
-            cell_mask, flows, styles, diams = cytomodel.eval(image.compute(), 
-                                                            channels=channels, 
-                                                            diameter=cyto_diameter, 
-                                                        invert=cellpose_invert, 
-                                                        normalize=cellpose_normalize, 
-                                                        channel_axis=cellpose_channel_axis, 
-                                                        do_3D=cellpose_do_3D,
-                                                        min_size=cyto_min_size, 
-                                                        flow_threshold=cyto_flow_threshold, 
-                                                        cellprob_threshold=cyto_cellprob_threshold,
-                                                        # net_avg=True, 
-                                                        augment=True)
+            cp = models.CellposeModel(model_type=cyto_model_type, gpu=True, pretrained_model=cyto_pretrained_model)
+            # cytomodel = models.Cellpose(model_type=cyto_model_type, gpu=True)
+            # if cp is not None:
+            #     cytomodel.cp = cp
+            channels = [0, 0]
+            cyto_image = image[cytoChannel, :, :].compute()
+            cell_mask, flows, styles = cp.eval(cyto_image,
+                                                    channels=channels, 
+                                                    diameter=cyto_diameter, 
+                                                    invert=cellpose_invert, 
+                                                    normalize=cellpose_normalize, 
+                                                    channel_axis=cellpose_channel_axis, 
+                                                    do_3D=cellpose_do_3D,
+                                                    min_size=cyto_min_size, 
+                                                    flow_threshold=cyto_flow_threshold, 
+                                                    cellprob_threshold=cyto_cellprob_threshold,
+                                                    # net_avg=True, 
+                                                    augment=True)
             return cell_mask
 
 class CellSegmentationStepClass_JF(CellSegmentation):
@@ -754,3 +829,4 @@ class BIGFISH_Tensorflow_Segmentation(SequentialStepsClass):
 
 if __name__ == '__main__':
     pass
+# %%

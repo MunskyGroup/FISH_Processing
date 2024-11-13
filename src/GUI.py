@@ -39,7 +39,19 @@ class GUI(ABC):
             if isinstance(widget, ttk.Checkbutton):
                 self.params[param] = widget.instate(['selected'])
             elif isinstance(widget, ttk.Entry):
-                self.params[param] = widget.get()
+                value = widget.get()
+                # check if the value is a number and evaluate it
+                try:
+                    value = eval(value)
+                except:
+                    pass
+                # check if value is a string and if so split it based on spaces into a list
+                if isinstance(value, str):
+                    value = value.split()
+                # check if value is a string and if so split it based on commas into a list
+                if isinstance(value, str):
+                    value = value.split(',')
+                self.params[param] = value
             elif isinstance(widget, ttk.Combobox):
                 self.params[param] = widget.get()
             elif isinstance(widget, ttk.Scale):
@@ -135,6 +147,9 @@ class StepGUI(GUI):
         self.window = tk.Tk()
         self.window.title("Step Parameters")
 
+        # make plt show the plots in a new window
+        plt.ion()
+
         # create a frame for the widgets
         self.frame = ttk.Frame(self.window)
         self.frame.pack(padx=10, pady=10)
@@ -186,6 +201,9 @@ class StepGUI(GUI):
                 doc_label.pack()
 
         self.window.mainloop()
+
+        # put plt back to normal
+        plt.ioff()
 
     def create_widgets(self):
         # Remove all unwanted parameters

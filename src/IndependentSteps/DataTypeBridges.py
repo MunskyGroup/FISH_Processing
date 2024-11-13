@@ -72,6 +72,7 @@ class DataTypeBridge(IndependentStepClass):
         masks = None
         if load_in_mask:
             masks = da.from_array(f['masks'])
+            masks = masks.rechunk((1, 1, -1, -1, -1, -1))
 
         num_chuncks = images.shape[0] * images.shape[1]
 
@@ -127,8 +128,7 @@ class FFF2NativeDataType(DataTypeBridge):
             mask_tifs = [f for f in mask_dirs if f.endswith('.tif')]
 
             mask_cells = [f for f in mask_tifs if 's_cyto_R' in f]
-            mask_nuclei = [f for f in mask_tifs if 'nuclei' in f]
-            mask_cyto = [f for f in mask_tifs if 'cyto_no_nuclei' in f]
+            mask_nuclei = [f for f in mask_tifs if 'masks_nuclei_R' in f]
             already_made_masks = True
     
         # create list of images
@@ -177,14 +177,18 @@ class FFF2NativeDataType(DataTypeBridge):
 
                     imgs[r, t, c, :, :, :] = img
 
-                    search_params = [fov, tp]
                     if already_made_masks:
+                        search_params = [fov, tp]
                         cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0] if len(mask_cells) > 0 else None
                         nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0] if len(mask_nuclei) > 0 else None
                         if cell_mask_name is not None:
-                            masks[r, 0, cytoChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(folder, cell_mask_name)))
+                            print('cell ', cell_mask_name)
+                            mask = tifffile.imread(os.path.join(folder, cell_mask_name))
+                            masks[r, 0, cytoChannel,0:, :, :] = da.from_array(mask)
                         if nuc_mask_name is not None:
-                            masks[r, 0, nucChannel, :, :, :] = da.from_array(tifffile.imread(os.path.join(folder, nuc_mask_name)))
+                            print('nuc ', nuc_mask_name)
+                            mask = tifffile.imread(os.path.join(folder, nuc_mask_name))
+                            masks[r, 0, nucChannel, 0, :, :] = da.from_array(mask)
                     count += 1
 
         da.to_hdf5(os.path.join(folder, H5_name), '/raw_images', imgs)
@@ -192,7 +196,9 @@ class FFF2NativeDataType(DataTypeBridge):
 
         metadata_str = json.dumps(img_metadata)
         with h5py.File(os.path.join(folder, H5_name), 'a') as h5f:
-            h5f.create_dataset(f'/metadata', data=metadata_str)
+            if '/metadata' in h5f:
+                del h5f['/metadata']
+            h5f.create_dataset('/metadata', data=metadata_str)
 
                 
 
