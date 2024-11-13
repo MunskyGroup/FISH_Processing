@@ -19,6 +19,7 @@ from .Pipeline import Pipeline
 from .SingleStepCompiler import SingleStepCompiler
 from .Send_To_Cluster import run_on_cluster
 from .Displays import Display
+from .GUI import GUI, StepGUI
 
 from . import Util
 from . import SequentialSteps

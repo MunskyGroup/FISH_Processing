@@ -88,20 +88,23 @@ from tifffile import imsave
 import copy
 from scipy.optimize import curve_fit
 from abc import abstractmethod
+import dask.array as da
 
 
 # append the path two directories before this file
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import SequentialStepsClass, StepOutputsClass, SingleStepCompiler, IndependentStepClass # TODO: remove this
+from src import SequentialStepsClass, SingleStepCompiler, IndependentStepClass # TODO: remove this
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
+from src.GeneralOutput import OutputClass
+
 
 
 #%%
 
 
-class FiltersOutputClass(StepOutputsClass):
+class FiltersOutputClass(OutputClass):
     def __init__(self, image: np.array):
         super().__init__()
         self.ModifyPipelineData = True

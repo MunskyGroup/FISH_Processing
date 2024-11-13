@@ -29,9 +29,9 @@ class StepClass(ABC):
         no_default_params = []
         all_params = []
         for step in steps:
-            _1, _2 = step.get_paramaters()
-            no_default_params.extend(_1)
-            all_params.extend(_2)
+            required, all, _, _ = step.get_paramaters()
+            no_default_params.extend(required)
+            all_params.extend(all)
 
         return list(set(no_default_params)), list(set(all_params))
 
@@ -78,12 +78,20 @@ class StepClass(ABC):
         else:
             self.step_output_dir = None
 
-    def get_paramaters(self):
+    def get_parameters(self):
             step_func = self.main
             sig = inspect.signature(step_func)
-            no_default_params = [param.name for param in sig.parameters.values() if param.default is param.empty]
+            # get the required parameters
+            required_params = [param.name for param in sig.parameters.values() if param.default is param.empty]
             all_params = [param.name for param in sig.parameters.values()]
-            return no_default_params, all_params
+            
+            # get default values for all parameters
+            defaults = {param.name: param.default for param in sig.parameters.values() if param.default is not param.empty}
+
+            # get types for all parameters
+            types = {param.name: (param.annotation if param.annotation is not param.empty else None) for param in sig.parameters.values()}
+
+            return required_params, all_params, defaults, types
     
     @abstractmethod
     def main(self, **kwargs):

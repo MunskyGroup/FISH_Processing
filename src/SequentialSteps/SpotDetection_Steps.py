@@ -356,8 +356,8 @@ class BIGFISH_SpotDetection(SpotDetection):
     def __init__(self):
         super().__init__()
 
-    def main(self, image, FISHChannel,  nucChannel, nuc_mask, cell_mask, cyto_mask,
-             voxel_size_yx, voxel_size_z, spot_yx, spot_z, timepoint, fov, independent_params,
+    def main(self, image, FISHChannel,  nucChannel, nuc_mask, cell_mask,
+             voxel_size_yx: int, voxel_size_z: int, spot_yx: int, spot_z: int, timepoint, fov, independent_params: dict,
              bigfish_threshold: Union[int, str] = None, snr_threshold: float = None, snr_ratio: float = None,
              bigfish_alpha: float = 0.7, bigfish_beta:float = 1, bigfish_gamma:float = 5, 
              CLUSTER_RADIUS:int = 500, MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
