@@ -205,7 +205,7 @@ class SequentialStepsClass(StepClass):
             print(' ###################### ')
             params = self.load_in_parameters(p, t)
             self.create_step_output_dir(**params)
-            self.on_first_run()
+            self.on_first_run(params)
             output = self.main(**params)
         
         return output

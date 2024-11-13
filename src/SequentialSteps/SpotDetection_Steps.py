@@ -43,11 +43,13 @@ class SpotDetectionOutputClass(OutputClass):
 #%% Abstract Class
 class SpotDetection(SequentialStepsClass):
 
-    def main(self, image, nuc_mask, cell_mask, cyto_mask, nucChannel, cytoChannel, FISHChannel, timepoint, fov, verbose, display_plots, **kwargs) -> SpotDetectionOutputClass:
+    def main(self, image, nuc_mask, cell_mask, nucChannel, cytoChannel, FISHChannel, timepoint, fov, verbose, display_plots, **kwargs) -> SpotDetectionOutputClass:
         for c in range(len(FISHChannel)):
             spots, clusters = self.get_detected_spots(**kwargs)
             spots, clusters = self.get_spot_properties(spots, clusters, **kwargs)
-            cell_results = self.extract_cell_level_results(image, spots, clusters, nucChannel, c, nuc_mask, cell_mask, cyto_mask, verbose, display_plots)
+            cell_results = self.extract_cell_level_results(image, spots, clusters, nucChannel, FISHChannel, 
+                                                        nuc_mask, cell_mask, timepoint, fov,
+                                                            verbose, display_plots)
 
         return SpotDetectionOutputClass(cell_results, spots, clusters)
 
@@ -60,7 +62,7 @@ class SpotDetection(SequentialStepsClass):
         pass
 
     def extract_cell_level_results(self, image, spots, clusters, nucChannel, FISHChannel, 
-                                   nuc_mask, cell_mask, cyto_mask, timepoint, fov,
+                                   nuc_mask, cell_mask, timepoint, fov,
                                     verbose, display_plots) -> pd.DataFrame:
         if nuc_mask is not None or cell_mask is not None:
 
@@ -328,22 +330,25 @@ class BIGFISH_SpotDetection(SpotDetection):
     -------
     __init__():
         Initializes the BIGFISH_SpotDetection class.
-    main(id, list_images, FISHChannel, nucChannel, voxel_size_yx, voxel_size_z, spot_yx, spot_z, map_id_imgprops, image_name=None, list_nuc_masks=None, list_cell_masks=None, bigfish_mean_threshold=None, bigfish_alpha=0.7, bigfish_beta=1, bigfish_gamma=5, CLUSTER_RADIUS=500, MIN_NUM_SPOT_FOR_CLUSTER=4, use_log_hook=False, verbose=False, display_plots=False, **kwargs):
+    main(image, FISHChannel, nucChannel, nuc_mask, cell_mask, voxel_size_yx, voxel_size_z, spot_yx, spot_z, timepoint, fov, independent_params, bigfish_threshold=None, snr_threshold=None, snr_ratio=None, bigfish_alpha=0.7, bigfish_beta=1, bigfish_gamma=5, CLUSTER_RADIUS=500, MIN_NUM_SPOT_FOR_CLUSTER=4, use_log_hook=False, verbose=False, display_plots=False, bigfish_use_pca=False, sub_pixel_fitting=False, bigfish_minDistance=None, **kwargs):
         Main method to detect spots in FISH images and extract cell-level results.
         Parameters:
-        - id (int): Identifier for the image.
-        - list_images (list): List of images.
+        - image (np.array): Input image.
         - FISHChannel (list): List of FISH channels.
         - nucChannel (list): List of nuclear channels.
+        - nuc_mask (np.array): Nuclear mask.
+        - cell_mask (np.array): Cell mask.
         - voxel_size_yx (float): Voxel size in the yx plane.
         - voxel_size_z (float): Voxel size in the z plane.
         - spot_yx (float): Spot size in the yx plane.
         - spot_z (float): Spot size in the z plane.
-        - map_id_imgprops (dict): Mapping of image properties.
-        - image_name (str, optional): Name of the image.
-        - list_nuc_masks (list[np.array], optional): List of nuclear masks.
-        - list_cell_masks (list[np.array], optional): List of complete cell masks.
-        - bigfish_mean_threshold (list[float], optional): List of mean thresholds for spot detection.
+        - timepoint (int): Timepoint of the image.
+        - fov (int): Field of view of the image.
+        - independent_params (dict): Independent parameters.
+        - bigfish_threshold (Union[int, str], optional): Threshold for spot detection.
+                            mean, min, max, median, mode, 75th_percentile, 25th_percentile, 90th_percentile.
+        - snr_threshold (float, optional): SNR threshold for spot filtering.
+        - snr_ratio (float, optional): Ratio to determine SNR threshold.
         - bigfish_alpha (float, optional): Alpha parameter for spot decomposition.
         - bigfish_beta (float, optional): Beta parameter for spot decomposition.
         - bigfish_gamma (float, optional): Gamma parameter for spot decomposition.
@@ -352,6 +357,9 @@ class BIGFISH_SpotDetection(SpotDetection):
         - use_log_hook (bool, optional): Whether to use log kernel for spot detection.
         - verbose (bool, optional): Whether to print verbose output.
         - display_plots (bool, optional): Whether to display plots.
+        - bigfish_use_pca (bool, optional): Whether to use PCA for spot filtering.
+        - sub_pixel_fitting (bool, optional): Whether to use sub-pixel fitting for spot detection.
+        - bigfish_minDistance (Union[float, list], optional): Minimum distance for spot detection.
     """
     def __init__(self):
         super().__init__()
@@ -363,6 +371,7 @@ class BIGFISH_SpotDetection(SpotDetection):
              CLUSTER_RADIUS:int = 500, MIN_NUM_SPOT_FOR_CLUSTER:int = 4, use_log_hook:bool = False, 
              verbose:bool = False, display_plots: bool = False, bigfish_use_pca: bool = False,
              sub_pixel_fitting: bool = False, bigfish_minDistance:Union[float, list] = None, **kwargs):
+        
         # cycle through FISH channels
         for c in range(len(FISHChannel)):
             rna = image[FISHChannel[c], :, :, :]
@@ -377,7 +386,7 @@ class BIGFISH_SpotDetection(SpotDetection):
                 minimum_distance=bigfish_minDistance, use_pca=bigfish_use_pca, snr_threshold=snr_threshold, snr_ratio=snr_ratio, **kwargs)
             
             cell_results = self.extract_cell_level_results(image, spots_px, clusters, nucChannel, FISHChannel, 
-                                                            nuc_mask, cell_mask, cyto_mask, timepoint, fov,
+                                                            nuc_mask, cell_mask, timepoint, fov,
                                                             verbose, display_plots)
 
             spots, clusters = self.standardize_df(cell_results, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params)
