@@ -106,11 +106,8 @@ class SequentialStepsClass(StepClass):
     _instances = []
 
     def __init__(self):
-        StepClass._instances.append(self)
-        SequentialStepsClass._instances.append(self)
         self.is_first_run = True
 
-    @classmethod
     def execute(self):
         params = Parameters.get_parameters()
         number_of_chunks = params['num_chunks_to_run']
@@ -122,10 +119,6 @@ class SequentialStepsClass(StepClass):
                 for p in range(params['images'].shape[0]):
                     if count >= number_of_chunks:
                         break
-                    print(' ###################### ')
-                    print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
-                    print(' ###################### ')
-                    print('')
                     for step in SequentialStepsClass._instances:
                         print('++++++++++++++++++++++++++++')
                         print('Running : ', step)
@@ -140,10 +133,6 @@ class SequentialStepsClass(StepClass):
                 for t in range(params['images'].shape[1]):
                     if count >= number_of_chunks:
                         break
-                    print(' ###################### ')
-                    print('        IMAGE : ' + str(p) + ' TIMEPOINT : ' + str(t))
-                    print(' ###################### ')
-                    print('')
                     for step in SequentialStepsClass._instances:
                         print('++++++++++++++++++++++++++++')
                         print('Running : ', step)

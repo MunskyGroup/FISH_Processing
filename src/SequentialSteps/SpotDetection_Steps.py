@@ -66,8 +66,8 @@ class SpotDetection(SequentialStepsClass):
                                     verbose, display_plots) -> pd.DataFrame:
         if nuc_mask is not None or cell_mask is not None:
 
-            nuc = image[0, 0, nucChannel, :, :, :]
-            rna = image[0, 0, FISHChannel, :, :, :]
+            nuc = image[nucChannel, :, :, :]
+            rna = image[FISHChannel, :, :, :]
 
             # convert masks to max projection
             if nuc_mask is not None and len(nuc_mask.shape) != 2:
@@ -76,7 +76,7 @@ class SpotDetection(SequentialStepsClass):
                 cell_mask = np.max(cell_mask, axis=0)
 
             # remove transcription sites
-            spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_mask, ndim=3)
+            spots_no_ts, foci, ts = multistack.remove_transcription_site(spots, clusters, nuc_mask.compute(), ndim=3)
             if verbose:
                 print("detected spots (without transcription sites)")
                 print("\r shape: {0}".format(spots_no_ts.shape))
@@ -93,12 +93,14 @@ class SpotDetection(SequentialStepsClass):
                 print("\r dtype: {0}".format(spots_out.dtype))
 
             # extract fov results
+            cell_mask = cell_mask.astype("uint16") if cell_mask is not None else nuc_mask.astype("uint16")
+            nuc_mask = nuc_mask.astype("uint16") if nuc_mask is not None else None
             other_images = {}
             other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
             fov_results = multistack.extract_cell(
-                cell_label=cell_mask.astype("uint16") if cell_mask is not None else nuc_mask.astype("uint16"),
+                cell_label=cell_mask.compute(),
                 ndim=3,
-                nuc_label=nuc_mask.astype("uint16"),
+                nuc_label=nuc_mask.compute(),
                 rna_coord=spots_no_ts,
                 others_coord={"foci": foci, "transcription_site": ts},
                 image=np.max(rna, axis=0).astype("uint16"),
