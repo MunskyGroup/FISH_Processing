@@ -40,7 +40,8 @@ class CellSegmentationOutput(OutputClass):
             Parameters.update_parameters(kwargs={'masks': masks})
 
 class CellSegmentation(SequentialStepsClass):
-    def main(self, masks, image, fov, timepoint, nucChannel, cytoChannel, display_plots, do_3D_Segmentation, **kwargs):
+    def main(self, masks, image, fov, timepoint, nucChannel, cytoChannel, 
+             display_plots, do_3D_Segmentation, **kwargs):
         if len(image.shape) == 3:
             image = np.max(image, axis=0) 
         
@@ -234,7 +235,8 @@ class SimpleCellposeSegmentaion(CellSegmentation):
     def __init__(self):
         super().__init__()
 
-    def main(self, image, 
+    def main(self, 
+             image, 
              cytoChannel, 
              nucChannel, 
              masks,

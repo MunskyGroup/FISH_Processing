@@ -25,6 +25,7 @@ class Display:
         return mask
 
     def displayImage_maxProject(self, position: int = 0, timepoint: int = 0, channel: int = 0):
+        # TODO: time these parts
         params = Parameters.get_parameters()
         images = params['images']
         image = images[position, timepoint, channel].max(axis=0)
