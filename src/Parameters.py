@@ -8,6 +8,7 @@ from pycromanager import Dataset
 import dask.array as da
 import dask.dataframe as dd
 import dask.bag as db
+import h5py
 
 
 @dataclass
@@ -34,6 +35,9 @@ class Parameters(ABC):
     @classmethod
     def clear_instances(cls):
         # Class method to clear all instances of the parent class
+        # deletes all instances of the class
+        for instance in cls._instances:
+            del instance
         cls._instances = []
 
     @classmethod
@@ -92,6 +96,13 @@ class Parameters(ABC):
     def reset(self):
         for field in fields(self):
             setattr(self, field.name, field.default)
+
+    def __str__(self):
+        string = f'{self.__class__.__name__}:\n'
+        for key, value in self.todict().items():
+            # make one large string of all the parameters
+            string += f'{key}: {value} \n'
+        return string
 
     @classmethod
     def get_parameters(self):
@@ -182,6 +193,7 @@ class Experiment(Parameters):
 @dataclass
 class DataContainer(Parameters):
     local_dataset_location: pathlib.Path = None
+    h5_file: h5py.File = None
     total_num_chunks: int = None
     images: da = None
     masks: da = None
@@ -202,6 +214,7 @@ class DataContainer(Parameters):
 repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @dataclass
 class Settings(Parameters):
+    name: str = None
     return_data_to_NAS: bool = True
     NUMBER_OF_CORES: int = 4
     save_files: bool = True
@@ -217,6 +230,9 @@ class Settings(Parameters):
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
+    def validate_parameters(self):
+        if self.name is None:
+            raise ValueError("Name must be set")
 
 class GeneratedOutputs(Parameters):
     _instance = None

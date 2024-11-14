@@ -15,6 +15,7 @@ class StepClass(ABC):
                 return instance
         instance = super().__new__(cls)
         cls._instances.append(instance)
+        StepClass._instances.append(instance)
         return instance
 
     @classmethod
@@ -54,11 +55,19 @@ class StepClass(ABC):
             params['timepoint'] = t
             params['image'] = params['images'][p, t, :, :, :, :]
             try:
-                params['cell_mask'] = params['masks'][p, t, params['cytoChannel'], :, :, :] if params['masks'].shape[1] > 1 else params['masks'][p, 0, params['cytoChannel'], :, :, :]
+                cytoChannel = params['cytoChannel']
+                if cytoChannel is not None:
+                    params['cell_mask'] = params['masks'][p, t, cytoChannel, :, :, :] if params['masks'].shape[1] > 1 else params['masks'][p, 0, cytoChannel, :, :, :]
+                else:
+                    params['cell_mask'] = None
             except AttributeError:
                 params['cell_mask'] = None
             try:
-                params['nuc_mask'] = params["masks"][p, t, params['nucChannel'], :, :, :] if params['masks'].shape[1] > 1 else params['masks'][p, 0, params['nucChannel'], :, :, :]
+                nucChannel = params['nucChannel']
+                if nucChannel is not None:
+                    params['nuc_mask'] = params["masks"][p, t, nucChannel, :, :, :] if params['masks'].shape[1] > 1 else params['masks'][p, 0, nucChannel, :, :, :]
+                else:
+                    params['nuc_mask'] = None
             except AttributeError:
                 params['nuc_mask'] = None
 
@@ -215,9 +224,6 @@ class SequentialStepsClass(StepClass):
 
 class FinalizingStepClass(StepClass):
     _instances = []
-    def __init__(self):
-        super().__init__()
-        FinalizingStepClass._instances.append(self)
 
     def execute(self):
         for step in FinalizingStepClass._instances:
@@ -228,9 +234,6 @@ class FinalizingStepClass(StepClass):
 
 class IndependentStepClass(StepClass):
     _instances = []
-    def __init__(self):
-        super().__init__()
-        IndependentStepClass._instances.append(self)
 
     def execute(self):
         for step in IndependentStepClass._instances:

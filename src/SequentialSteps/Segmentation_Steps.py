@@ -25,10 +25,10 @@ from src.Parameters import Parameters
 class CellSegmentationOutput(OutputClass):
     def append(self, timepoint, position, nuc_mask, cell_mask, nucChannel, cytoChannel, masks):
         if timepoint == 0:
-            if len(nuc_mask.shape) != 2:
+            if nuc_mask is not None and len(nuc_mask.shape) != 2:
                 raise ValueError('Nuclei mask must be 2D')
             
-            if len(cell_mask.shape) != 2:
+            if cell_mask is not None and len(cell_mask.shape) != 2:
                 raise ValueError('Cell mask must be 2D')
             
             if nuc_mask is not None:

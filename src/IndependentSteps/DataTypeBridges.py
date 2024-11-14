@@ -40,9 +40,6 @@ def get_first_executing_folder():
 
 #%% Abstract Class
 class DataTypeBridge(IndependentStepClass):
-    def __init__(self):
-        super().__init__()
-
     def main(self, initial_data_location, connection_config_location, 
              download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, index_dict: dict = None, 
              **kwargs):
@@ -65,9 +62,14 @@ class DataTypeBridge(IndependentStepClass):
 
     def load_in_dataset(self, location, H5_name, load_in_mask) -> DataContainer:
         H5_location = os.path.join(location, H5_name)
+
         f = h5py.File(H5_location, 'r')
         images = da.from_array(f['raw_images'])
         images = images.rechunk((1, 1, -1, -1, -1, -1))
+        
+        # with h5py.File(H5_location, 'r') as f:
+        #     images = da.from_array(f['raw_images'])
+        #     images = images.rechunk((1, 1, -1, -1, -1, -1))
         
         masks = None
         if load_in_mask:
@@ -77,6 +79,7 @@ class DataTypeBridge(IndependentStepClass):
         num_chuncks = images.shape[0] * images.shape[1]
 
         data = DataContainer(local_dataset_location = H5_location,
+                             h5_file = f,
                             total_num_chunks = num_chuncks,
                             images = images,
                             masks = masks)
@@ -204,27 +207,6 @@ class FFF2NativeDataType(DataTypeBridge):
 
         # save the data to a NDTIFF Dataset
 
-
-
-if __name__ == '__main__':
-    from src import Experiment, Settings, ScopeClass, DataContainer, Parameters
-    import matplotlib.pyplot as plt
-    experiment = Experiment(nucChannel=0, cytoChannel=1)
-    settings = Settings(load_in_mask=True)
-    scope = ScopeClass()
-    data = DataContainer()
-
-    experiment.initial_data_location = r'smFISH_images\Eric_smFISH_images\20230511\DUSP1_DexTimeConcSweep_10nM_75min_041223'
-
-    FFF2NativeDataType().run()
-
-    print(data.images.shape)
-    print(data.masks.shape)
-    print(data.local_dataset_location)
-
-    plt.imshow(data.images[0, 0, 0, 0, :, :])
-
-    print(Parameters.Parameters.get_parameters())
 
 
 
