@@ -161,21 +161,11 @@ class Save_Masks(Saving):
 
         h5_file = h5py.File(local_dataset_location, 'a')
 
-        # with h5py.File(local_dataset_location, 'a') as f:
-        #     if '/mask' in f:  # Replace with the same dataset name to overwrite
-        #         del f['/mask']
-
-        # computed = da.zeros(masks.shape, chunks=(1, 1, -1, -1, -1, -1), dtype=np.uint8)
-        # for p in range(masks.shape[0]):
-        #     for t in range(masks.shape[1]):
-        #         computed[p, t] = masks[p, t].compute()
-
         # check if the dataset is already made
         if '/mask' in h5_file:
             del h5_file['/mask']
 
         h5_file.create_dataset('/mask', data=computed_masks)
-        # da.to_hdf5(local_dataset_location, {'/mask': computed_masks})
 
 
 
