@@ -26,7 +26,7 @@ class Parameters(ABC):
         instance = super().__new__(cls)
         cls._instances.append(instance)
         return instance
-        
+
     @classmethod
     def get_all_instances(cls):
         # Class method to return all instances of the parent class
@@ -233,6 +233,7 @@ class Settings(Parameters):
     def validate_parameters(self):
         if self.name is None:
             raise ValueError("Name must be set")
+
 
 class GeneratedOutputs(Parameters):
     _instance = None
