@@ -162,10 +162,10 @@ class Save_Masks(Saving):
         h5_file = h5py.File(local_dataset_location, 'a')
 
         # check if the dataset is already made
-        if '/mask' in h5_file:
-            del h5_file['/mask']
+        if '/masks' in h5_file:
+            del h5_file['/masks']
 
-        h5_file.create_dataset('/mask', data=computed_masks)
+        h5_file.create_dataset('/masks', data=computed_masks)
 
 
 

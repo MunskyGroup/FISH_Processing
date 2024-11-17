@@ -46,7 +46,7 @@ class SpotDetection(SequentialStepsClass):
         for c in range(len(FISHChannel)):
             spots, clusters = self.get_detected_spots(**kwargs)
             spots, clusters = self.get_spot_properties(spots, clusters, **kwargs)
-            cell_results = self.extract_cell_level_results(image, spots, clusters, nucChannel, FISHChannel, 
+            cell_results = self.extract_cell_level_results(image, spots, clusters, nucChannel, c, 
                                                         nuc_mask, cell_mask, timepoint, fov,
                                                             verbose, display_plots)
 
@@ -390,7 +390,7 @@ class BIGFISH_SpotDetection(SpotDetection):
                 bigfish_threshold=bigfish_threshold, use_log_hook=use_log_hook, verbose=verbose, display_plots=display_plots, sub_pixel_fitting=sub_pixel_fitting,
                 minimum_distance=bigfish_minDistance, use_pca=bigfish_use_pca, snr_threshold=snr_threshold, snr_ratio=snr_ratio, **kwargs)
             
-            cell_results = self.extract_cell_level_results(image, spots_px, clusters, nucChannel, FISHChannel, 
+            cell_results = self.extract_cell_level_results(image, spots_px, clusters, nucChannel, c, 
                                                             nuc_mask, cell_mask, timepoint, fov,
                                                             verbose, display_plots)
 

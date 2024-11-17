@@ -67,29 +67,37 @@ class OutputClass(ABC):
 
         # save them to the h5 file 
 
-        h5_file = h5py.File(location, 'a')
         
         # check if the group exists
-        if group_name in h5_file:
-            group = h5_file[group_name]
-        else:
-            group = h5_file.create_group(group_name)
+
             
         for key in attributes:
             if key != '_initialized':
                 data = attributes[key]
                 if data is not None:
-                    if type(data) == pd.DataFrame:
-                        data = handle_df(data)
+                    # if type(data) == pd.DataFrame:
+                    #     data = handle_df(data)
 
                 
-                    # if dataset is already made, delete it
-                    if key in group:
-                        del group[key]
+                    # # if dataset is already made, delete it
+                    # if key in group:
+                    #     del group[key]
 
-                    group.create_dataset(key, data=data)
+                    if isinstance(data, pd.DataFrame):
+                        data = handle_df(data)
+                        data.to_hdf(location, f'{group_name}/{key}', mode='a', format='table', data_columns=True)
 
-        h5_file.close()
+                    else:
+                        h5_file = h5py.File(location, 'a')
+
+                        if group_name in h5_file:
+                            group = h5_file[group_name]
+                        else:
+                            group = h5_file.create_group(group_name)
+
+                        group.create_dataset(key, data=data)
+
+                        h5_file.close()
 
 
         
