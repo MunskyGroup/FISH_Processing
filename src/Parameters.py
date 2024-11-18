@@ -252,15 +252,15 @@ class Settings(Parameters):
 #         return self.outputs
     
 #     def todict(self):
-        for key in self.__dict__.keys():
-            try:
-                step_dict = getattr(self.data, key).__dict__
-                kwargs_data = {**kwargs_data, **step_dict}
-                kwargs_data.pop(key)
-            except AttributeError:
-                pass
+        # for key in self.__dict__.keys():
+        #     try:
+        #         step_dict = getattr(self.data, key).__dict__
+        #         kwargs_data = {**kwargs_data, **step_dict}
+        #         kwargs_data.pop(key)
+        #     except AttributeError:
+        #         pass
         
-        return kwargs_data
+        # return kwargs_data
 
 
 #%% Required Params

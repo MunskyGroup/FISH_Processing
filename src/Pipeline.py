@@ -4,7 +4,8 @@ import pickle
 from typing import Union
 from abc import ABC, abstractmethod
 
-from . import Settings, ScopeClass, Experiment, DataContainer, OutputClass, Parameters, StepClass, Experiment, Settings
+from . import OutputClass,  StepClass
+from .Parameters import Parameters, Experiment, Settings, ScopeClass, DataContainer
 from .Util.Utilities import Utilities
 
 
@@ -98,7 +99,7 @@ class Pipeline:
                 self._run()
 
     def run_on_cluster(self):
-        self.save_pipeline(self, name=Settings().name)
+        self.save_pipeline(name=Settings().name)
         self.send_pipeline_to_cluster()
 
     def _run(self):
@@ -109,8 +110,41 @@ class Pipeline:
         self.execute_finalization_steps()
 
     def save_pipeline(self, name: str):
-        pass
+        # save params as a dictionary
+        params = Parameters.get_parameters()
+
+        # save save steps as a dictionary
+        steps = {'independent_steps': [i.__class__.__name__ for i in self.get_independent_steps()],
+                 'sequential_steps': [i.__class__.__name__ for i in self.get_sequential_steps()],
+                 'finalization_steps': [i.__class__.__name__ for i in self.get_finalization_steps()]}
+        
+        # save these as a dictionary
+        pipeline = {'params': params, 'steps': steps}
+
+        # save the pipeline as txt file
+        file_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+
+        parent_dir = os.path.dirname(file_path)
+
+        pipeline_dir = os.path.join(parent_dir, 'Pipelines')
+        
+        with open(os.path.join(pipeline_dir, f'{name}.txt'), 'wb') as f:
+            pickle.dump(pipeline, f)
 
     def send_pipeline_to_cluster(self):
         pass
 
+
+
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    # get the current file path
+    file_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    print (file_path)
