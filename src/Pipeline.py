@@ -58,13 +58,33 @@ class Pipeline:
         self.save_location = self.DataContainer.save_location()
         
         Parameters.pipeline_init()
-
         
     def modify_kwargs(self, modify_kwargs: dict):
         Parameters.update_parameters(modify_kwargs)
 
     def get_step_parameters(self):
         self.no_default_params, self.all_params = StepClass.get_step_parameters()
+
+    def get_independent_steps(self):
+        from src.GeneralStep import IndependentStepClass
+        self.independent_steps = IndependentStepClass._instances
+        return self.independent_steps
+
+    def get_sequential_steps(self):
+        from src.GeneralStep import SequentialStepsClass
+        self.sequential_steps = SequentialStepsClass._instances
+        return self.sequential_steps
+    
+    def get_finalization_steps(self):
+        from src.GeneralStep import FinalizingStepClass
+        self.finalization_steps = FinalizingStepClass._instances
+        return self.finalization_steps
+
+    def run(self):
+        self.execute_independent_steps()
+        self.execute_sequential_steps()
+        self.execute_finalization_steps()
+
 
 class MultiPipeline:
     """
