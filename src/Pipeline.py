@@ -4,7 +4,7 @@ import pickle
 from typing import Union
 from abc import ABC, abstractmethod
 
-from . import Settings, ScopeClass, Experiment, DataContainer, OutputClass, Parameters, StepClass, Experiment
+from . import Settings, ScopeClass, Experiment, DataContainer, OutputClass, Parameters, StepClass, Experiment, Settings
 from .Util.Utilities import Utilities
 
 
@@ -98,7 +98,7 @@ class Pipeline:
                 self._run()
 
     def run_on_cluster(self):
-        self.save_pipeline()
+        self.save_pipeline(self, name=Settings().name)
         self.send_pipeline_to_cluster()
 
     def _run(self):
@@ -108,7 +108,7 @@ class Pipeline:
         self.execute_sequential_steps()
         self.execute_finalization_steps()
 
-    def save_pipeline(self):
+    def save_pipeline(self, name: str):
         pass
 
     def send_pipeline_to_cluster(self):

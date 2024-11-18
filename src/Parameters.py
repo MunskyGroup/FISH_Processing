@@ -235,23 +235,23 @@ class Settings(Parameters):
             raise ValueError("Name must be set")
 
 
-class GeneratedOutputs(Parameters):
-    _instance = None
+# class GeneratedOutputs(Parameters): # TODO: clear this, I dont think I use it anymore
+#     _instance = None
 
-    def __init__(self, **kwargs):
-        if kwargs is not None:
-            for key, value in kwargs.items():
-                setattr(self, key, value)
+#     def __init__(self, **kwargs):
+#         if kwargs is not None:
+#             for key, value in kwargs.items():
+#                 setattr(self, key, value)
 
-    def clear_outputs(self):
-        GeneratedOutputs._instances = []
+#     def clear_outputs(self):
+#         GeneratedOutputs._instances = []
 
-    def get_outputs(self):
-        from . import OutputClass
-        self.outputs = OutputClass._instances
-        return self.outputs
+#     def get_outputs(self):
+#         from . import OutputClass
+#         self.outputs = OutputClass._instances
+#         return self.outputs
     
-    def todict(self):
+#     def todict(self):
         for key in self.__dict__.keys():
             try:
                 step_dict = getattr(self.data, key).__dict__
