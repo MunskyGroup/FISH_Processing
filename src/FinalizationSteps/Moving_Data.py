@@ -31,6 +31,8 @@ class Moving_Data(FinalizingStepClass):
 class return_to_NAS(FinalizingStepClass):
     def main(self, local_dataset_location, initial_data_location, connection_config_location, share_name, **kwargs):
         # shutil.make_archive(analysis_location,'zip', pathlib.Path().absolute().joinpath(analysis_location))
+
+        # TODO: make sure that this overwrite the file on the NAS
         NASConnection(connection_config_location,share_name = share_name).write_files_to_NAS(local_dataset_location, initial_data_location)
 
 

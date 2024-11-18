@@ -1,17 +1,19 @@
 import os
 import inspect
 import pickle
+from typing import Union
 from abc import ABC, abstractmethod
 
-from . import Settings, ScopeClass, Experiment, DataContainer, OutputClass, Parameters, StepClass
+from . import Settings, ScopeClass, Experiment, DataContainer, OutputClass, Parameters, StepClass, Experiment
 from .Util.Utilities import Utilities
 
 
 
 class Pipeline:
     def __init__(self,
+                    experiment_location: Union[str, list[str]] = None,
                  ) -> None:
-        pass
+        self.experiment_location = experiment_location
 
     def check_requirements(self):
         self.get_parameters()
@@ -81,66 +83,34 @@ class Pipeline:
         return self.finalization_steps
 
     def run(self):
+        if self.experiment_location is None: # first case: no experiment location is given in pipeline
+            if Experiment().initial_data_location is None: # if experiment location is not set
+                raise ValueError('Experiment location is not set')
+            else: # if experiment location is set
+                self._run()
+        else: # second case: experiment location is given in pipeline
+            if type(self.experiment_location) == list: # if multiple experiment locations are given
+                for f in self.experiment_location:
+                    Experiment().initial_data_location = f
+                    self._run()
+            else: # if only one experiment location is given
+                Experiment().initial_data_location = self.experiment_location
+                self._run()
+
+    def run_on_cluster(self):
+        self.save_pipeline()
+        self.send_pipeline_to_cluster()
+
+    def _run(self):
+        # method to to execute the steps in order
+        self.check_requirements()
         self.execute_independent_steps()
         self.execute_sequential_steps()
         self.execute_finalization_steps()
 
-
-class MultiPipeline:
-    """
-    Goal: To handle multiple pipelines and link them together to acheive more complicated tasks
-
-    Given: 
-    - A list of pipelines
-    - A list of Datasets
-    
-    How:
-    - Each pipeline will be run in sequence with all datasets
-    - The calculated parameters will be saved
-    - The prameters will be averaged and passed to the next pipeline in the sequence
-    """
-
-    def __init__(self, pipelines: list, datasets_locations: list):
-        self.pipelines = pipelines
-        self.datasets_locations = datasets_locations
-        self.saved_results = {}
-    
-
-    def run(self):
-        # run each pipeline with each dataset
-        for p, pipeline in enumerate(self.pipelines):
-
-            pipeline.clear_data()
-            for dataset_loc in self.datasets_locations:
-                pipeline.set_dataset(dataset_loc)
-                pipeline.execute_independent_steps()
-                pipeline.execute_sequential_steps()
-                pipeline.execute_finalization_steps()
-                pipeline.save_outputs()
-            
-            self.average_parameters(pipeline)
-
-            self.load_results(self.pipelines[p+1])
-
-
-
-
-
-class DataCatastaphous:
-    """
-    Goal: To handle multiple pipelines and link them together to acheive more complicated tasks
-
-    How:
-    - Each pipeline will be run in sequence
-    - The outputs of each pipeline will be stored in a dictionary of location
-    - Parameters from previous steps will be passed to the next pipeline
-    - 
-    
-    """
-    def __init__(self):
+    def save_pipeline(self):
         pass
 
+    def send_pipeline_to_cluster(self):
+        pass
 
-
-
-            
