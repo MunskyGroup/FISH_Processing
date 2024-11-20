@@ -9,7 +9,7 @@ import dask.array as da
 import dask.dataframe as dd
 import dask.bag as db
 import h5py
-
+from dataclasses import asdict
 
 @dataclass
 class Parameters(ABC):
@@ -91,7 +91,9 @@ class Parameters(ABC):
         pass
 
     def todict(self):
-        return {field.name: getattr(self, field.name) for field in fields(self)}
+        # Convert all attributes of the instance to a dictionary
+        # return {field.name: getattr(self, field.name) for field in fields(self)}
+        return {**{field.name: getattr(self, field.name) for field in fields(self)}, **vars(self)}
     
     def reset(self):
         for field in fields(self):

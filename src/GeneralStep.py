@@ -21,7 +21,7 @@ class StepClass(ABC):
     @classmethod
     def get_all_instances(cls):
         # Class method to return all instances of the parent class
-        return cls._instance
+        return cls._instances
 
     @classmethod
     def get_step_parameters(cls):
@@ -30,11 +30,16 @@ class StepClass(ABC):
         no_default_params = []
         all_params = []
         for step in steps:
-            required, all, _, _ = step.get_paramaters()
+            required, all, _, _ = step.get_parameters()
             no_default_params.extend(required)
             all_params.extend(all)
 
         return list(set(no_default_params)), list(set(all_params))
+
+    @classmethod
+    def clear_instances(cls):
+        for step in cls._instances:
+            del step
 
     def __str__(self):
         return self.__class__.__name__

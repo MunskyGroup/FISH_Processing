@@ -95,6 +95,9 @@ class OutputClass(ABC):
                         else:
                             group = h5_file.create_group(group_name)
 
+                        if key in group:
+                            del group[key]
+                        
                         group.create_dataset(key, data=data)
 
                         h5_file.close()
