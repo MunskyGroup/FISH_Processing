@@ -23,7 +23,7 @@ from src.Util import Plots, SpotDetection
 
 #%% Output Classes
 class SpotDetectionOutputClass(OutputClass):
-    def append(self, df_cellresults, df_spotresults, df_clusterresults):
+    def append(self, df_cellresults, df_spotresults, df_clusterresults, threshold):
         if not hasattr(self, 'df_cellresults'):
             self.df_cellresults = df_cellresults
         if self.df_cellresults is not None:
@@ -38,6 +38,13 @@ class SpotDetectionOutputClass(OutputClass):
             self.df_clusterresults = df_clusterresults
         if self.df_clusterresults is not None:
             self.df_clusterresults = pd.concat([self.df_clusterresults, df_clusterresults])
+
+        if not hasattr(self, 'bigfish_threshold'):
+            self.bigfish_threshold = [threshold]
+        if threshold is not None:
+            self.bigfish_threshold = [*self.bigfish_threshold, threshold]
+        
+            
 
 
 #%% Abstract Class
@@ -384,7 +391,7 @@ class BIGFISH_SpotDetection(SpotDetection):
             rna = rna.compute()
 
             # detect spots
-            spots_px, dense_regions, reference_spot, clusters, spots_subpx = self.get_detected_spots( FISHChannel=c,
+            spots_px, dense_regions, reference_spot, clusters, spots_subpx, threshold = self.get_detected_spots( FISHChannel=c,
                 rna=rna, voxel_size_yx=voxel_size_yx, voxel_size_z=voxel_size_z, spot_yx=spot_yx, spot_z=spot_z, alpha=bigfish_alpha,
                 beta=bigfish_beta, gamma=bigfish_gamma, CLUSTER_RADIUS=CLUSTER_RADIUS, MIN_NUM_SPOT_FOR_CLUSTER=MIN_NUM_SPOT_FOR_CLUSTER, 
                 bigfish_threshold=bigfish_threshold, use_log_hook=use_log_hook, verbose=verbose, display_plots=display_plots, sub_pixel_fitting=sub_pixel_fitting,
@@ -397,7 +404,7 @@ class BIGFISH_SpotDetection(SpotDetection):
             spots, clusters = self.standardize_df(cell_results, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params)
 
 
-            output = SpotDetectionOutputClass(cell_results, spots, clusters)
+            output = SpotDetectionOutputClass(cell_results, spots, clusters, threshold)
         return output
         
     def _establish_threshold(self, c, bigfish_threshold, kwargs):
@@ -606,7 +613,7 @@ class BIGFISH_SpotDetection(SpotDetection):
                                     fill=[False, True], 
                                     contrast=True,
                                     path_output=os.path.join(self.step_output_dir, f'cluster_{self.image_name}') if self.step_output_dir is not None else None)
-        return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx
+        return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx, individual_thershold
 
     def standardize_df(self, df_cellresults, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params, **kwargs):
             # merge spots_px and spots_um
@@ -643,6 +650,7 @@ class BIGFISH_SpotDetection(SpotDetection):
             df_cellresults = add_indepenedent_params_to_df(df_cellresults, independent_params)
 
             return df_spotresults, df_clusterresults
+
 
 class UFISH_SpotDetection_Step(SequentialStepsClass):
     def __init__(self):

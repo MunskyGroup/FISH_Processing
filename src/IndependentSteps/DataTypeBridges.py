@@ -19,8 +19,10 @@ import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import IndependentStepClass, DataContainer, Parameters
+from src import IndependentStepClass, DataContainer
+from src.Parameters import Parameters
 from src.Util import Utilities, NASConnection
+from src.GeneralOutput import OutputClass
 
 
 #%% Useful Functions
@@ -210,4 +212,46 @@ class FFF2NativeDataType(DataTypeBridge):
 
 
 
-  
+
+# Loading in data from multiple locations
+class New_Parameters(OutputClass):
+    def append(self, new_params):
+        Parameters.update_parameters(new_params)
+
+
+
+class Avg_Parameters(IndependentStepClass):
+    def main(self, dataset_to_avg: list[str], previous_analysis_name: str, params_to_avg: list[str], local_dataset_location:str, h5_file,
+              **kwargs):
+
+        # find the local location of the dataset
+        ds_names = [os.path.basename(dataset) for dataset in dataset_to_avg]
+
+        # find h5 files in the directory
+        h5_files = [f for f in os.listdir(ds_names[0]) if f.endswith('.h5')]
+
+        # Load in each h5 file and find the group with previous analysis name
+        # then in that group find the parameters to average
+        # then average those parameters
+        values_to_average = np.empty((len(params_to_avg), len(dataset_to_avg)))
+        for h, h5 in enumerate(h5_files):
+            path = os.path.join(h5, f'{h5}.h5')
+            if h5 in local_dataset_location:
+                if previous_analysis_name in h5_file.keys():
+                        for p, param in enumerate(params_to_avg):
+                            if param in h5_file[previous_analysis_name].keys():
+                                values_to_average[p, h] = h5_file[previous_analysis_name][param]
+            else:
+                with h5py.File(h5, 'r') as f:
+                    if previous_analysis_name in f.keys():
+                        for p, param in enumerate(params_to_avg):
+                            if param in f[previous_analysis_name].keys():
+                                values_to_average[p, h] = f[previous_analysis_name][param]
+        
+        # average the values
+        avg_values = np.mean(values_to_average, axis=1)
+
+        # make this to a dictionary
+        avg_params = dict(zip(params_to_avg, avg_values))
+
+        return New_Parameters(avg_params)

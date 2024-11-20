@@ -17,16 +17,18 @@ class Pipeline:
         self.experiment_location = experiment_location
 
     def check_requirements(self):
-        self.get_parameters()
+        self.get_step_parameters()
 
         Parameters.validate()
 
         # check if all required parameters are present
         params = Parameters.get_parameters()
 
+        params_to_ignore = ['nuc_mask', 'cell_mask', 'masks', 'images', 'image', 'fov', 'timepoint']
+
         # check if all no default parameters are present
         for param in self.no_default_params:
-            if param not in params:
+            if param not in params and param not in params_to_ignore:
                 raise ValueError(f'{param} is required to run the pipeline')
 
     def display_all_params(self):
@@ -134,6 +136,9 @@ class Pipeline:
     def send_pipeline_to_cluster(self):
         pass
 
+    def clear_pipeline(self):
+        Parameters.clear_instances()
+        StepClass.clear_instances()
 
 
 
