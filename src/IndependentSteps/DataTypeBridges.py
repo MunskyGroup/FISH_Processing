@@ -81,7 +81,7 @@ class DataTypeBridge(IndependentStepClass):
         H5_locations = [os.path.join(location, H5_name) for location, H5_name in zip(locations, H5_names)]
         position_indexs = []
 
-        h5_files = [h5py.File(H5_location, 'r') for H5_location in H5_locations]
+        h5_files = [h5py.File(H5_location, 'a') for H5_location in H5_locations]
         # TODO: check if another file is already opening the h5 file
 
 
@@ -133,6 +133,13 @@ class DataTypeBridge(IndependentStepClass):
 
 
 #%% Data Bridges
+class NativeDataType(DataTypeBridge):
+    def __init__(self):
+        super().__init__()
+
+    def convert_folder_to_H5(self, folder, H5_name, nucChannel, cytoChannel):
+        pass
+
 class Pycromanager2NativeDataType(DataTypeBridge):
     def __init__(self):
         super().__init__()
