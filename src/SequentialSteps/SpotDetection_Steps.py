@@ -81,6 +81,9 @@ class SpotDetection(SequentialStepsClass):
             if cell_mask is not None and len(cell_mask.shape) != 2:
                 cell_mask = np.max(cell_mask, axis=0)
 
+            if len(rna.shape) == 3:
+                rna = np.max(rna, axis=0)
+
             # convert types
             nuc_mask = nuc_mask.squeeze().astype("uint16").compute() if nuc_mask is not None else None
             cell_mask = cell_mask.squeeze().astype("uint16").compute() if cell_mask is not None else None
@@ -105,15 +108,17 @@ class SpotDetection(SequentialStepsClass):
             # extract fov results
             cell_mask = cell_mask.astype("uint16") if cell_mask is not None else nuc_mask.astype("uint16")
             nuc_mask = nuc_mask.astype("uint16") if nuc_mask is not None else None
+            rna = rna.astype("uint16")
             other_images = {}
             other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
+
             fov_results = multistack.extract_cell(
                 cell_label=cell_mask,
                 ndim=3,
                 nuc_label=nuc_mask,
                 rna_coord=spots_no_ts,
                 others_coord={"foci": foci, "transcription_site": ts},
-                image=np.max(rna, axis=0).astype("uint16"),
+                image=rna,
                 others_image=other_images,)
             if verbose:
                 print("number of cells identified: {0}".format(len(fov_results)))

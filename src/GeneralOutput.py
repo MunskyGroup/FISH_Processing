@@ -75,7 +75,7 @@ class OutputClass(ABC):
                         df[col] = pd.to_numeric(df[col], errors='ignore')  # Convert to numeric, if possible
             
             # add the independent params to the dataframe
-            if 'position' in df.columns:
+            if 'fov' in df.columns:
                 if independent_params is not None:
                     for name in independent_params.keys():
                         if name in df.columns:
@@ -84,7 +84,7 @@ class OutputClass(ABC):
                             df[name] = independent_params[df['position']][name]
             return df
         
-        def split_df(df, upper, lower):
+        def split_df(df, lower, upper):
             if 'fov' not in df.columns:
                 return df
             else:

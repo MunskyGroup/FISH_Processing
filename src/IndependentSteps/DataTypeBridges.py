@@ -81,7 +81,7 @@ class DataTypeBridge(IndependentStepClass):
         H5_locations = [os.path.join(location, H5_name) for location, H5_name in zip(locations, H5_names)]
         position_indexs = []
 
-        h5_files = [h5py.File(H5_location, 'a') for H5_location in H5_locations]
+        h5_files = [h5py.File(H5_location, 'r') for H5_location in H5_locations]
         # TODO: check if another file is already opening the h5 file
 
 
@@ -238,12 +238,12 @@ class FFF2NativeDataType(DataTypeBridge):
                         search_params = [fov, tp]
                         cell_mask_name = [f for f in mask_cells if all(v in f for v in search_params)][0] if len(mask_cells) > 0 else None
                         nuc_mask_name = [f for f in mask_nuclei if all(v in f for v in search_params)][0] if len(mask_nuclei) > 0 else None
-                        if cell_mask_name is not None:
-                            print('cell ', cell_mask_name)
+                        if cell_mask_name is not None and cytoChannel is not None:
+                            # print('cell ', cell_mask_name)
                             mask = tifffile.imread(os.path.join(folder, cell_mask_name))
-                            masks[r, 0, cytoChannel,0:, :, :] = da.from_array(mask)
-                        if nuc_mask_name is not None:
-                            print('nuc ', nuc_mask_name)
+                            masks[r, 0, cytoChannel,0, :, :] = da.from_array(mask)
+                        if nuc_mask_name is not None and nucChannel is not None:
+                            # print('nuc ', nuc_mask_name)
                             mask = tifffile.imread(os.path.join(folder, nuc_mask_name))
                             masks[r, 0, nucChannel, 0, :, :] = da.from_array(mask)
                     count += 1
@@ -257,12 +257,12 @@ class FFF2NativeDataType(DataTypeBridge):
                 del h5f['/metadata']
             h5f.create_dataset('/metadata', data=metadata_str)
 
+        del imgs
+        del masks
+        del metadata_str
                 
 
         # save the data to a NDTIFF Dataset
-
-
-
 
 
 

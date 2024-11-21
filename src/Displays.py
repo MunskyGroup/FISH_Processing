@@ -13,6 +13,8 @@ class Display:
         images = params['images']
         image = images[position, timepoint, channel, zslice]
         plt.imshow(image)
+        # turn of axis
+        plt.axis('off')
         plt.show()
         return image
 
@@ -21,6 +23,7 @@ class Display:
         masks = params['masks']
         mask = masks[position, timepoint, channel, zslice]
         plt.imshow(mask)
+        plt.axis('off')
         plt.show()
         return mask
 
@@ -30,19 +33,21 @@ class Display:
         images = params['images']
         image = images[position, timepoint, channel].max(axis=0)
         plt.imshow(image)
+        plt.axis('off')
         plt.show()
         return image
 
-    def displayGrid_Images(self, positions: list[int] = [0, 1, 2, 3, 4]):
+    def displayGrid_Images(self, positions: list[int] = [0, 1, 2]):
         params = Parameters.get_parameters()
         images = params['images']
         fig, axs = plt.subplots(len(positions), images.shape[2], figsize=(20, 20))
         for i, position in enumerate(positions):
             for j in range(images.shape[2]):
                 axs[i, j].imshow(images[position, 0, j].max(axis=0))
+        plt.axis('off')
         plt.show()
 
-    def displayGrid_Masks(self, positions: list[int] = [0, 1, 2, 3, 4]):
+    def displayGrid_Masks(self, positions: list[int] = [0, 1, 2]):
         params = Parameters.get_parameters()
         masks = params['masks']
         fig, axs = plt.subplots(len(positions), masks.shape[2], figsize=(20, 20))
