@@ -157,16 +157,14 @@ class Experiment(Parameters):
     and will be in the format of : [Z, Y, X, C]
 
     The data must already be downloaded at this point and are in tiff for each image
-
-
     """
-    initial_data_location: str = field(default=None, repr=False)
+    initial_data_location: Union[str, list[str]] = None
     index_dict: dict = None
     nucChannel: int = None
     cytoChannel: int = None
     FISHChannel: Union[list[int], int] = None
     voxel_size_z: int = 300  # This is voxel
-    independent_params: dict = None
+    independent_params: Union[dict, list[dict]] = None
     kwargs: dict = None
     timestep_s: float = None
 
@@ -191,10 +189,21 @@ class Experiment(Parameters):
         if type(self.FISHChannel) is int:
             self.FISHChannel = [self.FISHChannel]
 
+        # make sure each independent parameter has the same keys
+        if self.independent_params is not None and type(self.independent_params) is list:
+            for i, params in enumerate(self.independent_params):
+                if i == 0:
+                    keys = set(params.keys())
+                else:
+                    if keys != set(params.keys()):
+                        raise ValueError(f"Independent parameters must have the same keys")
+            else:
+                self.independent_params = [self.independent_params]
+
 
 @dataclass
 class DataContainer(Parameters):
-    local_dataset_location: pathlib.Path = None
+    local_dataset_location: Union[list[pathlib.Path], pathlib.Path] = None
     h5_file: h5py.File = None
     total_num_chunks: int = None
     images: da = None

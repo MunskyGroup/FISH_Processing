@@ -3,11 +3,23 @@ from abc import ABC, abstractmethod
 import h5py
 import tables
 import pandas as pd
+import gc
 
 # Many of the output classes will be the same, so we can create a base class and then inherit from it
 # however, they will have differences on if they modify a PipelineDataClass or if they are the final output
 
 # The Step Classes will be similar however they will have differences on the inputs they act on 
+
+def close_h5_files():
+    for obj in gc.get_objects():
+        if isinstance(obj, h5py.File):
+            # check if the file is open
+            try:
+                print(f"Closing {obj.filename}")
+                obj.close()
+            except:
+                pass
+
 class OutputClass(ABC):
     """ This class will be used to generate singletons for the output classes. """
     _instances = []
@@ -39,18 +51,18 @@ class OutputClass(ABC):
         cls._instances = []
 
     @classmethod
-    def save_all_outputs(cls, location, h5_file: str, group_name: str):
+    def save_all_outputs(cls, location, h5_file: str, group_name: str, position_indexs: list[int], independent_params: Dict[str, Any]):
         # get all the instances of the class
         instances = cls.get_all_instances()
         # save them to the h5 file
         for i, instance in enumerate(instances):
-            instance.save(location, h5_file, group_name)
+            instance.save(location, h5_file, group_name, position_indexs, independent_params)
 
     @abstractmethod
     def append(self, *args, **kwargs):
         pass
 
-    def save(self, location, h5_file: str, group_name: str):
+    def save(self, locations, h5_file: str, group_name: str, position_indexs: list[int], independent_params: Dict[str, Any] ):
         # get all the attributes of the class
         attributes = vars(self)
 
@@ -60,47 +72,56 @@ class OutputClass(ABC):
                     if df[col].map(type).nunique() == 1 and isinstance(df[col].iloc[0], str):
                         df[col] = df[col].astype(str)  # Convert to string
                     else:
-                        df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert to numeric, if possible
-            return df
-
-        h5_file.close()
-
-        # save them to the h5 file 
-
-        
-        # check if the group exists
-
+                        df[col] = pd.to_numeric(df[col], errors='ignore')  # Convert to numeric, if possible
             
-        for key in attributes:
-            if key != '_initialized':
-                data = attributes[key]
-                if data is not None:
-                    # if type(data) == pd.DataFrame:
-                    #     data = handle_df(data)
-
-                
-                    # # if dataset is already made, delete it
-                    # if key in group:
-                    #     del group[key]
-
-                    if isinstance(data, pd.DataFrame):
-                        data = handle_df(data)
-                        data.to_hdf(location, f'{group_name}/{key}', mode='a', format='table', data_columns=True)
-
-                    else:
-                        h5_file = h5py.File(location, 'a')
-
-                        if group_name in h5_file:
-                            group = h5_file[group_name]
+            # add the independent params to the dataframe
+            if 'position' in df.columns:
+                if independent_params is not None:
+                    for name in independent_params.keys():
+                        if name in df.columns:
+                            pass
                         else:
-                            group = h5_file.create_group(group_name)
+                            df[name] = independent_params[df['position']][name]
+            return df
+        
+        def split_df(df, upper, lower):
+            if 'fov' not in df.columns:
+                return df
+            else:
+                positions = df['fov'].unique()
+                positions = positions[positions >= lower]
+                positions = positions[positions <= upper]
 
-                        if key in group:
-                            del group[key]
-                        
-                        group.create_dataset(key, data=data)
+                df = df[df['fov'].isin(positions)]
+            return df
+        
+        close_h5_files()
+        
+        for i, location in enumerate(locations):
+            for key in attributes:
+                if key != '_initialized':
+                    data = attributes[key]
+                    if data is not None:
 
-                        h5_file.close()
+                        if isinstance(data, pd.DataFrame):
+                            data = handle_df(data)
+                            data = split_df(data, position_indexs[i-1] if i > 0 else 0, position_indexs[i])
+                            data.to_hdf(location, f'{group_name}/{key}', mode='a', format='table', data_columns=True)
+
+                        else:
+                            h5_file = h5py.File(location, 'a')
+
+                            if group_name in h5_file:
+                                group = h5_file[group_name]
+                            else:
+                                group = h5_file.create_group(group_name)
+
+                            if key in group:
+                                del group[key]
+                            
+                            group.create_dataset(key, data=data)
+
+                            h5_file.close()
 
 
         

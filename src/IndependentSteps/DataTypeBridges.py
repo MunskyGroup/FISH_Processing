@@ -40,16 +40,31 @@ def get_first_executing_folder():
 
     return None
 
+
+
 #%% Abstract Class
+
+# Loading in data from multiple locations
+class New_Parameters(OutputClass):
+    def append(self, new_params):
+        Parameters.update_parameters(new_params)
+
+
 class DataTypeBridge(IndependentStepClass):
     def main(self, initial_data_location, connection_config_location, 
-             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, index_dict: dict = None, 
+             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, independent_params, 
              **kwargs):
-        h5_name = os.path.basename(initial_data_location) + '.h5'
-        folder = os.path.basename(initial_data_location)
-        self.download_folder_from_NAS(initial_data_location, folder, connection_config_location, download_data_from_NAS)
-        self.convert_folder_to_H5(folder, h5_name, nucChannel, cytoChannel)
-        self.load_in_dataset(folder, h5_name, load_in_mask)
+        if type(initial_data_location) == str:
+            initial_data_location = [initial_data_location]
+        folders = [os.path.basename(location) for location in initial_data_location]
+        h5_names = [f + '.h5' for f in folders]
+        for i, location in enumerate(initial_data_location):
+            folder = folders[i]
+            h5_name = h5_names[i]
+            self.download_folder_from_NAS(location, folder, connection_config_location, download_data_from_NAS)
+            self.convert_folder_to_H5(folder, h5_name, nucChannel, cytoChannel)
+
+        self.load_in_dataset(folders, h5_names, load_in_mask, independent_params, initial_data_location)
 
     def download_folder_from_NAS(self, remote_folder_path, local_folder_path, connection_config_location, download_data_from_NAS):
         if not os.path.exists(local_folder_path) and download_data_from_NAS:
@@ -62,29 +77,55 @@ class DataTypeBridge(IndependentStepClass):
     def convert_folder_to_H5(self, folder, h5_name, nucChannel, cytoChannel):
         ...
 
-    def load_in_dataset(self, location, H5_name, load_in_mask) -> DataContainer:
-        H5_location = os.path.join(location, H5_name)
+    def load_in_dataset(self, locations, H5_names, load_in_mask, independent_params, NAS_locations) -> DataContainer:
+        H5_locations = [os.path.join(location, H5_name) for location, H5_name in zip(locations, H5_names)]
+        position_indexs = []
 
-        f = h5py.File(H5_location, 'r')
-        images = da.from_array(f['raw_images'])
+        h5_files = [h5py.File(H5_location, 'r') for H5_location in H5_locations]
+        # TODO: check if another file is already opening the h5 file
+
+
+        images = [da.from_array(h5['raw_images']) for h5 in h5_files]
+        position_indexs = [img.shape[0] for img in images]
+        images = da.concatenate(images, axis=0)
         images = images.rechunk((1, 1, -1, -1, -1, -1))
-        
-        # with h5py.File(H5_location, 'r') as f:
-        #     images = da.from_array(f['raw_images'])
-        #     images = images.rechunk((1, 1, -1, -1, -1, -1))
-        
-        masks = None
         if load_in_mask:
-            masks = da.from_array(f['masks'])
+            masks = [da.from_array(h5['masks']) for h5 in h5_files]
+            masks = da.concatenate(masks, axis=0)
             masks = masks.rechunk((1, 1, -1, -1, -1, -1))
+        else:
+            masks = None
 
         num_chuncks = images.shape[0] * images.shape[1]
 
-        data = DataContainer(local_dataset_location = H5_location,
-                             h5_file = f,
+        position_indexs = np.cumsum(position_indexs)
+    
+        temp = np.full((position_indexs[-1]), np.nan, dtype=object)
+
+        for i, p in enumerate(position_indexs):
+            if independent_params is not None and len(independent_params) > 1:
+                if i == 0:
+                    independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                    temp[:p] = independent_params[i]
+                else:
+                    independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                    temp[position_indexs[i-1]:p] = independent_params[i]
+            elif independent_params is not None and len(independent_params) == 1:
+                independent_params[0]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                temp[:p] = independent_params[0]
+            else:
+                temp = None
+                print('No independent parameters were passed in')
+
+
+        data = DataContainer(local_dataset_location = H5_locations,
+                             h5_file = h5_files,
                             total_num_chunks = num_chuncks,
                             images = images,
                             masks = masks)
+        
+        New_Parameters({'independent_params': temp, 'position_indexs': position_indexs})
+
         return data
         
     def delete_folder(self, folder):
@@ -97,9 +138,13 @@ class Pycromanager2NativeDataType(DataTypeBridge):
         super().__init__()
 
     def convert_folder_to_H5(self, folder, H5_name, nucChannel, cytoChannel):
+        # check if h5 file already exists
+        if os.path.exists(os.path.join(folder, H5_name)):
+            return 'already exists'
+        
         ds = Dataset(folder)
         
-        imgs = ds.as_array('position', 'time', 'channel', 'z', 'x', 'y')
+        imgs = ds.as_array('position', 'time', 'channel', 'z', 'y', 'x')
 
         da.to_hdf5(os.path.join(folder, H5_name), '/raw_images', imgs)
 
@@ -213,10 +258,7 @@ class FFF2NativeDataType(DataTypeBridge):
 
 
 
-# Loading in data from multiple locations
-class New_Parameters(OutputClass):
-    def append(self, new_params):
-        Parameters.update_parameters(new_params)
+
 
 
 

@@ -11,6 +11,7 @@ import h5py
 import dask.array as da
 from datetime import datetime
 from abc import abstractmethod
+import gc
 
 from src.GeneralStep import FinalizingStepClass
 from src.Parameters import Parameters
@@ -20,6 +21,16 @@ from src.Util.Metadata import Metadata
 from src.Util.ReportPDF import ReportPDF
 from src.Util.Utilities import Utilities
 from src.Util.NASConnection import NASConnection
+
+def close_h5_files():
+    for obj in gc.get_objects():
+        if isinstance(obj, h5py.File):
+            # check if the file is open
+            try:
+                print(f"Closing {obj.filename}")
+                obj.close()
+            except:
+                pass
 
 class Saving(FinalizingStepClass):
     @abstractmethod
@@ -59,49 +70,18 @@ class Save_Outputs(Saving):
         h5_file = params['h5_file']
         Analysis_name = params['name']
         local_dataset_location = params['local_dataset_location']
+        independent_params = params['independent_params']
+        position_indexs = params['position_indexs']
 
         # get todays date
         today = datetime.today()
         date = today.strftime("%Y-%m-%d")
 
-        OutputClass.save_all_outputs(local_dataset_location, h5_file, f'Analysis_{Analysis_name}_{date}')
+        OutputClass.save_all_outputs(local_dataset_location, h5_file, f'Analysis_{Analysis_name}_{date}', position_indexs, independent_params)
 
 
 class Save_Parameters(Saving):
     def main(self, **kwargs):
-        params = Parameters.get_parameters()
-        params_to_ignore = ['h5_file', 'local_dataset_location', 'images', 'masks']
-
-        h5_file = params['h5_file']
-        Analysis_name = params['name']
-        local_dataset_location = params['local_dataset_location']
-
-        h5_file.close()
-
-        # get todays date
-        today = datetime.today()
-        date = today.strftime("%Y-%m-%d")
-
-        # save the parameters to the h5 file
-        h5_file = h5py.File(local_dataset_location, 'a')
-        group_name = f'Analysis_{Analysis_name}_{date}'
-        if group_name in h5_file:
-            group = h5_file[group_name]
-        else:
-            group = h5_file.create_group(group_name)
-
-        # save the parameters to the h5 file
-        # remove params_to_ignore
-        for key in params_to_ignore:
-            if key in params:
-                del params[key]
-        
-        params = handle_dict(params)
-
-        # if dataset is already made, delete it
-        if 'parameters' in group:
-            del group['parameters']
-
         def recursively_save_dict_contents_to_group(h5file, path, dic):
             for key, item in dic.items():
                 if isinstance(item, dict):
@@ -109,9 +89,45 @@ class Save_Parameters(Saving):
                 else:
                     h5file[f"{path}/{key}"] = item
 
-        recursively_save_dict_contents_to_group(h5_file, f'{group_name}/parameters', params)
 
-        h5_file.close()
+        params = Parameters.get_parameters()
+        params_to_ignore = ['h5_file', 'local_dataset_location', 'images', 'masks']
+
+        h5_file = params['h5_file']
+        Analysis_name = params['name']
+        local_dataset_location = params['local_dataset_location']
+
+        close_h5_files()
+
+        os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+        # get todays date
+        today = datetime.today()
+        date = today.strftime("%Y-%m-%d")
+
+        for i, locaction in enumerate(local_dataset_location):
+            # save the parameters to the h5 file
+            h5_file = h5py.File(locaction, 'r+')
+            group_name = f'Analysis_{Analysis_name}_{date}'
+            if group_name in h5_file:
+                group = h5_file[group_name]
+            else:
+                group = h5_file.create_group(group_name)
+
+            # save the parameters to the h5 file
+            # remove params_to_ignore
+            for key in params_to_ignore:
+                if key in params:
+                    del params[key]
+            
+            params = handle_dict(params)
+
+            # if dataset is already made, delete it
+            if 'parameters' in group:
+                del group['parameters']
+
+            recursively_save_dict_contents_to_group(group, 'parameters', params)
+
+            h5_file.close()
 
 
 class Save_Images(Saving):
@@ -122,29 +138,34 @@ class Save_Images(Saving):
         Analysis_name = params['name']
         local_dataset_location = params['local_dataset_location']
         images = params['images']
+        position_indexs = params['position_indexs']
 
-        h5_file.close()
+        close_h5_files()
 
+        os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
         # get todays date
         today = datetime.today()
         date = today.strftime("%Y-%m-%d")
 
         # save the images to the h5 file
-        h5_file = h5py.File(local_dataset_location, 'a')
-        group_name = f'Analysis_{Analysis_name}_{date}'
-        if group_name in h5_file:
-            group = h5_file[group_name]
-        else:
-            group = h5_file.create_group(group_name)
+        for i, locaction in enumerate(local_dataset_location):
+            if h5_file[i]:
+                h5_file[i].close()
+            h5 = h5py.File(locaction, 'r+')
+            group_name = f'Analysis_{Analysis_name}_{date}'
+            if group_name in h5:
+                group = h5[group_name]
+            else:
+                group = h5.create_group(group_name)
 
-        # if dataset is already made, delete it
-        if 'images' in group:
-            del group['images']
+            # if dataset is already made, delete it
+            if 'images' in group:
+                del group['images']
 
-        # save the images to the h5 file
-        group.create_dataset('images', data=images)
+            # save the images to the h5 file
+            group.create_dataset('images', data=images[position_indexs[i-1] if i > 0 else 0:position_indexs[i]])
 
-        h5_file.close()
+            h5.close()
 
 
 class Save_Masks(Saving):
@@ -154,18 +175,25 @@ class Save_Masks(Saving):
         local_dataset_location = params['local_dataset_location']
         masks = params['masks']
         h5_file = params['h5_file']
+        position_indexs = params['position_indexs']
 
         computed_masks = masks.compute()
 
-        h5_file.close()
+        close_h5_files()
 
-        h5_file = h5py.File(local_dataset_location, 'a')
+        # os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-        # check if the dataset is already made
-        if '/masks' in h5_file:
-            del h5_file['/masks']
+        if masks is not None:
+            for i, locaction in enumerate(local_dataset_location):
+                with h5py.File(locaction, 'r+') as h5:
+                    # h5 = h5py.File(locaction, 'a')
+                    
+                    # check if the dataset is already made
+                    if '/masks' in h5:
+                        del h5['/masks']
 
-        h5_file.create_dataset('/masks', data=computed_masks)
+                    h5.create_dataset('/masks', data=computed_masks[position_indexs[i-1] if i > 0 else 0:position_indexs[i]])
+                    
 
 
 
