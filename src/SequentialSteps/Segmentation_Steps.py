@@ -15,6 +15,7 @@ import dask.array as da
 from abc import ABC, abstractmethod
 
 
+
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 from src import SequentialStepsClass
 from src.GeneralOutput import OutputClass
@@ -340,6 +341,8 @@ class SimpleCellposeSegmentaion(CellSegmentation):
                                                                         cellpose_model_type,
                                                                         cellpose_diameter,
                                                                         cellpose_pretrained_model)
+            model_location = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
+            nuc_pretrained_model = os.path.join(model_location, nuc_pretrained_model) if nuc_pretrained_model else None
 
             cp = models.CellposeModel(model_type=nuc_model_type, gpu=True, pretrained_model=nuc_pretrained_model)
             # nucmodel = models.Cellpose(model_type=nuc_model_type, gpu=True)
@@ -377,11 +380,13 @@ class SimpleCellposeSegmentaion(CellSegmentation):
                                                                         cellpose_model_type,
                                                                         cellpose_diameter,
                                                                         cellpose_pretrained_model)
+            
+            model_location = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
+            cyto_pretrained_model = os.path.join(model_location, cyto_pretrained_model) if cyto_pretrained_model else None
+
 
             cp = models.CellposeModel(model_type=cyto_model_type, gpu=True, pretrained_model=cyto_pretrained_model)
-            # cytomodel = models.Cellpose(model_type=cyto_model_type, gpu=True)
-            # if cp is not None:
-            #     cytomodel.cp = cp
+
             channels = [0, 0]
             cyto_image = image[cytoChannel, :, :].compute()
             cell_mask, flows, styles = cp.eval(cyto_image,
@@ -831,4 +836,4 @@ class BIGFISH_Tensorflow_Segmentation(SequentialStepsClass):
 
 if __name__ == '__main__':
     pass
-# %%
+    # print(os.path.dirname(os.path.dirname(__file__)))
