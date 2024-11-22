@@ -31,8 +31,10 @@ class Display:
         # TODO: time these parts
         params = Parameters.get_parameters()
         images = params['images']
-        image = images[position, timepoint, channel].max(axis=0)
+        image = np.max(images[position, timepoint, channel, :, :, :].compute(), axis=0)
+        
         plt.imshow(image)
+        plt.clim(0, np.percentile(image.flatten(), 99.99))
         plt.axis('off')
         plt.show()
         return image
