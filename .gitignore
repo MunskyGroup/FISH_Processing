@@ -117,5 +117,3 @@ Pipelines/Standard_Pipeline/settings.txt
 *.log
 config_nas.yml
 config_cluster.yml
-config_cluster.yml
-config_nas.yml
