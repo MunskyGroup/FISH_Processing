@@ -12,7 +12,7 @@ parent_dir = os.path.dirname(current_dir)
 # Append the parent directory to sys.path
 sys.path.append(parent_dir)
 
-def run_on_cluster(path_to_config_file: str, local_file: str, remote_path: str = os.path.join(os.path.dirname(__file__), 'config_cluster.yml')):
+def run_on_cluster(remote_path: str, local_file: str, path_to_config_file: str = os.path.join(os.path.dirname(__file__), 'config_cluster.yml')):
     # Load the configuration
     conf = yaml.safe_load(open(str(path_to_config_file)))
     usr = str(conf['user']['username'])

@@ -52,17 +52,41 @@ class New_Parameters(OutputClass):
 
 class DataTypeBridge(IndependentStepClass):
     def main(self, initial_data_location, connection_config_location, 
-             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, independent_params, 
+             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, independent_params, local_dataset_location: list[str] = None,
              **kwargs):
-        if type(initial_data_location) == str:
-            initial_data_location = [initial_data_location]
-        folders = [os.path.basename(location) for location in initial_data_location]
-        h5_names = [f + '.h5' for f in folders]
-        for i, location in enumerate(initial_data_location):
-            folder = folders[i]
-            h5_name = h5_names[i]
-            self.download_folder_from_NAS(location, folder, connection_config_location, download_data_from_NAS)
-            self.convert_folder_to_H5(folder, h5_name, nucChannel, cytoChannel)
+
+        # if data is local
+        if local_dataset_location is not None:
+    
+            if isinstance(local_dataset_location, str):
+                local_dataset_location = [local_dataset_location]
+            
+            # if data is h5 format already
+            if local_dataset_location[0].endswith('h5'):
+                h5_names = [os.path.basename(f) for f in local_dataset_location]
+                folders = [os.path.dirname(f) for f in local_dataset_location]
+
+            # if data is hiding in a folder
+            elif os.path.isdir(local_dataset_location[0]):
+                h5_names = []
+                for ds in local_dataset_location:
+                    if os.path.isdir(ds):
+                        h5_name = os.path.basename(ds) + '.h5'
+                        h5_names.append(h5_name)
+                        self.convert_folder_to_H5(ds, h5_name, nucChannel, cytoChannel)
+                folders = local_dataset_location
+                
+        # if data is on nas
+        else:
+            if type(initial_data_location) == str:
+                initial_data_location = [initial_data_location]
+            folders = [os.path.basename(location) for location in initial_data_location]
+            h5_names = [f + '.h5' for f in folders]
+            for i, location in enumerate(initial_data_location):
+                folder = folders[i]
+                h5_name = h5_names[i]
+                self.download_folder_from_NAS(location, folder, connection_config_location, download_data_from_NAS)
+                self.convert_folder_to_H5(folder, h5_name, nucChannel, cytoChannel)
 
         self.load_in_dataset(folders, h5_names, load_in_mask, independent_params, initial_data_location)
 

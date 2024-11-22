@@ -183,8 +183,9 @@ class Experiment(Parameters):
                 setattr(self, key, value)
 
     def validate_parameters(self):
-        if self.initial_data_location is None:
-            raise ValueError("initial_data_location must be set")
+        print(DataContainer().local_dataset_location)
+        if self.initial_data_location is None and DataContainer().local_dataset_location is None:
+            raise ValueError("initial_data_location or local_dataset_location must be set")
         
         if self.nucChannel is None:
             print("nucChannel not set")
