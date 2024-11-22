@@ -110,8 +110,6 @@ Pipelines/Standard_Pipeline/scope.txt
 Pipelines/Standard_Pipeline/settings.txt
 *.mp4
 *.png
-config_nas.yml
-config_cluster.yml
 *.zip
 *.h5
 *.sld
