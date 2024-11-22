@@ -115,3 +115,5 @@ Pipelines/Standard_Pipeline/settings.txt
 *.sld
 *.tif
 *.log
+config_nas.yml
+config_cluster.yml
