@@ -6,34 +6,25 @@
 #SBATCH --job-name=t2
 
 # module purge
-module load gnu9/9.4.0 
+module load gnu9/9.4.0
 module load cudnn/8.3-10.2
 
 echo "Starting my job..."
+
 # Start timing the process
 start_time=$(date +%s)
 
-# If needed, use this to change file permissions -> chmod 755 <<script_name.sh>
-
-# ########### PROGRAM ARGUMENTS #############################
-# If the program requieres positional arguments. 
-# Read them in the python file using: sys.argv. This return a list of strings. 
-# Where sys.argv[0] is the name of the <<python_file.py>>, and  the rest are in positional order 
-
-NUMBER_OF_CORES=4
-
-# ###################  PATHS TO CODE FILES  ############################
-path_to_config_file="$HOME/FISH_Processing/config.yml"
-path_to_executable="${PWD%/*}/pipeline_executable.py" 
-
-pipeline_package_path="$1"
+kwarg_location=$1
+path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 
 # ########### PYTHON PROGRAM #############################
-output_names=""output__"${pipeline_package_path////__}"".txt"
-/home/formanj/miniconda3/envs/FISH_processing/bin/python "$path_to_executable" "$pipeline_package_path"  >> "$output_names" &
-wait
+
+output_names=""output__"${kwarg_location////__}"".txt"
+ ~PWD%/*/venv/Scripts/activate "$path_to_executable" "$kwarg_location" >> "$output_names" &
+ wait
 
 
+# End timing the process
 end_time=$(date +%s)
 total_time=$(( (end_time - start_time) / 60 ))
 
@@ -51,7 +42,7 @@ exit 0
 # ls *.tif
 # rm -r temp_*
 # rm -r analysis_*
-# rm -r slurm* out* temp_* masks_* 
+# rm -r slurm* out* temp_* masks_*
 
 # ########### SLURM COMMANDS #########################
 # scancel [jobid]

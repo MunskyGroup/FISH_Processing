@@ -3,6 +3,8 @@ import inspect
 import pickle
 from typing import Union
 from abc import ABC, abstractmethod
+from itertools import cycle, islice
+import json
 
 from . import OutputClass,  StepClass
 from .Parameters import Parameters, Experiment, Settings, ScopeClass, DataContainer
@@ -12,9 +14,13 @@ from .Util.Utilities import Utilities
 
 class Pipeline:
     def __init__(self,
-                    experiment_location: Union[str, list[str]] = None,
+                    experiment_location: Union[str, list[str], list[list[str]]] = None,
+                    parameters: Union[dict, list[dict]] = None,
+                    steps: Union[list[str], list[list[str]]] = None,
                  ) -> None:
-        self.experiment_location = experiment_location
+        self.experiment_location = experiment_location 
+        self.parameters = parameters
+        self.steps = steps
 
     def check_requirements(self):
         self.get_step_parameters()
@@ -86,39 +92,62 @@ class Pipeline:
         return self.finalization_steps
 
     def run(self):
-        if self.experiment_location is None: # first case: no experiment location is given in pipeline
-            if Experiment().initial_data_location is None: # if experiment location is not set
-                raise ValueError('Experiment location is not set')
-            else: # if experiment location is set
-                self._run()
-        else: # second case: experiment location is given in pipeline
-            if type(self.experiment_location) == list: # if multiple experiment locations are given
-                for f in self.experiment_location:
-                    Experiment().initial_data_location = f
-                    self._run()
-            else: # if only one experiment location is given
-                Experiment().initial_data_location = self.experiment_location
-                self._run()
+        def zip_expand(*iterables):
+            # Find the length of the longest iterable
+            max_length = max(len(iterable) for iterable in iterables)
 
-    def run_on_cluster(self):
-        self.save_pipeline(name=Settings().name)
+            # check if all iterables have the same length or if they have length 1
+            if all(len(iterable) == max_length or len(iterable) == 1 for iterable in iterables):
+            
+                # Create a new list of iterables where any iterable with length 1 is expanded to match max_length
+                expanded_iterables = [
+                    iterable if len(iterable) > 1 else list(islice(cycle(iterable), max_length))
+                    for iterable in iterables
+                ]
+                
+                # Use zip to combine the expanded iterables
+                return zip(*expanded_iterables)
+            else:
+                raise ValueError('All iterables must have the same length or length 1')
+
+        if self.experiment_location is None:
+            self.experiment_location = [Experiment().initial_data_location]
+        if self.parameters is None:
+            self.parameters = [Parameters.get_parameters()]
+        if self.steps is None:
+            self.steps = [[*[i.__class__.__name__ for i in self.get_independent_steps()], *[i.__class__.__name__ for i in self.get_sequential_steps()],
+                *[i.__class__.__name__ for i in self.get_finalization_steps()]]]
+        
+        for locations, params, steps in zip_expand(self.experiment_location, self.parameters, self.steps):
+            Parameters.initialize_parameters_instances()
+            self.modify_kwargs(params)
+            self._run(locations, steps)
+
+    def run_on_cluster(self, name: str):
+        self.save_pipeline(name=Settings().name if name is None else name)
         self.send_pipeline_to_cluster()
 
-    def _run(self):
+    def _run(self, locations, steps):
+        # save locations and steps
+        if steps is not None:
+            StepClass().initalize_steps_from_list(steps)
+        if locations is not None:
+            Experiment().initial_data_location = locations
         # method to to execute the steps in order
         self.check_requirements()
         self.execute_independent_steps()
         self.execute_sequential_steps()
         self.execute_finalization_steps()
+        self.clear_pipeline()
+
 
     def save_pipeline(self, name: str):
         # save params as a dictionary
         params = Parameters.get_parameters()
 
         # save save steps as a dictionary
-        steps = {'independent_steps': [i.__class__.__name__ for i in self.get_independent_steps()],
-                 'sequential_steps': [i.__class__.__name__ for i in self.get_sequential_steps()],
-                 'finalization_steps': [i.__class__.__name__ for i in self.get_finalization_steps()]}
+        steps = [*[i.__class__.__name__ for i in self.get_independent_steps()], *[i.__class__.__name__ for i in self.get_sequential_steps()],
+                *[i.__class__.__name__ for i in self.get_finalization_steps()]]
         
         # save these as a dictionary
         pipeline = {'params': params, 'steps': steps}
@@ -130,24 +159,17 @@ class Pipeline:
 
         pipeline_dir = os.path.join(parent_dir, 'Pipelines')
         
-        with open(os.path.join(pipeline_dir, f'{name}.txt'), 'wb') as f:
-            pickle.dump(pipeline, f)
+        self.pipeline_dictionary_location = os.path.join(pipeline_dir, f'{name}.txt')
+        with open(self.pipeline_dictionary_location, 'wb') as f:
+            json.dump(pipeline, f)
 
     def send_pipeline_to_cluster(self):
-        pass
+        from Send_To_Cluster import run_on_cluster
+        run_on_cluster(_ , self.pipeline_dictionary_location) # TODO:
 
     def clear_pipeline(self):
         Parameters.clear_instances()
         StepClass.clear_instances()
-
-
-
-
-
-
-
-
-
 
 if __name__ == '__main__':
     # get the current file path
