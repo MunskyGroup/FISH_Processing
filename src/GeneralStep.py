@@ -107,6 +107,55 @@ class StepClass(ABC):
 
             return required_params, all_params, defaults, types
     
+    def initalize_steps_from_list(self, steps: list):
+        # get names of all children of this class even if they are not imported
+        seq_children = SequentialStepsClass.list_all_children()
+        ind_children = IndependentStepClass.list_all_children()
+        fin_children = FinalizingStepClass.list_all_children()
+        print(SequentialStepsClass._instances)
+        print(IndependentStepClass._instances)
+        print(FinalizingStepClass._instances)
+
+        print(StepClass._instances)
+
+        seq_children_names = [cls.__name__ for cls in seq_children]
+        ind_children_names = [cls.__name__ for cls in ind_children]
+        fin_children_names = [cls.__name__ for cls in fin_children]
+
+        for step in steps:
+            print('++++++++++++++++++++++++++++')
+            print(step)
+            print(SequentialStepsClass._instances)
+            print(IndependentStepClass._instances)
+            print(FinalizingStepClass._instances)
+            print(StepClass._instances)
+            if step in seq_children_names:
+                i = seq_children_names.index(step)
+                seq_children[i]()
+            elif step in ind_children_names:
+                i = ind_children_names.index(step)
+                ind_children[i]()
+            elif step in fin_children_names:
+                i = fin_children_names.index(step)
+                fin_children[i]()
+            else:
+                raise ValueError(f'{step} is not a valid step class')
+
+    @classmethod
+    def list_all_children(cls):
+        children = []
+        # check if the class is a subclass of this class
+        children.append(cls)
+
+        if hasattr(cls, '__subclasses__') and 'ABCMeta' not in cls.__subclasses__() :
+            for c in cls.__subclasses__():
+                children.extend(c.list_all_children())
+
+
+        # return the list of all children and the class so it can be initialized
+        return children
+            
+
     @abstractmethod
     def main(self, **kwargs):
         pass

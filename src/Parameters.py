@@ -43,8 +43,8 @@ class Parameters(ABC):
     @classmethod
     def validate(cls):
         # make sure settings, scope, experiemnt, and datacontainer are all initialized
-        if len(cls._instances) != 4:
-            raise ValueError(f"Settings, ScopeClass, Experiment, and DataContainer must all be initialized")
+        if len(cls._instances) < 3 or len(cls._instances) > 4:
+            raise ValueError(f"Settings, ScopeClass, and Experiment must all be initialized")
         # makes sure ScopeClass is in _instances
         if not any(isinstance(instance, ScopeClass) for instance in cls._instances):
             raise ValueError(f"ScopeClass must be initialized")
@@ -63,8 +63,17 @@ class Parameters(ABC):
             instance.validate_parameters()
 
     @classmethod
-    def update_parameters(cls, kwargs):
+    def initialize_parameters_instances(cls):
+        ScopeClass()
+        Experiment()
+        DataContainer()
+        Settings()
+
+    @classmethod
+    def update_parameters(cls, kwargs: dict):
         # Class method to update all instances of the parent class
+        if kwargs is None:
+            return None
         used_keys = []
         for instance in cls._instances:
             for key, value in kwargs.items():
@@ -107,7 +116,7 @@ class Parameters(ABC):
         return string
 
     @classmethod
-    def get_parameters(self):
+    def get_parameters(self) -> dict:
         # Get all the parameters of all instances of the class
         params = {}
         for instance in Parameters._instances:
@@ -219,7 +228,8 @@ class DataContainer(Parameters):
         if name == 'total_num_chunks':
             for instance in Parameters._instances:
                 if isinstance(instance, Settings):
-                    instance.num_chunks_to_run = min(instance.num_chunks_to_run, value)
+                    l = [instance.num_chunks_to_run, value]
+                    instance.num_chunks_to_run = min(i for i in l if i is not None)
 
 
 repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
