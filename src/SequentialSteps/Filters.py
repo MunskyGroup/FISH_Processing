@@ -190,18 +190,106 @@ from scipy.optimize import curve_fit
 import dask.array as da
 
 class IlluminationCorrection(IndependentStepClass):
-    def __init__(self, da, sigma_dict, display_plots=False):
+    def __init__(self, da, sigma_dict, display_plots=False, save_profiles=False, save_format="npy", save_dir="profiles"):
         """
         Initialize the IlluminationCorrection class.
 
         Parameters:
-        - da: Dask array with shape [p, t, c, y, x]
-        - sigma_dict: Dictionary with sigma values per channel {channel_index: sigma_value}
-        - display_plots: Boolean to control plotting
+        - da: Dask array with shape [P, T, C, Y, X].
+        - sigma_dict: Dictionary with sigma values per channel {channel_index: sigma_value}.
+        - display_plots: Boolean to control plotting.
+        - save_profiles: Boolean to enable saving of computed profiles.
+        - save_format: String indicating format to save profiles ('npy', 'tif', or 'png').
+        - save_dir: Directory to save profiles.
+
+        Attributes:
+        - da: Dask array to be processed.
+        - sigma_dict: Dictionary with smoothing parameters per channel.
+        - display_plots: Boolean flag to control plotting of profiles and corrections.
+        - save_profiles: Boolean flag to enable saving of profiles.
+        - save_format: Format for saving profiles ('npy', 'tif', 'png').
+        - save_dir: Directory to save profiles.
+        - averaged_profiles: Dask array to store computed averaged illumination profiles.
+        - smoothed_profiles: Dask array to store computed smoothed illumination profiles.
         """
         self.da = da
         self.sigma_dict = sigma_dict
         self.display_plots = display_plots
+        self.save_profiles = save_profiles
+        self.save_format = save_format
+        self.save_dir = save_dir
+
+        # Initialize placeholders for computed profiles
+        self.averaged_profiles = None
+        self.smoothed_profiles = None
+
+
+    def main(self, da, save_profiles=False, save_format="npy", save_dir="profiles"):
+        """
+        Main function to process images and correct illumination.
+
+        Parameters:
+        - da: Dask array with shape [P, T, C, Y, X].
+        - save_profiles: Bool, whether to save the computed profiles.
+        - save_format: Str, format for saving profiles ('npy', 'tif', or 'png').
+        - save_dir: Str, directory to save profiles.
+
+        Returns:
+        - corrected_da: Dask array with corrected images.
+        """
+        # Ensure the save directory exists if saving profiles
+        if save_profiles:
+            os.makedirs(save_dir, exist_ok=True)
+
+        num_channels = da.shape[2]  # Extract number of channels
+        averaged_profiles = []
+        smoothed_profiles = []
+
+        # Step 1: Compute Averaged and Smoothed Illumination Profiles
+        for channel, sigma in self.sigma_dict.items():
+            print(f"Processing channel {channel} with sigma={sigma}...")
+
+            # Compute averaged and smoothed profiles
+            avg_profile, smoothed_profile = self.average_illumination_profile(da, channel, sigma_smooth=sigma)
+
+            # Append to profile arrays
+            averaged_profiles.append(avg_profile)
+            smoothed_profiles.append(smoothed_profile)
+
+            # Display smoothed profile
+            if self.display_plots:
+                self.show_smoothed_profile(smoothed_profile, channel)
+
+            # Save profiles if flag is set
+            if save_profiles:
+                avg_profile_np = avg_profile.compute()
+                smoothed_profile_np = smoothed_profile.compute()
+
+                # Generate file names
+                avg_file = os.path.join(save_dir, f"channel_{channel}_averaged.{save_format}")
+                smoothed_file = os.path.join(save_dir, f"channel_{channel}_smoothed.{save_format}")
+
+                # Save profiles in the specified format
+                if save_format == "npy":
+                    np.save(avg_file, avg_profile_np)
+                    np.save(smoothed_file, smoothed_profile_np)
+                elif save_format in ["tif", "png"]:
+                    io.imsave(avg_file, avg_profile_np.astype(np.float32))
+                    io.imsave(smoothed_file, smoothed_profile_np.astype(np.float32))
+                else:
+                    raise ValueError("Unsupported save format. Use 'npy', 'tif', or 'png'.")
+
+        # Convert profile lists to consolidated Dask arrays
+        averaged_profiles = da.stack(averaged_profiles, axis=0)  # Shape [C, Y, X]
+        smoothed_profiles = da.stack(smoothed_profiles, axis=0)  # Shape [C, Y, X]
+
+        # Step 2: Correct Images Using Smoothed Profiles
+        print("Correcting images...")
+        corrected_da = self.correct_image(da, smoothed_profiles)
+
+        # Step 3: Return Corrected Images
+        return corrected_da
+
 
     def gaussian_2d(self, x, y, x0, y0, sigma_x, sigma_y, amplitude, offset):
         """2D Gaussian function."""
@@ -245,17 +333,28 @@ class IlluminationCorrection(IndependentStepClass):
         return smoothed_fitted_profile
 
     def average_illumination_profile(self, da, channel, sigma_smooth=200):
-        """Compute the averaged illumination profile for a single channel across all images."""
-        avg_projection = None
-        list_images = da.shape[0]
-        num_images = len(da.shape[0])
+        """
+        Compute the averaged illumination profile for a single channel across all images.
 
-        for image in list_images:
+        Parameters:
+        - da: Dask array with shape [p, t, c, y, x]
+        - channel: int, channel index to process
+        - sigma_smooth: int, smoothing factor for Gaussian fitting
+
+        Returns:
+        - avg_projection: np.ndarray, averaged projection
+        - smoothed_profile: np.ndarray, smoothed illumination profile
+        """
+        avg_projection = None
+        num_images = da.shape[0]  # Number of positions
+
+        for pos_idx in range(num_images):
+            image = da[pos_idx]  # Select position
             if image.ndim < 5 or channel >= image.shape[2]:
-                print(f"Warning: Skipping image with incompatible dimensions for channel {channel}")
+                print(f"Warning: Skipping position {pos_idx} due to incompatible dimensions for channel {channel}")
                 continue
 
-            # Compute mean over positions and time
+            # Compute mean over positions (p) and time (t)
             projection = image.mean(axis=(0, 1))[channel].compute()
             projection = projection.astype(np.float64)
 
@@ -279,117 +378,120 @@ class IlluminationCorrection(IndependentStepClass):
 
         return avg_projection, smoothed_profile
 
-    def correct_image(self, image, smoothed_profiles):
-        """Apply the calculated illumination correction to each channel independently."""
-        epsilon = 1e-6
-        if image.ndim < 5:
-            raise ValueError("Image must have at least 5 dimensions [p, t, c, y, x]")
-
-        corrected_image = image.copy()
-
-        for c in range(image.shape[2]):
-            if c not in smoothed_profiles:
-                print(f"Warning: No illumination profile for channel {c}. Skipping correction for this channel.")
-                continue
-
-            correction_factor = 1.0 / (smoothed_profiles[c] + epsilon)
-            correction_factor /= np.median(correction_factor)
-
-            # Expand correction_factor to match image dimensions
-            correction_factor = correction_factor[np.newaxis, np.newaxis, np.newaxis, :, :]
-
-            # Multiply image by correction factor
-            corrected_channel = corrected_image[:, :, c, :, :] * correction_factor
-
-            # Rescale intensity
-            min_intensity = corrected_channel.min().compute()
-            max_intensity = corrected_channel.max().compute()
-            corrected_channel = exposure.rescale_intensity(
-                corrected_channel.compute(), out_range=(min_intensity, max_intensity)
-            )
-
-            # Assign back to corrected_image
-            corrected_image[:, :, c, :, :] = da.from_array(corrected_channel)
-
-        return corrected_image
-
-    def process_images(self, list_images):
+    def correct_image(self, da, smoothed_profiles):
         """
-        Main function to process the images.
+        Apply the calculated illumination correction to each channel and Z-slice independently.
 
         Parameters:
-        - list_images: List of dask arrays with shape [p, t, c, y, x]
+        - da: Dask array with shape [P, T, C, Z, Y, X]
+        - smoothed_profiles: dict, with channel indices as keys and illumination profiles as values
 
         Returns:
-        - corrected_images: List of corrected images in the same format as input
+        - corrected_da: Dask array, illumination-corrected image
         """
-        # Step 1: Compute averaged and smoothed illumination profiles for each channel across all images
-        averaged_profiles = {}
-        smoothed_profiles = {}
-        for channel, sigma in self.sigma_dict.items():
-            print(f"Calculating averaged and smoothed illumination profile for channel {channel} with sigma={sigma}...")
-            avg_profile, smoothed_profile = self.average_illumination_profile(list_images, channel, sigma_smooth=sigma)
-            averaged_profiles[channel] = avg_profile
-            smoothed_profiles[channel] = smoothed_profile
+        epsilon = 1e-6  # Small constant to avoid division by zero
 
-            if self.display_plots:
-                self.show_smoothed_profile(avg_profile, smoothed_profile, channel)
+        if da.ndim < 5:
+            raise ValueError("Input must have at least 5 dimensions [P, T, C, Z, Y, X]")
 
-        # Step 2: Apply correction to each image using the smoothed profiles
-        corrected_images = []
-        for idx, image in enumerate(list_images):
-            print(f"Correcting image {idx + 1}/{len(list_images)}...")
-            corrected_image = self.correct_image(image, smoothed_profiles)
-            corrected_images.append(corrected_image)
+        corrected_da = da.copy()
 
-            if self.display_plots and idx == 0:
-                self.show_corrected_max_projection(image, corrected_image)
+        for p in range(da.shape[0]):  # Loop over positions
+            for c in range(da.shape[2]):  # Loop over channels
+                if c not in smoothed_profiles:
+                    print(f"Warning: No illumination profile for channel {c}. Skipping correction for this channel.")
+                    continue
 
-        return corrected_images
+                # Retrieve the smoothed illumination profile for the current channel
+                correction_factor = 1.0 / (smoothed_profiles[c] + epsilon)
+                correction_factor /= np.median(correction_factor)  # Normalize by median value
 
-    def show_smoothed_profile(self, avg_profile, smoothed_profile, channel):
-        """Display averaged and smoothed illumination profiles for a channel."""
-        plt.ioff()
-        fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
-        sns.heatmap(avg_profile, cmap='hot', cbar=True, ax=axes[0])
-        axes[0].set_title(f'Averaged Profile - Channel {channel}')
-        axes[0].axis('off')
-        sns.heatmap(smoothed_profile, cmap='hot', cbar=True, ax=axes[1])
-        axes[1].set_title(f'Smoothed Profile - Channel {channel}')
-        axes[1].axis('off')
-        plt.tight_layout()
-        plt.show()
+                for z in range(da.shape[3]):  # Loop over Z-slices
+                    # Extract all time points for this position, channel, and Z-slice
+                    channel_slice = da[p, :, c, z, :, :].compute()  # [T, Y, X] for this Z-slice
 
-    def show_corrected_max_projection(self, original_image, corrected_image):
-        """Display max projections of the original and corrected images for all channels."""
-        num_channels = original_image.shape[2]
+                    # Apply correction factor
+                    corrected_slice = channel_slice * correction_factor[np.newaxis, :, :]
 
-        for channel in range(num_channels):
-            # Compute mean over positions and time
-            original_proj = original_image[:, :, channel, :, :].mean(axis=(0, 1)).compute()
-            corrected_proj = corrected_image[:, :, channel, :, :].mean(axis=(0, 1)).compute()
+                    # Rescale intensity for each time point in this Z-slice
+                    corrected_slice = np.array([
+                        exposure.rescale_intensity(slice_, out_range=(slice_.min(), slice_.max()))
+                        for slice_ in corrected_slice
+                    ])
 
-            # Rescale intensities for visualization
-            original_proj_rescaled = exposure.rescale_intensity(
-                original_proj, in_range=(np.percentile(original_proj, 1), np.percentile(original_proj, 99))
-            )
-            corrected_proj_rescaled = exposure.rescale_intensity(
-                corrected_proj, in_range=(np.percentile(corrected_proj, 1), np.percentile(corrected_proj, 99))
-            )
+                    # Assign corrected slices back to the array
+                    corrected_da[p, :, c, z, :, :] = da.from_array(corrected_slice)
 
-            # Plotting
-            plt.ioff()
-            fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
-            axes[0].imshow(original_proj_rescaled, cmap='hot')
-            axes[0].set_title(f'Original Projection - Channel {channel}')
-            axes[0].axis('off')
+        return corrected_da
 
-            axes[1].imshow(corrected_proj_rescaled, cmap='hot')
-            axes[1].set_title(f'Corrected Projection - Channel {channel}')
-            axes[1].axis('off')
+    def show_illumination_profiles(self, illumination_profiles, corrected_profiles, display_plots: bool = False):
+        """Display the reconstructed illumination profiles for each channel before and after correction as heatmaps with contour lines."""
+        if display_plots:
+            num_channels = len(illumination_profiles)  # Number of channels
 
-            plt.tight_layout()
-            plt.show()
+            for channel in range(num_channels):
+                # Compute illumination profiles into NumPy arrays
+                original_profile = illumination_profiles[channel].compute()
+                corrected_profile = corrected_profiles[channel].compute()
+
+                # Rescale intensity for visualization (optional, based on range of interest)
+                original_profile = exposure.rescale_intensity(
+                    original_profile, in_range=(np.percentile(original_profile, 1), np.percentile(original_profile, 99))
+                )
+                corrected_profile = exposure.rescale_intensity(
+                    corrected_profile, in_range=(np.percentile(corrected_profile, 1), np.percentile(corrected_profile, 99))
+                )
+
+                # Plot original and corrected illumination profiles
+                fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+
+                sns.heatmap(original_profile, cmap='hot', cbar=True, ax=axes[0])
+                axes[0].set_title(f'Original Illumination Profile - Channel {channel}')
+                axes[0].axis('off')
+                contours = axes[0].contour(original_profile, colors='white', linewidths=0.5, alpha=0.7)
+                axes[0].clabel(contours, inline=True, fontsize=8, fmt="%.2f")
+
+                sns.heatmap(corrected_profile, cmap='hot', cbar=True, ax=axes[1])
+                axes[1].set_title(f'Corrected Illumination Profile - Channel {channel}')
+                axes[1].axis('off')
+                contours = axes[1].contour(corrected_profile, colors='white', linewidths=0.5, alpha=0.7)
+                axes[1].clabel(contours, inline=True, fontsize=8, fmt="%.2f")
+
+                plt.tight_layout()
+                plt.show()
+
+
+    def show_corrected_max_projection(self, display_plots: bool = False):
+        """Display max projections of the original and corrected 3D stack for all channels side-by-side."""
+        if display_plots:
+            num_channels = self.da.shape[2]  # Number of channels in the 5D array
+
+            for channel in range(num_channels):
+                # Compute max projections lazily and then convert to NumPy arrays
+                original_max_projection = self.da[:, :, channel, :, :, :].max(axis=(0, 3)).compute()
+                corrected_max_projection = self.corrected_da[:, :, channel, :, :, :].max(axis=(0, 3)).compute()
+
+                # Rescale intensity for better visualization
+                original_max_projection = exposure.rescale_intensity(
+                    original_max_projection, in_range=(np.percentile(original_max_projection, 1), np.percentile(original_max_projection, 99))
+                )
+                corrected_max_projection = exposure.rescale_intensity(
+                    corrected_max_projection, in_range=(np.percentile(corrected_max_projection, 1), np.percentile(corrected_max_projection, 99))
+                )
+
+                # Plot original and corrected max projections
+                fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+                axes[0].imshow(original_max_projection, cmap='hot')
+                axes[0].set_title(f'Original Max Projection - Channel {channel}')
+                axes[0].axis('off')
+
+                axes[1].imshow(corrected_max_projection, cmap='hot')
+                axes[1].set_title(f'Corrected Max Projection - Channel {channel}')
+                axes[1].axis('off')
+
+                plt.tight_layout()
+                plt.show()
+
 
 
 class rescale_images(SequentialStepsClass):
