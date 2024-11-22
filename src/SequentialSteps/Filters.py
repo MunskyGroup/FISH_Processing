@@ -229,7 +229,7 @@ class IlluminationCorrection(IndependentStepClass):
         Main function to process images and correct illumination.
 
         Parameters:
-        - da: Dask array with shape [P, T, C, Y, X].
+        - da: Dask array with shape [P, T, C, Z, Y, X].
         - save_profiles: Bool, whether to save the computed profiles.
         - save_format: Str, format for saving profiles ('npy', 'tif', or 'png').
         - save_dir: Str, directory to save profiles.
@@ -337,7 +337,7 @@ class IlluminationCorrection(IndependentStepClass):
         Compute the averaged illumination profile for a single channel across all images.
 
         Parameters:
-        - da: Dask array with shape [p, t, c, y, x]
+        - da: Dask array with shape [P, T, C, Z, Y, X]
         - channel: int, channel index to process
         - sigma_smooth: int, smoothing factor for Gaussian fitting
 
@@ -354,8 +354,8 @@ class IlluminationCorrection(IndependentStepClass):
                 print(f"Warning: Skipping position {pos_idx} due to incompatible dimensions for channel {channel}")
                 continue
 
-            # Compute mean over positions (p) and time (t)
-            projection = image.mean(axis=(0, 1))[channel].compute()
+            # Compute mean over positions (p) and time (c)
+            projection = image.mean(axis=(0, 2))[channel].compute() #TODO: check if this is correct
             projection = projection.astype(np.float64)
 
             # Accumulate the projection values
@@ -467,8 +467,8 @@ class IlluminationCorrection(IndependentStepClass):
             num_channels = self.da.shape[2]  # Number of channels in the 5D array
 
             for channel in range(num_channels):
-                # Compute max projections lazily and then convert to NumPy arrays
-                original_max_projection = self.da[:, :, channel, :, :, :].max(axis=(0, 3)).compute()
+                # Compute Z max projections lazily and then convert to NumPy arrays
+                original_max_projection = self.da[:, :, channel, :, :, :].max(axis=(0, 3)).compute() #TODO: check if this is correct
                 corrected_max_projection = self.corrected_da[:, :, channel, :, :, :].max(axis=(0, 3)).compute()
 
                 # Rescale intensity for better visualization
