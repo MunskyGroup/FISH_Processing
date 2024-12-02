@@ -52,6 +52,7 @@ from scipy.ndimage import gaussian_filter
 from skimage.io import imsave
 import seaborn as sns
 from skimage import exposure
+import io
 
 warnings.filterwarnings('ignore', category=matplotlib.MatplotlibDeprecationWarning)
 
