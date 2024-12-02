@@ -123,9 +123,9 @@ class Pipeline:
             self.modify_kwargs(params)
             self._run(locations, steps)
 
-    def run_on_cluster(self, name: str):
+    def run_on_cluster(self, remote_folder, name: str = None):
         self.save_pipeline(name=Settings().name if name is None else name)
-        self.send_pipeline_to_cluster()
+        self.send_pipeline_to_cluster(remote_folder)
 
     def _run(self, locations, steps):
         # save locations and steps
@@ -163,12 +163,12 @@ class Pipeline:
         pipeline_dir = os.path.join(parent_dir, 'Pipelines')
         
         self.pipeline_dictionary_location = os.path.join(pipeline_dir, f'{name}.txt')
-        with open(self.pipeline_dictionary_location, 'wb') as f:
+        with open(self.pipeline_dictionary_location, 'w') as f:
             json.dump(pipeline, f)
 
-    def send_pipeline_to_cluster(self):
-        from Send_To_Cluster import run_on_cluster
-        run_on_cluster(_ , self.pipeline_dictionary_location) # TODO:
+    def send_pipeline_to_cluster(self, remote_folder):
+        from .Send_To_Cluster import run_on_cluster
+        run_on_cluster(remote_folder , self.pipeline_dictionary_location) 
 
     def clear_pipeline(self):
         Parameters.clear_instances()
