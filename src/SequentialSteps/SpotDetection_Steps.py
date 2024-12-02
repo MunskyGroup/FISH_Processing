@@ -650,9 +650,9 @@ class BIGFISH_SpotDetection(SpotDetection):
             df_clusterresults['fov'] = [fov]*len(df_clusterresults)
             df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
 
-            df_spotresults = add_indepenedent_params_to_df(df_spotresults, independent_params)
-            df_clusterresults = add_indepenedent_params_to_df(df_clusterresults, independent_params)
-            df_cellresults = add_indepenedent_params_to_df(df_cellresults, independent_params)
+            # df_spotresults = add_indepenedent_params_to_df(df_spotresults, independent_params)
+            # df_clusterresults = add_indepenedent_params_to_df(df_clusterresults, independent_params)
+            # df_cellresults = add_indepenedent_params_to_df(df_cellresults, independent_params)
 
             return df_spotresults, df_clusterresults
 

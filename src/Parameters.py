@@ -200,15 +200,18 @@ class Experiment(Parameters):
             self.FISHChannel = [self.FISHChannel]
 
         # make sure each independent parameter has the same keys
-        if self.independent_params is not None and type(self.independent_params) is list:
-            for i, params in enumerate(self.independent_params):
-                if i == 0:
-                    keys = set(params.keys())
-                else:
-                    if keys != set(params.keys()):
-                        raise ValueError(f"Independent parameters must have the same keys")
+        if self.independent_params is not None:
+            if type(self.independent_params) is list:
+                for i, params in enumerate(self.independent_params):
+                    if i == 0:
+                        keys = set(params.keys())
+                    else:
+                        if keys != set(params.keys()):
+                            raise ValueError(f"Independent parameters must have the same keys")
             else:
                 self.independent_params = [self.independent_params]
+        else:
+            self.independent_params = [{}]
 
 
 @dataclass
