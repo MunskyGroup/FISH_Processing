@@ -126,6 +126,9 @@ class DataTypeBridge(IndependentStepClass):
     
         temp = np.full((position_indexs[-1]), np.nan, dtype=object)
 
+        if not isinstance(independent_params, list):
+            independent_params = [independent_params]
+
         for i, p in enumerate(position_indexs):
             if independent_params is not None and len(independent_params) > 1:
                 if i == 0:

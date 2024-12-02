@@ -251,6 +251,9 @@ class Settings(Parameters):
         if kwargs is not None:
             for key, value in kwargs.items():
                 setattr(self, key, value)
+        
+        if self.connection_config_location is None:
+            self.connection_config_location = str(os.path.join(repo_path, 'config_nas.yml'))
 
     def validate_parameters(self):
         if self.name is None:
