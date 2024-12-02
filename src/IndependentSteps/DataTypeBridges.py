@@ -52,12 +52,12 @@ class New_Parameters(OutputClass):
 
 class DataTypeBridge(IndependentStepClass):
     def main(self, initial_data_location, connection_config_location, 
-             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, independent_params, local_dataset_location: list[str] = None,
+             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, 
+             independent_params, local_dataset_location: list[str] = None,
              **kwargs):
 
         # if data is local
         if local_dataset_location is not None:
-    
             if isinstance(local_dataset_location, str):
                 local_dataset_location = [local_dataset_location]
             
@@ -126,23 +126,29 @@ class DataTypeBridge(IndependentStepClass):
     
         temp = np.full((position_indexs[-1]), np.nan, dtype=object)
 
-        if not isinstance(independent_params, list):
-            independent_params = [independent_params]
+        if type(independent_params) is not np.ndarray:
+            if not isinstance(independent_params, list):
+                independent_params = [independent_params]
 
-        for i, p in enumerate(position_indexs):
-            if independent_params is not None and len(independent_params) > 1:
-                if i == 0:
-                    independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
-                    temp[:p] = independent_params[i]
+            for i, p in enumerate(position_indexs):
+                if independent_params is not None and len(independent_params) > 1:
+                    if i == 0:
+                        if NAS_locations is not None:
+                            independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                        temp[:p] = independent_params[i]
+                    else:
+                        if NAS_locations is not None:
+                            independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                        temp[position_indexs[i-1]:p] = independent_params[i]
+                elif independent_params is not None and len(independent_params) == 1:
+                    if NAS_locations is not None:
+                        independent_params[0]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                    temp[:p] = independent_params[0]
                 else:
-                    independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
-                    temp[position_indexs[i-1]:p] = independent_params[i]
-            elif independent_params is not None and len(independent_params) == 1:
-                independent_params[0]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
-                temp[:p] = independent_params[0]
-            else:
-                temp = None
-                print('No independent parameters were passed in')
+                    temp = None
+                    print('No independent parameters were passed in')
+        else:
+            temp = independent_params
 
 
         data = DataContainer(local_dataset_location = H5_locations,

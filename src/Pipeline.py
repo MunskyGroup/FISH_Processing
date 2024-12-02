@@ -146,11 +146,13 @@ class Pipeline:
 
     def save_pipeline(self, name: str):
         # save params as a dictionary
-        params = [Parameters.get_parameters()]
+        if self.parameters is None:
+            params = [Parameters.get_parameters()]
 
         # save save steps as a dictionary
-        steps = [[*[i.__class__.__name__ for i in self.get_independent_steps()], *[i.__class__.__name__ for i in self.get_sequential_steps()],
-                *[i.__class__.__name__ for i in self.get_finalization_steps()]]]
+        if self.steps is None:
+            steps = [[*[i.__class__.__name__ for i in self.get_independent_steps()], *[i.__class__.__name__ for i in self.get_sequential_steps()],
+                    *[i.__class__.__name__ for i in self.get_finalization_steps()]]]
         
         # save these as a dictionary
         pipeline = {'params': params, 'steps': steps}
