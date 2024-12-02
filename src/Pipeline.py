@@ -130,13 +130,16 @@ class Pipeline:
     def _run(self, locations, steps):
         # save locations and steps
         if steps is not None:
-            StepClass().initalize_steps_from_list(steps)
+            StepClass.initalize_steps_from_list(steps)
         if locations is not None:
             Experiment().initial_data_location = locations
         # method to to execute the steps in order
         self.check_requirements()
+        print('Running Independent Steps')
         self.execute_independent_steps()
+        print('Running Sequential Steps')
         self.execute_sequential_steps()
+        print('Running Finalization Steps')
         self.execute_finalization_steps()
         self.clear_pipeline()
 

@@ -107,7 +107,8 @@ class StepClass(ABC):
 
             return required_params, all_params, defaults, types
     
-    def initalize_steps_from_list(self, steps: list):
+    @classmethod
+    def initalize_steps_from_list(cls, steps: list):
         # get names of all children of this class even if they are not imported
         seq_children = SequentialStepsClass.list_all_children()
         ind_children = IndependentStepClass.list_all_children()
@@ -123,12 +124,12 @@ class StepClass(ABC):
         fin_children_names = [cls.__name__ for cls in fin_children]
 
         for step in steps:
-            print('++++++++++++++++++++++++++++')
-            print(step)
-            print(SequentialStepsClass._instances)
-            print(IndependentStepClass._instances)
-            print(FinalizingStepClass._instances)
-            print(StepClass._instances)
+            # print('++++++++++++++++++++++++++++')
+            # print(step)
+            # # print(SequentialStepsClass._instances)
+            # # print(IndependentStepClass._instances)
+            # # print(FinalizingStepClass._instances)
+            # # print(StepClass._instances)
             if step in seq_children_names:
                 i = seq_children_names.index(step)
                 seq_children[i]()
