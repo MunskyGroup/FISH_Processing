@@ -50,14 +50,20 @@ pipeline_location = os.path.normpath(sys.argv[1])
 with open(pipeline_location, 'r') as f:
     pipeline_dict = json.load(f)
 
-Parameters.initialize_parameters_instances()
-Parameters.update_parameters(pipeline_dict['params'])
 
-pipeline_dict['display_plots'] = False
+repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+connection_config_location = str(os.path.join(repo_path, 'config_nas.yml'))
+for i in range(len(pipeline_dict['params'])):
+    pipeline_dict['params'][i]['display_plots'] = False
+    pipeline_dict['params'][i]['connection_config_location'] = connection_config_location
 
+    
 steps = pipeline_dict['steps']
-StepClass.initalize_steps_from_list(steps)
+experiment_locations = [i['initial_data_location'] for i in pipeline_dict['params']]
 
-pipeline = Pipeline()
+print(steps)
+print(pipeline_dict['params'])
+
+pipeline = Pipeline(experiment_location=experiment_locations, parameters=pipeline_dict['params'], steps=steps)
 
 pipeline.run()

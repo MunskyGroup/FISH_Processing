@@ -77,11 +77,11 @@ class OutputClass(ABC):
             # add the independent params to the dataframe
             if 'fov' in df.columns:
                 if independent_params is not None:
-                    for name in independent_params.keys():
+                    for name in independent_params[0].keys():
                         if name in df.columns:
                             pass
                         else:
-                            df[name] = independent_params[df['position']][name]
+                            df[name] = independent_params[df['fov']][name]
             return df
         
         def split_df(df, lower, upper):
@@ -99,7 +99,7 @@ class OutputClass(ABC):
         
         for i, location in enumerate(locations):
             for key in attributes:
-                if key != '_initialized':
+                if key not in ['_initialized', 'independent_params']:
                     data = attributes[key]
                     if data is not None:
 

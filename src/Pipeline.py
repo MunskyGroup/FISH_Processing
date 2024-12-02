@@ -123,31 +123,36 @@ class Pipeline:
             self.modify_kwargs(params)
             self._run(locations, steps)
 
-    def run_on_cluster(self, name: str):
+    def run_on_cluster(self, remote_folder, name: str = None):
         self.save_pipeline(name=Settings().name if name is None else name)
-        self.send_pipeline_to_cluster()
+        self.send_pipeline_to_cluster(remote_folder)
 
     def _run(self, locations, steps):
         # save locations and steps
         if steps is not None:
-            StepClass().initalize_steps_from_list(steps)
+            StepClass.initalize_steps_from_list(steps)
         if locations is not None:
             Experiment().initial_data_location = locations
         # method to to execute the steps in order
         self.check_requirements()
+        print('Running Independent Steps')
         self.execute_independent_steps()
+        print('Running Sequential Steps')
         self.execute_sequential_steps()
+        print('Running Finalization Steps')
         self.execute_finalization_steps()
         self.clear_pipeline()
 
 
     def save_pipeline(self, name: str):
         # save params as a dictionary
-        params = Parameters.get_parameters()
+        if self.parameters is None:
+            params = [Parameters.get_parameters()]
 
         # save save steps as a dictionary
-        steps = [*[i.__class__.__name__ for i in self.get_independent_steps()], *[i.__class__.__name__ for i in self.get_sequential_steps()],
-                *[i.__class__.__name__ for i in self.get_finalization_steps()]]
+        if self.steps is None:
+            steps = [[*[i.__class__.__name__ for i in self.get_independent_steps()], *[i.__class__.__name__ for i in self.get_sequential_steps()],
+                    *[i.__class__.__name__ for i in self.get_finalization_steps()]]]
         
         # save these as a dictionary
         pipeline = {'params': params, 'steps': steps}
@@ -160,12 +165,12 @@ class Pipeline:
         pipeline_dir = os.path.join(parent_dir, 'Pipelines')
         
         self.pipeline_dictionary_location = os.path.join(pipeline_dir, f'{name}.txt')
-        with open(self.pipeline_dictionary_location, 'wb') as f:
+        with open(self.pipeline_dictionary_location, 'w') as f:
             json.dump(pipeline, f)
 
-    def send_pipeline_to_cluster(self):
-        from Send_To_Cluster import run_on_cluster
-        run_on_cluster(_ , self.pipeline_dictionary_location) # TODO:
+    def send_pipeline_to_cluster(self, remote_folder):
+        from .Send_To_Cluster import run_on_cluster
+        run_on_cluster(remote_folder , self.pipeline_dictionary_location) 
 
     def clear_pipeline(self):
         Parameters.clear_instances()

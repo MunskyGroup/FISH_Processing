@@ -67,7 +67,7 @@ class CellSegmentation(SequentialStepsClass):
 
     def align_nuc_cell_masks(self, nuc_mask, cell_mask):
         if nuc_mask is not None and cell_mask is not None:
-            nuc_mask, cell_mask = multistack.match_nuc_cell(nuc_mask, cell_mask, single_nuc=False, cell_alone=True)
+            nuc_mask, cell_mask = multistack.match_nuc_cell(nuc_mask, cell_mask, single_nuc=False, cell_alone=False)
         return nuc_mask, cell_mask
 
     def plot_segmentation(self, display_plots, image, nuc_mask, cell_mask, nuc_channel, cyto_channel, do_3D_Segmentation):
@@ -81,33 +81,32 @@ class CellSegmentation(SequentialStepsClass):
             i = 0
             if nuc_mask is not None:
                 if do_3D_Segmentation:
-                    axs[i].imshow(np.max(image,axis=0)[nuc_channel, :, :], cmap='gray')
+                    axs[i].imshow(np.max(image,axis=0)[nuc_channel, :, :])
                     axs[i].set_title('Nuclei')
                     i += 1
-                    axs[i].imshow(np.max(nuc_mask,axis=0), cmap='tab20')
+                    axs[i].imshow(np.max(nuc_mask,axis=0))
                     axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
                 else:
-                    axs[i].imshow(image[nuc_channel,:,:], cmap='gray')
+                    axs[i].imshow(image[nuc_channel,:,:])
                     axs[i].set_title('Nuclei')
                     i += 1
-                    axs[i].imshow(nuc_mask, cmap='tab20')
+                    axs[i].imshow(nuc_mask)
                     axs[i].set_title('Nuclei Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
             if cell_mask is not None:
                 if do_3D_Segmentation:
-                    axs[i].imshow(np.max(image,axis=0)[cyto_channel, :, :], 
-                                    cmap='gray')
+                    axs[i].imshow(np.max(image,axis=0)[cyto_channel, :, :])
                     axs[i].set_title('cell_mask')
                     i += 1
-                    axs[i].imshow(np.max(cell_mask, axis=0), cmap='tab20')
+                    axs[i].imshow(np.max(cell_mask, axis=0))
                     axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
                 else:
-                    axs[i].imshow(image[cyto_channel,:,:], cmap='gray')
+                    axs[i].imshow(image[cyto_channel,:,:])
                     axs[i].set_title('cell_mask')
                     i += 1
-                    axs[i].imshow(cell_mask, cmap='tab20')
+                    axs[i].imshow(cell_mask)
                     axs[i].set_title('cell_mask Segmentation, NC: ' + str(np.max(nuc_mask)))
                     i += 1
             plt.tight_layout()
@@ -345,12 +344,17 @@ class SimpleCellposeSegmentaion(CellSegmentation):
             nuc_pretrained_model = os.path.join(model_location, nuc_pretrained_model) if nuc_pretrained_model else None
 
             cp = models.CellposeModel(model_type=nuc_model_type, gpu=True, pretrained_model=nuc_pretrained_model)
+            sz = models.SizeModel(cp)
+
+            model = models.Cellpose(gpu=True)
+            model.cp = cp
+            model.sz = sz
             # nucmodel = models.Cellpose(model_type=nuc_model_type, gpu=True)
             # if cp is not None:
             #     nucmodel.cp = cp
             channels = [0, 0]
             nuc_image = image[nucChannel, :, :].compute()
-            nuc_mask, flows, styles = cp.eval(nuc_image,
+            nuc_mask, flows, styles, diams = model.eval(nuc_image,
                                                 channels=channels, 
                                                 diameter=nuc_diameter, 
                                                 invert=cellpose_invert, 
@@ -359,9 +363,8 @@ class SimpleCellposeSegmentaion(CellSegmentation):
                                                 do_3D=cellpose_do_3D,
                                                 min_size=nuc_min_size, 
                                                 flow_threshold=nuc_flow_threshold, 
-                                                cellprob_threshold=nuc_cellprob_threshold,
-                                                # net_avg=True, 
-                                                augment=True)
+                                                cellprob_threshold=nuc_cellprob_threshold)
+                                                # net_avg=True
 
 
             return nuc_mask
@@ -386,10 +389,15 @@ class SimpleCellposeSegmentaion(CellSegmentation):
 
 
             cp = models.CellposeModel(model_type=cyto_model_type, gpu=True, pretrained_model=cyto_pretrained_model)
+            sz = models.SizeModel(cp)
+
+            model = models.Cellpose(gpu=True)
+            model.cp = cp
+            model.sz = sz
 
             channels = [0, 0]
             cyto_image = image[cytoChannel, :, :].compute()
-            cell_mask, flows, styles = cp.eval(cyto_image,
+            cell_mask, flows, styles, diams = model.eval(cyto_image,
                                                     channels=channels, 
                                                     diameter=cyto_diameter, 
                                                     invert=cellpose_invert, 
@@ -398,9 +406,7 @@ class SimpleCellposeSegmentaion(CellSegmentation):
                                                     do_3D=cellpose_do_3D,
                                                     min_size=cyto_min_size, 
                                                     flow_threshold=cyto_flow_threshold, 
-                                                    cellprob_threshold=cyto_cellprob_threshold,
-                                                    # net_avg=True, 
-                                                    augment=True)
+                                                    cellprob_threshold=cyto_cellprob_threshold,)
             return cell_mask
 
 class CellSegmentationStepClass_JF(CellSegmentation):
