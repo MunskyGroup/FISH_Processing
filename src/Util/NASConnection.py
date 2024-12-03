@@ -239,7 +239,7 @@ class NASConnection():
             if (file.filename not in ['.', '..'] and not file.isDirectory):
                 print ('File Downloaded :', file.filename)
                 fileobj = open(file.filename,'wb')
-                self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj)
+                self.conn.retrieveFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(file.filename) ),fileobj, timeout=timeout)
                 fileobj.close()
                 # moving files in the local computer
                 shutil.move(pathlib.Path().absolute().joinpath(file.filename), local_folder_path.joinpath(file.filename))
