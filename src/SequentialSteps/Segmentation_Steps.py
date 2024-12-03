@@ -13,13 +13,14 @@ import bigfish.multistack as multistack
 import bigfish.plot as plot
 import dask.array as da
 from abc import ABC, abstractmethod
-
-
+import tifffile
+import pandas as pd
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 from src import SequentialStepsClass
 from src.GeneralOutput import OutputClass
 from src.Parameters import Parameters
+
 
 
 #%% Abstract Class
@@ -796,7 +797,6 @@ class CellSegmentationStepClass_Luis(SequentialStepsClass):
         if not 'list_cyto_masks_no_nuclei' in locals():
             self.list_cyto_masks_no_nuclei = None
 
-
 class BIGFISH_Tensorflow_Segmentation(SequentialStepsClass):
     def __init__(self):
         super().__init__()
@@ -836,6 +836,46 @@ class BIGFISH_Tensorflow_Segmentation(SequentialStepsClass):
         #                                 list_cyto_masks=mask_cytosol, segmentation_successful=1,
         #                                 number_detected_cells=num_of_cells, id=id)
         # return output
+
+class BoxCells(SequentialStepsClass):
+    def __init__(self):
+        super().__init__()
+
+    def main(self, nuc_mask, cell_mask, save_mask_location, df_spotresults: pd.DataFrame):
+
+        for region in sk.measure.regionprops(cell_mask):
+            minr, minc, maxr, maxc = region.bbox
+            for i, row in df_spotresults.iterrows():
+                x, y = row['x_px'], row['y_px']
+                try:
+                    cell_mask[0, y-1:y+2, x-1:x+2] = -1
+                except:
+                    pass
+            cropped_cell = cell_mask[minr:maxr, minc:maxc]
+            file_counter = 0
+            file_path = os.path.join(save_mask_location, f'cell_crop_{file_counter}.csv')
+            while os.path.exists(file_path):
+                file_path = os.path.join(save_mask_location, f'cell_crop_{file_counter}.csv')
+                file_counter += 1
+            tifffile.imwrite(file_path, cropped_cell)
+
+        for region in sk.measure.regionprops(nuc_mask):
+            minr, minc, maxr, maxc = region.bbox
+            for i, row in df_spotresults.iterrows():
+                x, y = row['x_px'], row['y_px']
+                try:
+                    cell_mask[0, y-1:y+2, x-1:x+2] = -1
+                except:
+                    pass
+            cropped_nuc = nuc_mask[minr:maxr, minc:maxc]
+            file_counter = 0
+            file_path = os.path.join(save_mask_location, f'nuc_crop_{file_counter}.csv')
+            while os.path.exists(file_path):
+                file_path = os.path.join(save_mask_location, f'nuc_crop_{file_counter}.csv')
+                file_counter += 1
+            tifffile.imwrite(file_path, cropped_nuc)
+    
+        os.makedirs(save_mask_location, exist_ok=True)
 
 
 

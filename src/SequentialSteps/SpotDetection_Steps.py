@@ -857,6 +857,28 @@ class Calculate_BIGFISH_Threshold(IndependentStepClass):
 
 
 
+#%% Masking
+class DetectedSpot_Mask(SequentialStepsClass):
+    def __init__(self):
+        super().__init__()
+    
+    def main(self, masks, FISHChannel,
+             timepoint, fov, df_spotresults: pd.DataFrame):
+        for i, row in df_spotresults.iterrows():
+            x, y = row['x_px'], row['y_px']
+            try:
+                masks[fov, timepoint, FISHChannel[0], 0, y-1:y+2, x-1:x+2] = 1
+            except:
+                pass
+        
+        New_Parameters({'masks': masks})
+        
+
+        
+
+
+
+
 
 
     
