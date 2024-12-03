@@ -542,6 +542,8 @@ class BIGFISH_SpotDetection(SpotDetection):
         print(f'SNR threshold: {snr_threshold}')
 
         if snr_threshold is not None:
+            # Print the number of spots before filtering
+            print(f'Number of spots before SNR filtering: {canidate_spots.shape[0]}')
             good_spots = [True if snr > snr_threshold else False for snr in snr_spots]
             canidate_spots = canidate_spots[good_spots, :]
             print(f'Number of spots after SNR filtering: {canidate_spots.shape[0]}')
