@@ -301,7 +301,7 @@ class FFF2NativeDataType(DataTypeBridge):
 
 
 
-
+#%% Auxilary Functions
 class Avg_Parameters(IndependentStepClass):
     def main(self, dataset_to_avg: list[str], previous_analysis_name: str, params_to_avg: list[str], local_dataset_location:str, h5_file,
               **kwargs):

@@ -841,8 +841,8 @@ class Calculate_BIGFISH_Threshold(IndependentStepClass):
 
 
         for c in FISHChannel:
-            rna = [images[i, 0, c, :, :, :].compute() for i in range(min(MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, images.shape[0]))]
-            rna = [r.astype(np.float32) for r in rna]
+            rna = images[:min(MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, images.shape[0]), 0, c, :, :, :].compute()
+            rna = [rna[r].astype(np.float32) for r in range(rna.shape[0])]
             spots, t = detection.detect_spots(images=rna, 
                                                         return_threshold=True, 
                                                         voxel_size=voxel_size,
@@ -855,6 +855,28 @@ class Calculate_BIGFISH_Threshold(IndependentStepClass):
             print()
 
         New_Parameters({'bigfish_threshold': thresholds})
+
+
+
+
+#%% Masking
+class DetectedSpot_Mask(SequentialStepsClass):
+    def __init__(self):
+        super().__init__()
+    
+    def main(self, masks, FISHChannel,
+             timepoint, fov, df_spotresults: pd.DataFrame):
+        for i, row in df_spotresults.iterrows():
+            x, y = row['x_px'], row['y_px']
+            try:
+                masks[fov, timepoint, FISHChannel[0], 0, y-1:y+2, x-1:x+2] = 1
+            except:
+                pass
+        
+        New_Parameters({'masks': masks})
+        
+
+        
 
 
 

@@ -81,7 +81,7 @@ class OutputClass(ABC):
                         if name in df.columns:
                             pass
                         else:
-                            df[name] = independent_params[df['fov']][name]
+                            df[name] =[independent_params[fov][name] for fov in df['fov'].astype(int).tolist()]
             return df
         
         def split_df(df, lower, upper):
