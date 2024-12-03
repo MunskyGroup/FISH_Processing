@@ -84,13 +84,6 @@ class StepClass(ABC):
             
         
         return params
-    
-    def create_step_output_dir(self, output_location = None, **kwargs):
-        if output_location is not None:
-            self.step_output_dir = os.path.join(output_location, self.__class__.__name__)
-            os.makedirs(self.step_output_dir, exist_ok=True)
-        else:
-            self.step_output_dir = None
 
     def get_parameters(self):
             step_func = self.main
@@ -113,23 +106,12 @@ class StepClass(ABC):
         seq_children = SequentialStepsClass.list_all_children()
         ind_children = IndependentStepClass.list_all_children()
         fin_children = FinalizingStepClass.list_all_children()
-        print(SequentialStepsClass._instances)
-        print(IndependentStepClass._instances)
-        print(FinalizingStepClass._instances)
-
-        print(StepClass._instances)
 
         seq_children_names = [cls.__name__ for cls in seq_children]
         ind_children_names = [cls.__name__ for cls in ind_children]
         fin_children_names = [cls.__name__ for cls in fin_children]
 
         for step in steps:
-            # print('++++++++++++++++++++++++++++')
-            # print(step)
-            # # print(SequentialStepsClass._instances)
-            # # print(IndependentStepClass._instances)
-            # # print(FinalizingStepClass._instances)
-            # # print(StepClass._instances)
             if step in seq_children_names:
                 i = seq_children_names.index(step)
                 seq_children[i]()
@@ -226,8 +208,6 @@ class SequentialStepsClass(StepClass):
                         print('FOV' + str(p) + ' TIMEPOINT : ' + str(t))
                         print(' ###################### ')
                         params = self.load_in_parameters(p, t)
-                        self.create_step_output_dir(**params)
-                        self.on_first_run()
                         output = self.main(**params)
                         count += 1
             elif SequentialStepsClass.order == 'pt':
@@ -245,8 +225,6 @@ class SequentialStepsClass(StepClass):
                         print('FOV:' +  str(p) + ' TIMEPOINT: ' + str(t))
                         print(' ###################### ')
                         params = self.load_in_parameters(p, t)
-                        self.create_step_output_dir(**params)
-                        self.on_first_run(params)
                         output = self.main(**params)
                         count += 1
                         if count >= number_of_chunks:
@@ -257,24 +235,11 @@ class SequentialStepsClass(StepClass):
             print('FOV:' + str(p) + ' TIMEPOINT : ' + str(t))
             print(' ###################### ')
             params = self.load_in_parameters(p, t)
-            self.create_step_output_dir(**params)
-            self.on_first_run(params)
             output = self.main(**params)
         
         return output
 
     def main(self, **kwargs):
-        pass
-
-    def on_first_run(self, params):
-        if self.is_first_run:
-            self.first_run(params)
-            self.is_first_run = False
-            return True
-        else:
-            return False
-    
-    def first_run(self, params):
         pass
 
 class FinalizingStepClass(StepClass):
