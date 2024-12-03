@@ -18,8 +18,10 @@ from abc import abstractmethod
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.GeneralOutput import OutputClass
-from src import SequentialStepsClass, SingleStepCompiler
+from src import SequentialStepsClass, IndependentStepClass
 from src.Util import Plots, SpotDetection
+from src.Parameters import Parameters
+
 
 #%% Output Classes
 class SpotDetectionOutputClass(OutputClass):
@@ -43,9 +45,10 @@ class SpotDetectionOutputClass(OutputClass):
             self.bigfish_threshold = [threshold]
         if threshold is not None:
             self.bigfish_threshold = [*self.bigfish_threshold, threshold]
-        
-            
 
+class New_Parameters(OutputClass):
+    def append(self, new_params):
+        Parameters.update_parameters(new_params)
 
 #%% Abstract Class
 class SpotDetection(SequentialStepsClass):
@@ -56,12 +59,14 @@ class SpotDetection(SequentialStepsClass):
             cell_results = self.extract_cell_level_results(image, spots, clusters, nucChannel, c, 
                                                         nuc_mask, cell_mask, timepoint, fov,
                                                             verbose, display_plots)
+            
+            spots, cell_results, clusters = self.add_ind_params(spots, cell_results, clusters, timepoint, fov, c)
 
         return SpotDetectionOutputClass(cell_results, spots, clusters)
 
 
     @abstractmethod
-    def get_detected_spots(self, **kwargs) -> np.array:
+    def get_detected_spots(self, **kwargs) -> pd.DataFrame:
         pass
 
     def get_spot_properties(self, **kwargs) -> pd.DataFrame:
@@ -160,20 +165,25 @@ class SpotDetection(SequentialStepsClass):
 
         return df
 
+    def add_ind_params(self, df_spotresults, df_cellresults, df_clusterresults, timepoint, fov, c):
+        df_spotresults['timepoint'] = [timepoint]*len(df_spotresults)
+        df_spotresults['fov'] = [fov]*len(df_spotresults)
+        df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+
+        if df_cellresults is not None:
+            df_cellresults['timepoint'] = [timepoint]*len(df_cellresults)
+            df_cellresults['fov'] = [fov]*len(df_cellresults)
+            df_cellresults['FISH_Channel'] = [c]*len(df_cellresults)
+
+        df_clusterresults['timepoint'] = [timepoint]*len(df_clusterresults)
+        df_clusterresults['fov'] = [fov]*len(df_clusterresults)
+        df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
+
+        return df_spotresults, df_cellresults, df_clusterresults
 
 
 
 #%% Useful Functions
-def add_indepenedent_params_to_df(df, independent_params):
-    if df is None:
-        return None
-    if independent_params is None:
-        return df
-    else:
-        for key, value in independent_params.items():
-            df[key] = [value]*len(df)
-        return df
-    
 def compute_snr_spots(image, spots, voxel_size, spot_radius, display_plots: bool = False):
     """Compute signal-to-noise ratio (SNR) based on spot coordinates.
 
@@ -324,19 +334,6 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius, display_plots: bool
 
     # Return both SNRs and max_signals for further analysis
     return snr_spots, max_signals
-
-
-
-
-class illumination_correction_output(OutputClass): # TODO: move this thing
-    def __init__(self, id, corrected_image):
-        super().__init__()
-        self.id = [id]
-        self.corrected_image = corrected_image
-
-    def append(self, newOutput):
-        self.id = [*self.id, *newOutput.id]
-        self.corrected_image = pd.concat([self.corrected_image, newOutput.corrected_image])        
 
 
 #%% Step Classes
@@ -646,13 +643,14 @@ class BIGFISH_SpotDetection(SpotDetection):
             df_spotresults['fov'] = [fov]*len(df_spotresults)
             df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
 
+            if df_cellresults is not None:
+                df_spotresults['timepoint'] = [timepoint]*len(df_spotresults)
+                df_spotresults['fov'] = [fov]*len(df_spotresults)
+                df_spotresults['FISH_Channel'] = [c]*len(df_spotresults)
+
             df_clusterresults['timepoint'] = [timepoint]*len(df_clusterresults)
             df_clusterresults['fov'] = [fov]*len(df_clusterresults)
             df_clusterresults['FISH_Channel'] = [c]*len(df_clusterresults)
-
-            # df_spotresults = add_indepenedent_params_to_df(df_spotresults, independent_params)
-            # df_clusterresults = add_indepenedent_params_to_df(df_clusterresults, independent_params)
-            # df_cellresults = add_indepenedent_params_to_df(df_cellresults, independent_params)
 
             return df_spotresults, df_clusterresults
 
@@ -822,145 +820,45 @@ class TrackPy_SpotDetection(SequentialStepsClass):
 
         output = Trackpy_SpotDetection_Output(id=id, trackpy_features=trackpy_features)
         return output
-    
 
-# class SpotDetectionStepClass_Luis(SequentialStepsClass):
-#     def __init__(self) -> None:
-#         super().__init__()
+#%% Axilary Steps
+class Calculate_BIGFISH_Threshold(IndependentStepClass):
+    def __init__(self):
+        super().__init__()
 
-#     def main(self,
-#              id: int,
-#              list_images: list[np.array],
-#              cytoChannel: list[int],
-#              nucChannel: list[int],
-#              FISHChannel: list[int],
-#              list_image_names: list,
-#              temp_folder_name: Union[str, pathlib.Path],
-#              threshold_for_spot_detection: float,
-#              segmentation_successful: list[bool],
-#              CLUSTER_RADIUS: float,
-#              minimum_spots_cluster: float,
-#              list_cell_masks: list[np.array],
-#              list_nuc_masks: list[np.array],
-#              list_cyto_masks: list[np.array],
-#              voxel_size_z: float,
-#              voxel_size_yx: float,
-#              psf_z: float,
-#              psf_yx: float,
-#              save_all_images: bool,
-#              filtered_folder_name: Union[str, pathlib.Path],
-#              show_plots: bool = True,
-#              display_spots_on_multiple_z_planes: bool = False,
-#              use_log_filter_for_spot_detection: bool = False,
-#              save_files: bool = True,
-#              **kwargs) -> SpotDetectionStepOutputClass:
+    def main(self, images, FISHChannel: list[int], voxel_size_yx, voxel_size_z, spot_yx, spot_z, 
+            MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD:int = 50,
+            use_log_hook:bool =False, verbose:bool = False, 
+            display_plots: bool = False, **kwargs):
+        voxel_size = (float(voxel_size_z), float(voxel_size_yx), float(voxel_size_yx))
+        spot_size = (float(spot_z), float(spot_yx), float(spot_yx))
+        self.verbose = verbose
+        self.display_plots = display_plots
 
-#         img = list_images[id]
-#         list_cell_masks = list_cell_masks[id]
-#         list_nuc_masks = list_nuc_masks[id]
-#         list_cyto_masks = list_cyto_masks[id]
-#         file_name = list_image_names[id]
-#         temp_folder_name = temp_folder_name
-#         segmentation_successful = segmentation_successful[id]
-#         list_voxels = [voxel_size_z, voxel_size_yx]
-#         list_psfs = [psf_z, psf_yx]
+        thresholds = []
 
-#         temp_file_name = file_name[:file_name.rfind(
-#             '.')]  # slicing the name of the file. Removing after finding '.' in the string.
-#         temp_original_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
-#                                                                     'ori_' + temp_file_name + '.png')
 
-#         temp_segmentation_img_name = pathlib.Path().absolute().joinpath(temp_folder_name,
-#                                                                         'seg_' + temp_file_name + '.png')
-#         # Modified Luis's Code
-#         if segmentation_successful:
-#             temp_detection_img_name = pathlib.Path().absolute().joinpath(temp_folder_name, 'det_' + temp_file_name)
-#             dataframe_FISH, list_fish_images, thresholds_spot_detection = (
-#                 SpotDetection(img,
-#                               FISHChannel,
-#                               cytoChannel,
-#                               nucChannel,
-#                               cluster_radius=CLUSTER_RADIUS,
-#                               minimum_spots_cluster=minimum_spots_cluster,
-#                               list_cell_masks=list_cell_masks,
-#                               list_nuc_masks=list_nuc_masks,
-#                               list_cyto_masks_no_nuclei=list_cyto_masks,
-#                               dataframe=self.dataframe,
-#                               image_counter=id,
-#                               list_voxels=list_voxels,
-#                               list_psfs=list_psfs,
-#                               show_plots=show_plots,
-#                               image_name=temp_detection_img_name,
-#                               save_all_images=save_all_images,
-#                               display_spots_on_multiple_z_planes=display_spots_on_multiple_z_planes,
-#                               use_log_filter_for_spot_detection=use_log_filter_for_spot_detection,
-#                               threshold_for_spot_detection=threshold_for_spot_detection,
-#                               save_files=save_files,
-#                               **kwargs).get_dataframe())
+        for c in FISHChannel:
+            rna = [images[i, 0, c, :, :, :].compute() for i in range(min(MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, images.shape[0]))]
+            rna = [r.astype(np.float32) for r in rna]
+            spots, t = detection.detect_spots(images=rna, 
+                                                        return_threshold=True, 
+                                                        voxel_size=voxel_size,
+                                                        spot_radius=spot_size if not use_log_hook else None)
 
-#             self.dataframe = dataframe_FISH
-#             # print(dataframe)
+            thresholds.append(t)
+            
+            print("Channel: ", c)
+            print("Threshold: ", t)
+            print()
 
-#             print('    Intensity threshold for spot detection : ', str(thresholds_spot_detection))
-#             # Create the image with labels.
-#             df_test = self.dataframe.loc[self.dataframe['image_id'] == id]
-#             test_cells_ids = np.unique(df_test['cell_id'].values)
-#             # Saving the average number of spots per cell
-#             list_number_of_spots_per_cell_for_each_spot_type = []
-#             list_max_number_of_spots_per_cell_for_each_spot_type = []
-#             for sp in range(len(FISHChannel)):
-#                 detected_spots = np.asarray([len(self.dataframe.loc[(self.dataframe['cell_id'] == cell_id_test) & (
-#                         self.dataframe['spot_type'] == sp) & (self.dataframe['is_cell_fragmented'] != -1)].spot_id)
-#                                              for i, cell_id_test in enumerate(test_cells_ids)])
-#                 average_number_of_spots_per_cell = int(np.mean(detected_spots))
-#                 max_number_of_spots_per_cell = int(np.max(detected_spots))
-#                 list_number_of_spots_per_cell_for_each_spot_type.append(average_number_of_spots_per_cell)
-#                 list_max_number_of_spots_per_cell_for_each_spot_type.append(max_number_of_spots_per_cell)
-#             print('    Average detected spots per cell :        ', list_number_of_spots_per_cell_for_each_spot_type)
-#             print('    Maximum detected spots per cell :        ', list_max_number_of_spots_per_cell_for_each_spot_type)
-#             #list_average_spots_per_cell.append(list_number_of_spots_per_cell_for_each_spot_type)
-#             # saving FISH images
-#             if save_all_images:
-#                 for j in range(len(FISHChannel)):
-#                     filtered_image_path = pathlib.Path().absolute().joinpath(filtered_folder_name, 'filter_Ch_' + str(
-#                         FISHChannel[j]) + '_' + temp_file_name + '.tif')
-#                     tifffile.imwrite(filtered_image_path, list_fish_images[j])
-#             # Create the image with labels.
-#             df_subset = dataframe_FISH.loc[dataframe_FISH['image_id'] == id]
-#             df_labels = df_subset.drop_duplicates(subset=['cell_id'])
-#             # Plotting cells 
-#             if save_files:
-#                 Plots().plotting_masks_and_original_image(image=img,
-#                                                           list_cell_masks=list_cell_masks,
-#                                                           list_nuc_masks=list_nuc_masks,
-#                                                           channels_with_cytosol=cytoChannel,
-#                                                           channels_with_nucleus=nucChannel,
-#                                                           image_name=temp_segmentation_img_name,
-#                                                           show_plots=show_plots,
-#                                                           df_labels=df_labels)
-#             # del list_cell_masks, list_nuc_masks, list_cyto_masks_no_nuclei, list_fish_images,df_subset,df_labels
-#         else:
-#             raise Exception('Segmentation was not successful, so spot detection was not performed.')
-
-#         # OUTPUTS:
-#         output = SpotDetectionStepOutputClass(id=id,
-#                                               individual_threshold_spot_detection=thresholds_spot_detection,
-#                                               avg_number_of_spots_per_cell_each_ch=list_number_of_spots_per_cell_for_each_spot_type,
-#                                               dfFISH=self.dataframe)
-#         return output
-
-#     def first_run(self, id):
-#         self.dataframe = None
+        New_Parameters({'bigfish_threshold': thresholds})
 
 
 
 
-if __name__ == "__main__":
-    ds = Dataset(r"C:\Users\Jack\Desktop\H128_Tiles_100ms_5mW_Blue_15x15_10z_05step_2")
-    kwargs = {'nucChannel': [0], 'FISHChannel': [0],
-          'user_select_number_of_images_to_run': 5}
-    compiler = SingleStepCompiler(ds, kwargs)
-    output = compiler.sudo_run_step(UFISH_SpotDetection_Step)
+
+
     
 
 

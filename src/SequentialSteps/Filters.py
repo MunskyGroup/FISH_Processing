@@ -95,7 +95,7 @@ import dask.array as da
 # append the path two directories before this file
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src import SequentialStepsClass, SingleStepCompiler, IndependentStepClass # TODO: remove this
+from src import SequentialStepsClass, IndependentStepClass # TODO: remove this
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 from src.GeneralOutput import OutputClass

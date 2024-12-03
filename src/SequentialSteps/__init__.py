@@ -1,4 +1,4 @@
-from .SpotDetection_Steps import (BIGFISH_SpotDetection, UFISH_SpotDetection_Step, TrackPy_SpotDetection)
+from .SpotDetection_Steps import (BIGFISH_SpotDetection, UFISH_SpotDetection_Step, TrackPy_SpotDetection, Calculate_BIGFISH_Threshold)
 
 from .Filters import (rescale_images, remove_background, exposure_correction, IlluminationCorrection)
 
