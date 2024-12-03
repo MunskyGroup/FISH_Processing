@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 import inspect
+from dask.distributed import Client
 
 from .Parameters import Parameters
 # from . import Settings, Experiment, ScopeClass, DataContainer
@@ -244,8 +245,20 @@ class SequentialStepsClass(StepClass):
                         count += 1
                         if count >= number_of_chunks:
                             break
+<<<<<<< Updated upstream
             elif SequentialStepsClass.order == 'parallel':
                 pass
+=======
+
+            elif SequentialStepsClass.order == 'parallel':
+                for p in range(params['images'].shape[0]):
+                    if count >= number_of_chunks:
+                        break
+                    for t in range(params['images'].shape[1]):
+                        if count >= number_of_chunks:
+                            break
+                        
+>>>>>>> Stashed changes
         elif p is not None and t is not None:
             print('')
             print(' ###################### ')

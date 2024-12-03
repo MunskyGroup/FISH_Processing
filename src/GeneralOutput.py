@@ -4,7 +4,11 @@ import h5py
 import tables
 import pandas as pd
 import gc
+<<<<<<< Updated upstream
 import threading
+=======
+import multiprocessing
+>>>>>>> Stashed changes
 
 
 
@@ -36,6 +40,10 @@ class OutputClass(ABC):
         if not hasattr(self, "_initialized"):
             self.lock = threading.Lock()
             self._initialized = True
+<<<<<<< Updated upstream
+=======
+            self.lock = multiprocessing.Lock()
+>>>>>>> Stashed changes
             with self.lock:
                 self.append(*args, **kwargs)
 
