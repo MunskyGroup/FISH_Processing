@@ -4,11 +4,9 @@ import h5py
 import tables
 import pandas as pd
 import gc
+import threading
 
-# Many of the output classes will be the same, so we can create a base class and then inherit from it
-# however, they will have differences on if they modify a PipelineDataClass or if they are the final output
 
-# The Step Classes will be similar however they will have differences on the inputs they act on 
 
 def close_h5_files():
     for obj in gc.get_objects():
@@ -27,7 +25,8 @@ class OutputClass(ABC):
     def __new__(cls, *args, **kwargs):
         for instance in OutputClass._instances:
             if isinstance(instance, cls):
-                instance.append(*args, **kwargs)
+                with instance.lock:
+                    instance.append(*args, **kwargs)
                 return instance
         instance = super().__new__(cls)
         OutputClass._instances.append(instance)
@@ -35,8 +34,10 @@ class OutputClass(ABC):
     
     def __init__(self, *args, **kwargs):
         if not hasattr(self, "_initialized"):
+            self.lock = threading.Lock()
             self._initialized = True
-            self.append(*args, **kwargs)
+            with self.lock:
+                self.append(*args, **kwargs)
 
     @classmethod
     def get_all_instances(cls):

@@ -84,13 +84,6 @@ class StepClass(ABC):
             
         
         return params
-    
-    def create_step_output_dir(self, output_location = None, **kwargs):
-        if output_location is not None:
-            self.step_output_dir = os.path.join(output_location, self.__class__.__name__)
-            os.makedirs(self.step_output_dir, exist_ok=True)
-        else:
-            self.step_output_dir = None
 
     def get_parameters(self):
             step_func = self.main
@@ -172,7 +165,8 @@ class SequentialStepsClass(StepClass):
     def __init__(self):
         self.is_first_run = True
 
-    def execute(self):
+    @classmethod
+    def execute(cls):
         params = Parameters.get_parameters()
         number_of_chunks = params['num_chunks_to_run']
         count = 0
@@ -226,7 +220,6 @@ class SequentialStepsClass(StepClass):
                         print('FOV' + str(p) + ' TIMEPOINT : ' + str(t))
                         print(' ###################### ')
                         params = self.load_in_parameters(p, t)
-                        self.create_step_output_dir(**params)
                         self.on_first_run()
                         output = self.main(**params)
                         count += 1
@@ -251,13 +244,14 @@ class SequentialStepsClass(StepClass):
                         count += 1
                         if count >= number_of_chunks:
                             break
+            elif SequentialStepsClass.order == 'parallel':
+                pass
         elif p is not None and t is not None:
             print('')
             print(' ###################### ')
             print('FOV:' + str(p) + ' TIMEPOINT : ' + str(t))
             print(' ###################### ')
             params = self.load_in_parameters(p, t)
-            self.create_step_output_dir(**params)
             self.on_first_run(params)
             output = self.main(**params)
         
