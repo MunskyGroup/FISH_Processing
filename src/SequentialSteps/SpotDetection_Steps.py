@@ -839,8 +839,8 @@ class Calculate_BIGFISH_Threshold(IndependentStepClass):
 
 
         for c in FISHChannel:
-            rna = [images[i, 0, c, :, :, :].compute() for i in range(min(MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, images.shape[0]))]
-            rna = [r.astype(np.float32) for r in rna]
+            rna = images[:min(MAX_NUM_IMAGES_TO_AUTOMATICALLY_CALCULATE_THRESHOLD, images.shape[0]), 0, c, :, :, :].compute()
+            rna = [rna[r].astype(np.float32) for r in range(rna.shape[0])]
             spots, t = detection.detect_spots(images=rna, 
                                                         return_threshold=True, 
                                                         voxel_size=voxel_size,
