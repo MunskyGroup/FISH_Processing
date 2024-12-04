@@ -55,7 +55,8 @@ class DataTypeBridge(IndependentStepClass):
              download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, 
              independent_params, local_dataset_location: list[str] = None,
              **kwargs):
-
+        database_loc = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        database_loc = os.path.join(database_loc, 'dataBases')
         # if data is local
         if local_dataset_location is not None:
             if isinstance(local_dataset_location, str):
@@ -76,11 +77,12 @@ class DataTypeBridge(IndependentStepClass):
                         self.convert_folder_to_H5(ds, h5_name, nucChannel, cytoChannel)
                 folders = local_dataset_location
                 
-        # if data is on nas
+        # if data is on originates from the nas
         else:
             if type(initial_data_location) == str:
                 initial_data_location = [initial_data_location]
             folders = [os.path.basename(location) for location in initial_data_location]
+            folders = [os.path.join(database_loc, l) for l in folders]
             h5_names = [f + '.h5' for f in folders]
             for i, location in enumerate(initial_data_location):
                 folder = folders[i]

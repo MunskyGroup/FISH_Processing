@@ -4,7 +4,6 @@ import os
 
 sys.path.append(os.path.join(os.getcwd(), '..'))
 
-
 from src.Parameters import Parameters, ScopeClass, Experiment, DataContainer, Settings
 
 
@@ -48,6 +47,7 @@ def test_update_parameters():
     assert(scope.voxel_size_yx, 150)
     assert(settings.name, 'Test')
 
+# TODO figure out why this doesnt run in coverage
 def test_todict():
     scope = ScopeClass()
     scope_dict = scope.todict()
