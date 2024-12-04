@@ -127,11 +127,6 @@ class Parameters(ABC):
                     raise ValueError(f"Duplicate parameter found: {duplicate_keys}")
             params.update(instance.todict())
         return params
-    
-    @classmethod
-    def pipeline_init(cls):
-        for instance in cls._instances:
-            instance.pipeline_init()
 
 
 @dataclass

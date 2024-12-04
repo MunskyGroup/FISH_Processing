@@ -123,23 +123,21 @@ class DataTypeBridge(IndependentStepClass):
         num_chuncks = images.shape[0] * images.shape[1]
 
         position_indexs = np.cumsum(position_indexs)
-    
-        temp = np.full((position_indexs[-1]), np.nan, dtype=object)
 
-        if type(independent_params) is not np.ndarray:
+        if independent_params.keys() != np.arange(position_indexs[-1]).tolist():
             if not isinstance(independent_params, list):
                 independent_params = [independent_params]
 
+            ip = {}
             for i, p in enumerate(position_indexs):
                 if independent_params is not None and len(independent_params) > 1:
+                    if NAS_locations is not None:
+                        independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
                     if i == 0:
-                        if NAS_locations is not None:
-                            independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
-                        temp[:p] = independent_params[i]
+                        temp = {p_idx: independent_params[i] for p_idx in range(p)}
                     else:
-                        if NAS_locations is not None:
-                            independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
-                        temp[position_indexs[i-1]:p] = independent_params[i]
+                        temp = {p_idx: independent_params[i] for p_idx in range(position_indexs[i-1], p)}
+                    ip = {**ip, **temp}
                 elif independent_params is not None and len(independent_params) == 1:
                     if NAS_locations is not None:
                         independent_params[0]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
@@ -148,7 +146,7 @@ class DataTypeBridge(IndependentStepClass):
                     temp = None
                     print('No independent parameters were passed in')
         else:
-            temp = independent_params
+            ip = independent_params
 
 
         data = DataContainer(local_dataset_location = H5_locations,
@@ -157,7 +155,7 @@ class DataTypeBridge(IndependentStepClass):
                             images = images,
                             masks = masks)
         
-        New_Parameters({'independent_params': temp, 'position_indexs': position_indexs})
+        New_Parameters({'independent_params': ip, 'position_indexs': position_indexs})
 
         return data
         
