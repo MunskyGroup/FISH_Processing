@@ -245,10 +245,6 @@ class SequentialStepsClass(StepClass):
                         count += 1
                         if count >= number_of_chunks:
                             break
-<<<<<<< Updated upstream
-            elif SequentialStepsClass.order == 'parallel':
-                pass
-=======
 
             elif SequentialStepsClass.order == 'parallel':
                 for p in range(params['images'].shape[0]):
@@ -258,7 +254,6 @@ class SequentialStepsClass(StepClass):
                         if count >= number_of_chunks:
                             break
                         
->>>>>>> Stashed changes
         elif p is not None and t is not None:
             print('')
             print(' ###################### ')
