@@ -52,9 +52,10 @@ class New_Parameters(OutputClass):
 
 class DataTypeBridge(IndependentStepClass):
     def main(self, initial_data_location, connection_config_location, 
-             download_data_from_NAS, load_in_mask, nucChannel, cytoChannel, 
-             independent_params, local_dataset_location: list[str] = None,
-             **kwargs):
+            load_in_mask, nucChannel, cytoChannel, 
+            independent_params, local_dataset_location: list[str] = None,
+            **kwargs):
+        # save to a single location
         database_loc = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         database_loc = os.path.join(database_loc, 'dataBases')
         # if data is local
@@ -87,13 +88,15 @@ class DataTypeBridge(IndependentStepClass):
             for i, location in enumerate(initial_data_location):
                 folder = folders[i]
                 h5_name = h5_names[i]
-                self.download_folder_from_NAS(location, folder, connection_config_location, download_data_from_NAS)
+                self.download_folder_from_NAS(location, folder, connection_config_location)
                 self.convert_folder_to_H5(folder, h5_name, nucChannel, cytoChannel)
 
+        # Load in H5 and build independent params
         self.load_in_dataset(folders, h5_names, load_in_mask, independent_params, initial_data_location)
 
-    def download_folder_from_NAS(self, remote_folder_path, local_folder_path, connection_config_location, download_data_from_NAS):
-        if not os.path.exists(local_folder_path) and download_data_from_NAS:
+    def download_folder_from_NAS(self, remote_folder_path, local_folder_path, connection_config_location):
+        # Downloads a folder from the NAS, confirms that the it has not already been downloaded
+        if not os.path.exists(local_folder_path):
             nas = NASConnection(pathlib.Path(connection_config_location))
             os.makedirs(local_folder_path, exist_ok=True)
             nas.copy_folder(remote_folder_path=pathlib.Path(remote_folder_path), 
@@ -101,9 +104,13 @@ class DataTypeBridge(IndependentStepClass):
 
     @abstractmethod
     def convert_folder_to_H5(self, folder, h5_name, nucChannel, cytoChannel):
+        # For any standardized data type this will convert it to a h5 file and save that file in the folder
+        # that the data originally came from
         ...
 
     def load_in_dataset(self, locations, H5_names, load_in_mask, independent_params, NAS_locations) -> DataContainer:
+        # given an h5 file this will load in the dat in a uniform manner
+
         H5_locations = [os.path.join(location, H5_name) for location, H5_name in zip(locations, H5_names)]
         position_indexs = []
 
@@ -164,7 +171,6 @@ class DataTypeBridge(IndependentStepClass):
         
         New_Parameters({'independent_params': ip, 'position_indexs': position_indexs})
 
-        
     def delete_folder(self, folder):
         shutil.rmtree(folder)
 
@@ -176,6 +182,7 @@ class NativeDataType(DataTypeBridge):
 
     def convert_folder_to_H5(self, folder, H5_name, nucChannel, cytoChannel):
         pass
+
 
 class Pycromanager2NativeDataType(DataTypeBridge):
     def __init__(self):
