@@ -168,6 +168,10 @@ class SequentialStepsClass(StepClass):
 
     @classmethod
     def execute(cls):
+        def master_step(p, t, steps):
+            for s in steps:
+                s.run(p, t) 
+            
         params = Parameters.get_parameters()
         number_of_chunks = params['num_chunks_to_run']
         count = 0
@@ -198,6 +202,19 @@ class SequentialStepsClass(StepClass):
                         print('++++++++++++++++++++++++++++')
                         step.run(p, t)
                     count += 1
+
+        elif SequentialStepsClass.order == 'parallel': # tbh if this works is a amazing but i doubt it
+            client = Client()
+            futures = []
+            for p in range(params['images'].shape[0]):
+                if count >= number_of_chunks:
+                    break
+                for t in range(params['images'].shape[1]):
+                    if count >= number_of_chunks:
+                        break
+                    futures.append(client.submit(master_step, p, t, SequentialStepsClass._instances))
+            results = client.gather(futures)
+
         else:
             raise ValueError('Order must be either "pt" or "tp"')
 
@@ -224,6 +241,7 @@ class SequentialStepsClass(StepClass):
                         self.on_first_run()
                         output = self.main(**params)
                         count += 1
+
             elif SequentialStepsClass.order == 'pt':
                 print('++++++++++++++++++++++++++++')
                 print('Running : ', self)
@@ -247,12 +265,17 @@ class SequentialStepsClass(StepClass):
                             break
 
             elif SequentialStepsClass.order == 'parallel':
+                client = Client()
+                futures = []
                 for p in range(params['images'].shape[0]):
                     if count >= number_of_chunks:
                         break
                     for t in range(params['images'].shape[1]):
                         if count >= number_of_chunks:
                             break
+                        params = self.load_in_parameters(p, t)
+                        futures.append(client.submit(self.main, **params))
+                results = client.gather(futures)
                         
         elif p is not None and t is not None:
             print('')
