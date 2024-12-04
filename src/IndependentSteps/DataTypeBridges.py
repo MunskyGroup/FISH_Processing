@@ -81,9 +81,9 @@ class DataTypeBridge(IndependentStepClass):
         else:
             if type(initial_data_location) == str:
                 initial_data_location = [initial_data_location]
-            folders = [os.path.basename(location) for location in initial_data_location]
-            folders = [os.path.join(database_loc, l) for l in folders]
-            h5_names = [f + '.h5' for f in folders]
+            names = [os.path.basename(location) for location in initial_data_location]
+            folders = [os.path.join(database_loc, n) for n in names]
+            h5_names = [n + '.h5' for n in names]
             for i, location in enumerate(initial_data_location):
                 folder = folders[i]
                 h5_name = h5_names[i]
@@ -126,32 +126,37 @@ class DataTypeBridge(IndependentStepClass):
 
         position_indexs = np.cumsum(position_indexs)
 
-        if independent_params.keys() != np.arange(position_indexs[-1]).tolist():
+        # we have 3 inputs for independent params list[dict], dict, dict w/ proper keys
+        if isinstance(independent_params, dict) and independent_params.keys() == np.arange(position_indexs[-1]).tolist():
+            # handles dict w/ proper keys
+            ip = independent_params
+        else:
             if not isinstance(independent_params, list):
+                # handles dict w/o proper keys
                 independent_params = [independent_params]
 
+            # converts all to proper keys
             ip = {}
             for i, p in enumerate(position_indexs):
                 if independent_params is not None and len(independent_params) > 1:
-                    if NAS_locations is not None:
-                        independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                    independent_params[i]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
                     if i == 0:
                         temp = {p_idx: independent_params[i] for p_idx in range(p)}
                     else:
                         temp = {p_idx: independent_params[i] for p_idx in range(position_indexs[i-1], p)}
                     ip = {**ip, **temp}
                 elif independent_params is not None and len(independent_params) == 1:
-                    if NAS_locations is not None:
-                        independent_params[0]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
-                    temp[:p] = independent_params[0]
+                    independent_params[0]['NAS_location'] = os.path.join(NAS_locations[i], H5_names[i])
+                    if i == 0:
+                        temp = {p_idx: independent_params[0] for p_idx in range(p)}
+                    else:
+                        temp = {p_idx: independent_params[0] for p_idx in range(position_indexs[i-1], p)}
+                    ip = {**ip, **temp}
                 else:
-                    temp = None
-                    print('No independent parameters were passed in')
-        else:
-            ip = independent_params
+                    print('Something is broken')
 
 
-        data = DataContainer(local_dataset_location = H5_locations,
+        DataContainer(local_dataset_location = H5_locations,
                              h5_file = h5_files,
                             total_num_chunks = num_chuncks,
                             images = images,
@@ -159,7 +164,6 @@ class DataTypeBridge(IndependentStepClass):
         
         New_Parameters({'independent_params': ip, 'position_indexs': position_indexs})
 
-        return data
         
     def delete_folder(self, folder):
         shutil.rmtree(folder)

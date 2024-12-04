@@ -595,19 +595,14 @@ class BIGFISH_SpotDetection(SpotDetection):
                 voxel_size=voxel_size_nm if not use_log_hook else None, 
                 spot_radius=spot_size_nm if not use_log_hook else None,
                 log_kernel_size=spot_radius_px if use_log_hook else None,
-                minimum_distance=spot_radius_px if use_log_hook else None,
-                path_output=os.path.join(self.step_output_dir, f'elbow_{self.image_name}') if self.step_output_dir is not None else None)
-            plot.plot_reference_spot(reference_spot, rescale=True, 
-                                    path_output=os.path.join(self.step_output_dir, f'reference_spot_{self.image_name}') if self.step_output_dir is not None else None)
-            
+                minimum_distance=spot_radius_px if use_log_hook else None)
+            plot.plot_reference_spot(reference_spot, rescale=True)            
             plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0),
-                                    canidate_spots, contrast=True, 
-                                    path_output=os.path.join(self.step_output_dir, f'canidate_{self.image_name}') if self.step_output_dir is not None else None)
-            
+                                    canidate_spots, contrast=True)
+                        
             plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0),
-                                    spots_post_decomposition, contrast=True, 
-                                    path_output=os.path.join(self.step_output_dir, f'detection_{self.image_name}') if self.step_output_dir is not None else None)
-            
+                                    spots_post_decomposition, contrast=True)
+                        
             plot.plot_detection(rna if len(rna.shape) == 2 else np.max(rna, axis=0), 
                                     spots=[spots_post_decomposition, clusters[:, :2] if len(rna.shape) == 2 else clusters[:, :3]], 
                                     shape=["circle", "circle"], 
@@ -615,8 +610,8 @@ class BIGFISH_SpotDetection(SpotDetection):
                                     color=["red", "blue"],
                                     linewidth=[1, 2], 
                                     fill=[False, True], 
-                                    contrast=True,
-                                    path_output=os.path.join(self.step_output_dir, f'cluster_{self.image_name}') if self.step_output_dir is not None else None)
+                                    contrast=True)
+            
         return spots_post_clustering, dense_regions, reference_spot, clusters, spots_subpx, individual_thershold
 
     def standardize_df(self, df_cellresults, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params, **kwargs):
