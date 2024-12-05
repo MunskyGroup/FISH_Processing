@@ -127,14 +127,14 @@ class DataTypeBridge(IndependentStepClass):
             masks = da.concatenate(masks, axis=0)
             masks = masks.rechunk((1, 1, -1, -1, -1, -1))
         else:
-            masks = None
+            masks = da.zeros([images.shape[0], images.shape[1], images.shape[2], images.shape[3], images.shape[4], images.shape[5]]) # TODO This may give problems in the future but will live with it
 
         num_chuncks = images.shape[0] * images.shape[1]
 
         position_indexs = np.cumsum(position_indexs)
 
         # we have 3 inputs for independent params list[dict], dict, dict w/ proper keys
-        if isinstance(independent_params, dict) and independent_params.keys() == np.arange(position_indexs[-1]).tolist():
+        if isinstance(independent_params, dict) and set(independent_params.keys()) == set(np.arange(position_indexs[-1]).tolist()):
             # handles dict w/ proper keys
             ip = independent_params
         else:

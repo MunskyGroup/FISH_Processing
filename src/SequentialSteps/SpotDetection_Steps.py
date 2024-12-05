@@ -152,8 +152,7 @@ class SpotDetection(SequentialStepsClass):
                         ndim=3, cell_coord=cell_coord, nuc_coord=nuc_coord,
                         rna_coord=rna_coord, foci_coord=foci_coord, other_coord=ts_coord,
                         image=image_contrasted, cell_mask=cell_mask, nuc_mask=nuc_mask, rescale=True, contrast=True,
-                        title="Cell {0}".format(i), 
-                        path_output=os.path.join(self.step_output_dir, f'cell_{self.image_name}_cell{i}') if self.step_output_dir is not None else None)
+                        title="Cell {0}".format(i))
 
             df = multistack.summarize_extraction_results(fov_results, ndim=3)
             df['timepoint'] = [timepoint]*len(df)

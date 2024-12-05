@@ -19,7 +19,7 @@ path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 
 # ########### PYTHON PROGRAM #############################
 output_names=""output__"${kwarg_location////__}"".txt"
-source ../venv/bin/activate
+source ../.venv/bin/activate
 python "$path_to_executable" "$kwarg_location" >> "$output_names" &
 wait
 
