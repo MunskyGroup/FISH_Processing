@@ -82,6 +82,8 @@ class OutputClass(ABC):
                             pass
                         else:
                             df[name] =[independent_params[fov][name] for fov in df['fov'].astype(int).tolist()]
+                df = df.sort_values(by='fov')
+                df['fov'] = pd.Categorical(df['fov']).codes
             return df
         
         def split_df(df, lower, upper):

@@ -19,7 +19,7 @@ kwarg_location=$1
 path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 
 # ########### PYTHON PROGRAM #############################
-output_names=""output__"${kwarg_location////__}"".txt"
+output_names=""output__"${kwarg_location}"".txt"
 source ../.venv/bin/activate
 python "$path_to_executable" "$kwarg_location" >> "$output_names" &
 wait
@@ -33,7 +33,7 @@ total_time=$(( (end_time - start_time) / 60 ))
 echo "Total time to complete the job: $total_time minutes"
 
 # ########### TO EXECUTE RUN IN TERMINAL #########################
-# run as: sbatch runner_cluster.sh /dev/null 2>&1 & disown
+# run as: sbatch runner_pipeline.sh /dev/null 2>&1 & disown
 
 exit 0
 
