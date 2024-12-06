@@ -5,6 +5,10 @@ from .Filters import (rescale_images, remove_background, exposure_correction, Il
 from .Segmentation_Steps import (CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, BIGFISH_Tensorflow_Segmentation,
                                   CellSegmentationStepClass_Luis, DilationedCytoMask)
 
+from .CellProperty_Step import CellProperties
+
+from .Debugging_Steps import DisplaySequentialParams
+
 
 
 

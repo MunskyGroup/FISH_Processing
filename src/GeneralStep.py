@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 import inspect
+from copy import copy
 
 from .Parameters import Parameters
 # from . import Settings, Experiment, ScopeClass, DataContainer
@@ -77,7 +78,7 @@ class StepClass(ABC):
                 params['nuc_mask'] = None
 
             if params['cell_mask'] is not None and params['nuc_mask'] is not None:
-                params['cyto_mask'] = params['cell_mask']
+                params['cyto_mask'] = copy(params['cell_mask'])
                 params['cyto_mask'][params['nuc_mask'] >= 1] = 0
             else:
                 params['cyto_mask'] = None

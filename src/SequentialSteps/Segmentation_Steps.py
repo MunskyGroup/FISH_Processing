@@ -15,6 +15,8 @@ import dask.array as da
 from abc import ABC, abstractmethod
 import tifffile
 import pandas as pd
+from scipy import ndimage as ndi
+from copy import copy
 
 from src.Util import Utilities, Plots, CellSegmentation, SpotDetection
 from src import SequentialStepsClass
@@ -40,6 +42,11 @@ class CellSegmentationOutput(OutputClass):
                 masks[position, 0, cytoChannel, 0, :, :] = cell_mask
 
             Parameters.update_parameters(kwargs={'masks': masks})
+
+# Loading in data from multiple locations
+class New_Parameters(OutputClass):
+    def append(self, new_params):
+        Parameters.update_parameters(new_params)
 
 class CellSegmentation(SequentialStepsClass):
     def main(self, masks, image, fov, timepoint, nucChannel, cytoChannel, 
@@ -113,75 +120,48 @@ class CellSegmentation(SequentialStepsClass):
             plt.tight_layout()
             plt.show()
 
-    def first_run(self, params):
-        if params['masks'] is None:
-            images = params['images']
-            # TODO: make this smarter, we may want time, and z specific masks
-            # add a flag so that these that t and z are not 1
-            params['masks'] = da.zeros((images.shape[0], 1, images.shape[2], 1, images.shape[4], images.shape[5]), dtype=np.uint8)
-
-
-
-    
-#%% Useful functions
-def remove_lonely_cells(cellmask, nucmask):
-    # check to make sure there is only one nuc label per cell label
-    # if not, remove both the cell and nuc labels
-    for label in np.unique(cellmask):
-        if label == 0:
-            continue
-        pixels = nucmask[cellmask == label].flatten()
-        # remove zero pixels
-        pixels = pixels[pixels != 0]
-        if len(np.unique(pixels)) > 2:
-            print('Removing cell with multiple nuclei, label:', label)
-            nucmask[cellmask == label] = 0
-            cellmask[cellmask == np.unique(pixels)] = 0
-            
-    for label in np.unique(nucmask):
-        if label == 0:
-            continue
-        pixels = cellmask[nucmask == label].flatten()
-        if len(np.unique(pixels)) > 2:
-            print('Removing nucleus with multiple cells, label:', label)
-            nucmask[nucmask == label] = 0
-            cellmask[nucmask == label] = 0
-    return cellmask, nucmask
-
-def confirm_labels(nucmask, cellmask):
-    # relabels all the cells masks so they agree with the nuclei masks
-    # this is done by checking the nuclei mask for each cell and assigning the cell the label of the nucleus
-    bad_labels = [] # list of [nuc_label, cell_label]
-    for label in np.unique(nucmask):
-        if label == 0:
-            continue
-        nuc_label = np.argmax(np.bincount(nucmask[cellmask == label].flatten()))
-        cellmask[cellmask == label] = nuc_label
-
-
-
 
 
 #%% Steps
-class DilationedCytoMask(CellSegmentation):
+class DilationedCytoMask(SequentialStepsClass):
     def __init__(self):
         super().__init__()
 
-    def main(self, id, cyto_mask, nuc_mask, dilation_size: int = 5, **kwargs):
-        if cyto_mask is None:
-            cell_mask = np.zeros_like(nuc_mask)
-            for label in np.unique(nuc_mask):
-                if label == 0:
-                    continue
-                dilated_mask = np.zeros_like(nuc_mask)
-                mask = nuc_mask == label
-                dilated_mask += sk.morphology.binary_dilation(mask, selem=sk.morphology.disk(dilation_size))
-                cell_mask[dilated_mask] = label
-        
-        cyto_mask = cell_mask.copy()
-        cyto_mask[nuc_mask > 0] = 0
+    def main(self, timepoint, fov, nucChannel, psuedoCyto, masks,  nuc_mask, dilation_size: int = 20, display_plots: bool = False, **kwargs):
+        cell_mask = masks[fov, timepoint, psuedoCyto, 0, :, :].squeeze().compute()
 
-        return CellSegmentationOutput(list_cell_masks=cell_mask, list_cyto_masks=cyto_mask)
+        mask = nuc_mask[0, :, :].squeeze() > 0
+        nuc_mask =  nuc_mask[0, :, :].squeeze()
+        nuc_mask = nuc_mask.compute()
+        for i in range(dilation_size):
+            mask = sk.morphology.binary_dilation(mask)
+        
+        # watershed 
+        markers = np.zeros_like(nuc_mask, dtype=int)
+        distance = ndi.distance_transform_edt(mask)
+        for label in np.unique(nuc_mask):
+            if label == 0:
+                continue
+            d = copy(distance)
+            d[nuc_mask!=label] = 0
+            center = np.unravel_index(np.argmax(d), distance.shape)
+            markers[center] = label
+        cell_mask = sk.segmentation.watershed(-distance, markers, mask=mask)
+
+        # match nuc and cell mask
+        nuc_mask, cell_mask = multistack.match_nuc_cell(nuc_mask.astype(np.uint8), cell_mask.astype(np.uint8), single_nuc=False, cell_alone=False)
+
+        if display_plots:
+            # cyto_mask = copy(cell_mask)
+            # cyto_mask[nuc_mask > 0] = 0
+            fig, axs = plt.subplots(1, 2)
+            axs[0].imshow(nuc_mask)
+            axs[1].imshow(cell_mask)
+            # axs[2].imshow(cyto_mask)
+            plt.show()
+
+        New_Parameters({'cytoChannel': psuedoCyto})
+        return CellSegmentationOutput(timepoint, fov, None, cell_mask, nucChannel, psuedoCyto, masks)
 
 
 class SimpleCellposeSegmentaion(CellSegmentation):

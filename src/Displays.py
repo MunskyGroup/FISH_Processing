@@ -18,10 +18,12 @@ class Display:
         plt.show()
         return image
 
-    def displayMask(self, position: int = 0, timepoint: int = 0, channel: int = 0, zslice: int = 0):
+    def displayMask(self, position: int = 0, timepoint: int = 0, channel: int = 0, zslice: int = 0, label: int = None):
         params = Parameters.get_parameters()
         masks = params['masks']
         mask = masks[position, timepoint, channel, zslice]
+        if label is not None:
+            mask[mask != label] = 0
         plt.imshow(mask)
         plt.axis('off')
         plt.show()
