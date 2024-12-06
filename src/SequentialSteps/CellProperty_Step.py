@@ -17,7 +17,7 @@ import pandas as pd
 class CellPropertyOutput(OutputClass):
     def append(self, df):
         if hasattr(self, 'cell_properties'):
-            self.cell_properties = pd.concat(self.cell_properties, df, axis=0)
+            self.cell_properties = pd.concat([self.cell_properties, df], axis=0)
         else:
             self.cell_properties = df
 
