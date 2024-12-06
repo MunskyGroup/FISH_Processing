@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --gres=gpu:4
 # #SBATCH --nodelist=gpu2    # gpu2 gpu3 gpu4
+#SBATCH --exclude=gpu1
 #SBATCH --partition=all
 #SBATCH --ntasks=4
 #SBATCH --job-name=t2
