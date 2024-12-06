@@ -1,8 +1,9 @@
 #!/bin/bash
 #SBATCH --gres=gpu:4
 # #SBATCH --nodelist=gpu3    # gpu2 gpu3 gpu4
-#SBATCH --exclude=gpu1,gpu2
-#SBATCH --partition=all
+# #SBATCH --exclude=gpu1,gpu2
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=cpu
 #SBATCH --ntasks=4
 #SBATCH --job-name=t2
 
