@@ -52,14 +52,20 @@ class New_Parameters(OutputClass):
 
 #%% Abstract Class
 class SpotDetection(SequentialStepsClass):
-    def main(self, image, nuc_mask, cell_mask, nucChannel, cytoChannel, FISHChannel, timepoint, fov, verbose, display_plots, **kwargs) -> SpotDetectionOutputClass:
+    def main(self, image, nuc_mask, cell_mask, nucChannel, cytoChannel, FISHChannel, timepoint, fov, verbose, display_plots,
+             voxel_size_yx, voxel_size_z, spot_yx, spot_z, **kwargs) -> SpotDetectionOutputClass:
         for c in range(len(FISHChannel)):
+            rna = image[FISHChannel[c], :, :, :]
+            rna = rna.squeeze()
+            rna = rna.compute()
             spots, clusters = self.get_detected_spots(**kwargs)
-            spots, clusters = self.get_spot_properties(spots, clusters, **kwargs)
+
             cell_results = self.extract_cell_level_results(image, spots, clusters, nucChannel, c, 
                                                         nuc_mask, cell_mask, timepoint, fov,
                                                             verbose, display_plots)
-            
+
+            spots, clusters = self.get_spot_properties(rna, spots, voxel_size_yx, voxel_size_z, spot_yx, spot_z, display_plots, **kwargs)
+
             spots, cell_results, clusters = self.add_ind_params(spots, cell_results, clusters, timepoint, fov, c)
 
         return SpotDetectionOutputClass(cell_results, spots, clusters)
@@ -69,8 +75,14 @@ class SpotDetection(SequentialStepsClass):
     def get_detected_spots(self, **kwargs) -> pd.DataFrame:
         pass
 
-    def get_spot_properties(self, **kwargs) -> pd.DataFrame:
-        pass
+    def get_spot_properties(self, rna, spots, voxel_size_yx, voxel_size_z, spot_yx, spot_z, display_plots, **kwargs) -> pd.DataFrame:
+        voxel_size_nm = (int(voxel_size_z), int(voxel_size_yx), int(voxel_size_yx)) if len(rna.shape) == 3 else (int(voxel_size_yx), int(voxel_size_yx))
+        spot_size_nm = (int(spot_z), int(spot_yx), int(spot_yx)) if len(rna.shape) == 3 else (int(spot_yx), int(spot_yx))
+        snr, signal = compute_snr_spots(rna, spots[:, :len(voxel_size_nm)], voxel_size_nm, spot_size_nm, display_plots)
+        snr = np.array(snr).reshape(-1, 1)
+        signal = np.array(signal).reshape(-1, 1)
+        spots = np.hstack([spots, snr, signal])
+        return spots
 
     def extract_cell_level_results(self, image, spots, clusters, nucChannel, FISHChannel, 
                                    nuc_mask, cell_mask, timepoint, fov,
@@ -86,7 +98,9 @@ class SpotDetection(SequentialStepsClass):
             if cell_mask is not None and len(cell_mask.shape) != 2:
                 cell_mask = np.max(cell_mask, axis=0)
 
+            ndim = 2
             if len(rna.shape) == 3:
+                ndim = 3
                 rna = np.max(rna, axis=0)
 
             # convert types
@@ -117,9 +131,9 @@ class SpotDetection(SequentialStepsClass):
             other_images = {}
             other_images["dapi"] = np.max(nuc, axis=0).astype("uint16") if nuc is not None else None
 
-            fov_results = multistack.extract_cell(
+            fov_results = multistack.extract_cell( # this function is incredibly poorly written be careful looking at it
                 cell_label=cell_mask,
-                ndim=3,
+                ndim=ndim,
                 nuc_label=nuc_mask,
                 rna_coord=spots_no_ts,
                 others_coord={"foci": foci, "transcription_site": ts},
@@ -155,8 +169,8 @@ class SpotDetection(SequentialStepsClass):
                         title="Cell {0}".format(i))
 
             df = multistack.summarize_extraction_results(fov_results, ndim=3)
-            df['timepoint'] = [timepoint]*len(df)
             df['fov'] = [fov]*len(df)
+            df['timepoint'] = [timepoint]*len(df)
             df['FISH_Channel'] = [FISHChannel]*len(df)
 
         else:
@@ -402,8 +416,9 @@ class BIGFISH_SpotDetection(SpotDetection):
                                                             nuc_mask, cell_mask, timepoint, fov,
                                                             verbose, display_plots)
 
-            spots, clusters = self.standardize_df(cell_results, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params)
+            spots_px = self.get_spot_properties(rna, spots_px, voxel_size_yx, voxel_size_z, spot_yx, spot_z, display_plots, **kwargs)
 
+            spots, clusters = self.standardize_df(cell_results, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params)
 
             output = SpotDetectionOutputClass(cell_results, spots, clusters, threshold)
         return output
@@ -448,7 +463,7 @@ class BIGFISH_SpotDetection(SpotDetection):
             spot_radius_px = detection.get_object_radius_pixel(
                     voxel_size_nm=voxel_size_nm, 
                     object_radius_nm=spot_size_nm, 
-                    ndim=3 if len(rna.shape) == 3 else 2)
+                    ndim=len(rna.shape))
         else:
             spot_radius_px = None
 
@@ -615,24 +630,24 @@ class BIGFISH_SpotDetection(SpotDetection):
 
     def standardize_df(self, df_cellresults, spots_px, spots_subpx, sub_pixel_fitting, clusters, c, timepoint, fov, independent_params, **kwargs):
             # merge spots_px and spots_um
-            if spots_px.shape[1] == 4:
+            if spots_px.shape[1] == 6:
                 if sub_pixel_fitting:
                     spots = np.concatenate([spots_px, spots_subpx], axis=1)
-                    df_spotresults = pd.DataFrame(spots, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
+                    df_spotresults = pd.DataFrame(spots, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm', 'snr', 'signal'])
                     df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
 
                 else:
-                    df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index'])
+                    df_spotresults = pd.DataFrame(spots_px, columns=['z_px', 'y_px', 'x_px', 'cluster_index', 'snr', 'signal'])
                     df_clusterresults = pd.DataFrame(clusters, columns=['z_px', 'y_px', 'x_px', 'nb_spots', 'cluster_index'])
             
             else:
                 if sub_pixel_fitting:
                     spots = np.concatenate([spots_px, spots_subpx], axis=1)
-                    df_spotresults = pd.DataFrame(spots, columns=['y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm'])
+                    df_spotresults = pd.DataFrame(spots, columns=['y_px', 'x_px', 'cluster_index', 'z_nm', 'y_nm', 'x_nm', 'snr', 'signal'])
                     df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
 
                 else:
-                    df_spotresults = pd.DataFrame(spots_px, columns=['y_px', 'x_px', 'cluster_index'])
+                    df_spotresults = pd.DataFrame(spots_px, columns=['y_px', 'x_px', 'cluster_index', 'snr', 'signal'])
                     df_clusterresults = pd.DataFrame(clusters, columns=['y_px', 'x_px', 'nb_spots', 'cluster_index'])
 
             df_spotresults['timepoint'] = [timepoint]*len(df_spotresults)

@@ -37,12 +37,10 @@ class return_to_NAS(Moving_Data):
             NASConnection(connection_config_location, share_name=share_name).write_files_to_NAS(log_file, '/Users/Jack/All_Analysis')
             NASConnection(connection_config_location, share_name=share_name).write_files_to_NAS(h5_file, initial_data_location[i])
 
-
 class remove_local_data(Moving_Data):
     def main(self, local_dataset_location, **kwargs):
         for folder in local_dataset_location:
             shutil.rmtree(os.path.dirname(local_dataset_location))
-
 
 class remove_local_data_but_keep_h5(Moving_Data):
     def main(self, local_dataset_location, **kwargs):
