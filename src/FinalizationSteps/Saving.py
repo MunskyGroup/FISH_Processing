@@ -59,6 +59,8 @@ def handle_dict(d):
             newd[key] = d[key]
         elif isinstance(d[key], list):
             newd[key] = d[key]
+        else:
+            print(f'IDK what to do with {key}: {type(d[key])}')
     return newd
 
 
@@ -88,7 +90,6 @@ class Save_Parameters(Saving):
                     recursively_save_dict_contents_to_group(h5file, f"{path}/{key}", item)
                 else:
                     h5file[f"{path}/{key}"] = item
-
 
         params = Parameters.get_parameters()
         params_to_ignore = ['h5_file', 'local_dataset_location', 'images', 'masks']
@@ -127,6 +128,14 @@ class Save_Parameters(Saving):
 
             recursively_save_dict_contents_to_group(group, 'parameters', params)
 
+            # save the nuc channel and cyto channel and fish channel at the top level
+            if 'nucChannel' in params:
+                group.attrs['nucChannel'] = params['nucChannel']
+            if 'cytoChannel' in params:
+                group.attrs['cytoChannel'] = params['cytoChannel']
+            if 'FISHChannel' in params:
+                group.attrs['FISHChannel'] = params['FISHChannel']
+        
             h5_file.close()
 
 
