@@ -1,14 +1,13 @@
 #!/bin/bash
-#SBATCH --gres=gpu:4
-# #SBATCH --nodelist=gpu3    # gpu2 gpu3 gpu4
-#SBATCH --exclude=gpu1,gpu2
-#SBATCH --partition=all
-#SBATCH --ntasks=4
-#SBATCH --job-name=t2
+#SBATCH --gres=gpu:1                # Request 1 GPU
+#SBATCH --partition=coe_gpu         # Use the GPU partition
+#SBATCH --job-name=GR_test          # Job name
+#SBATCH --ntasks=1                  # Number of tasks
+#SBATCH --output=job_output.log     # Redirect output to a file
+#SBATCH --error=job_error.log       # Redirect errors to a file
 
 # module purge
-module load gnu9/9.4.0
-module load cudnn/8.3-10.2
+module load gnu13/13.2.0
 
 echo "Starting my job..."
 
@@ -19,9 +18,15 @@ kwarg_location=$1
 path_to_executable="${PWD%/*}/src/pipeline_executable.py"
 
 # ########### PYTHON PROGRAM #############################
-output_names=""output__"${kwarg_location}"".txt"
+# Ensure output directory exists
+mkdir -p "${PWD}/output"
+
+# Correct output file name
+output_names="${PWD}/output/output__$(basename ${kwarg_location})"
+
+# Activate the environment and run the script
 source ../.venv/bin/activate
-python "$path_to_executable" "$kwarg_location" >> "$output_names" &
+python "$path_to_executable" "$kwarg_location" >> "$output_names" 2>&1 &
 wait
 
 
