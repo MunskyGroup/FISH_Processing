@@ -40,7 +40,7 @@ class return_to_NAS(Moving_Data):
 class remove_local_data(Moving_Data):
     def main(self, local_dataset_location, **kwargs):
         for folder in local_dataset_location:
-            shutil.rmtree(os.path.dirname(local_dataset_location))
+            shutil.rmtree(os.path.dirname(folder))
 
 class remove_local_data_but_keep_h5(Moving_Data):
     def main(self, local_dataset_location, **kwargs):
