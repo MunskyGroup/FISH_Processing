@@ -199,10 +199,9 @@ class NASConnection():
         # Iterate in the folder to download all tif files
         list_dir = self.conn.listPath(self.share_name, str(remote_folder_path))
         list_all_files_in_NAS = [file.filename for file in list_dir]
-        if str(local_file_to_send_to_NAS.name) not in list_all_files_in_NAS:
-            with open(str(local_file_to_send_to_NAS), 'rb') as file_obj:
-                self.conn.storeFile(self.share_name, str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name) ) ,  file_obj )
-                print ('The file was uploaded to NAS in location:', str( pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name))  )
+        with open(str(local_file_to_send_to_NAS), 'rb') as file_obj:
+            self.conn.storeFile(self.share_name, str(pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name)), file_obj)
+        print('The file was uploaded to NAS in location:', str(pathlib.Path(remote_folder_path).joinpath(local_file_to_send_to_NAS.name)))
         return None
     
     def copy_folder(self, remote_folder_path, local_folder_path, timeout=600):
