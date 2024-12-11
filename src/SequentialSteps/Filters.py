@@ -528,251 +528,251 @@ class remove_background(SequentialStepsClass):
         output.__class__.__name__ = 'remove_background'
         return output
 
-class IlluminationCorrection(IndependentStepClass):
-    def __init__(self):
-        """
-        Initialize the IlluminationCorrection class.
+# class IlluminationCorrection(IndependentStepClass):
+#     def __init__(self):
+#         """
+#         Initialize the IlluminationCorrection class.
 
-        Parameters:
-        - da: Dask array with shape [P, T, C, Y, X].
-        - sigma_dict: Dictionary with sigma values per channel {channel_index: sigma_value}.
-        - display_plots: Boolean to control plotting.
-        - save_profiles: Boolean to enable saving of computed profiles.
-        - save_format: String indicating format to save profiles ('npy', 'tif', or 'png').
-        - save_dir: Directory to save profiles.
+#         Parameters:
+#         - da: Dask array with shape [P, T, C, Y, X].
+#         - sigma_dict: Dictionary with sigma values per channel {channel_index: sigma_value}.
+#         - display_plots: Boolean to control plotting.
+#         - save_profiles: Boolean to enable saving of computed profiles.
+#         - save_format: String indicating format to save profiles ('npy', 'tif', or 'png').
+#         - save_dir: Directory to save profiles.
 
-        Attributes:
-        - da: Dask array to be processed.
-        - sigma_dict: Dictionary with smoothing parameters per channel.
-        - display_plots: Boolean flag to control plotting of profiles and corrections.
-        - save_profiles: Boolean flag to enable saving of profiles.
-        - save_format: Format for saving profiles ('npy', 'tif', 'png').
-        - save_dir: Directory to save profiles.
-        - averaged_profiles: Dask array to store computed averaged illumination profiles.
-        - smoothed_profiles: Dask array to store computed smoothed illumination profiles.
-        """
-        # Initialize placeholders for computed profiles
-        self.averaged_profiles = None
-        self.smoothed_profiles = None
+#         Attributes:
+#         - da: Dask array to be processed.
+#         - sigma_dict: Dictionary with smoothing parameters per channel.
+#         - display_plots: Boolean flag to control plotting of profiles and corrections.
+#         - save_profiles: Boolean flag to enable saving of profiles.
+#         - save_format: Format for saving profiles ('npy', 'tif', 'png').
+#         - save_dir: Directory to save profiles.
+#         - averaged_profiles: Dask array to store computed averaged illumination profiles.
+#         - smoothed_profiles: Dask array to store computed smoothed illumination profiles.
+#         """
+#         # Initialize placeholders for computed profiles
+#         self.averaged_profiles = None
+#         self.smoothed_profiles = None
 
-    def main(self, images, sigma_dict, display_plots: bool = False, smoothed_profiles: da = None, **kwargs):
-        """
-        Main function to process images and correct illumination.
+#     def main(self, images, sigma_dict, display_plots: bool = False, smoothed_profiles: da = None, **kwargs):
+#         """
+#         Main function to process images and correct illumination.
 
-        Parameters:
-        - images: Dask array with shape [P, T, C, Z, Y, X].
+#         Parameters:
+#         - images: Dask array with shape [P, T, C, Z, Y, X].
 
-        Returns:
-        - corrected_da: Dask array with corrected images.
-        """
+#         Returns:
+#         - corrected_da: Dask array with corrected images.
+#         """
 
-        self.da = images
-        self.sigma_dict = sigma_dict
-        self.display_plots = display_plots
-        # Ensure the save directory exists if saving profiles
+#         self.da = images
+#         self.sigma_dict = sigma_dict
+#         self.display_plots = display_plots
+#         # Ensure the save directory exists if saving profiles
 
         
 
 
-        if smoothed_profiles is None:
-            num_channels = self.da.shape[2]  # Extract number of channels
-            averaged_profiles = []
-            smoothed_profiles = []
-            # Step 1: Compute Averaged and Smoothed Illumination Profiles
-            for channel, sigma in self.sigma_dict.items():
-                print(f"Processing channel {channel} with sigma={sigma}...")
+#         if smoothed_profiles is None:
+#             num_channels = self.da.shape[2]  # Extract number of channels
+#             averaged_profiles = []
+#             smoothed_profiles = []
+#             # Step 1: Compute Averaged and Smoothed Illumination Profiles
+#             for channel, sigma in self.sigma_dict.items():
+#                 print(f"Processing channel {channel} with sigma={sigma}...")
 
-                # Compute averaged and smoothed profiles
-                avg_profile, smoothed_profile = self.average_illumination_profile(self.da, channel, sigma_smooth=sigma)
+#                 # Compute averaged and smoothed profiles
+#                 avg_profile, smoothed_profile = self.average_illumination_profile(self.da, channel, sigma_smooth=sigma)
 
-                # Append to profile arrays
-                averaged_profiles.append(avg_profile)
-                smoothed_profiles.append(smoothed_profile)
+#                 # Append to profile arrays
+#                 averaged_profiles.append(avg_profile)
+#                 smoothed_profiles.append(smoothed_profile)
 
-                # Display smoothed profile
+#                 # Display smoothed profile
 
-            # Convert profile lists to consolidated Dask arrays
-            averaged_profiles = da.stack(averaged_profiles, axis=0)  # Shape [C, Y, X]
-            smoothed_profiles = da.stack(smoothed_profiles, axis=0)  # Shape [C, Y, X]
-            self.show_illumination_profiles(averaged_profiles, smoothed_profiles)
+#             # Convert profile lists to consolidated Dask arrays
+#             averaged_profiles = da.stack(averaged_profiles, axis=0)  # Shape [C, Y, X]
+#             smoothed_profiles = da.stack(smoothed_profiles, axis=0)  # Shape [C, Y, X]
+#             self.show_illumination_profiles(averaged_profiles, smoothed_profiles)
 
 
-        # Step 2: Correct Images Using Smoothed Profiles
-        print("Correcting images...")
-        corrected_da = self.correct_image(self.da, smoothed_profiles)
+#         # Step 2: Correct Images Using Smoothed Profiles
+#         print("Correcting images...")
+#         corrected_da = self.correct_image(self.da, smoothed_profiles)
 
-        New_Parameters({'images': corrected_da, 'smoothed_profiles': smoothed_profiles})
+#         New_Parameters({'images': corrected_da, 'smoothed_profiles': smoothed_profiles})
 
-    def gaussian_2d(self, x, y, x0, y0, sigma_x, sigma_y, amplitude, offset):
-        """2D Gaussian function."""
-        return offset + amplitude * np.exp(
-            -(((x - x0) ** 2) / (2 * sigma_x ** 2) + ((y - y0) ** 2) / (2 * sigma_y ** 2))
-        )
+#     def gaussian_2d(self, x, y, x0, y0, sigma_x, sigma_y, amplitude, offset):
+#         """2D Gaussian function."""
+#         return offset + amplitude * np.exp(
+#             -(((x - x0) ** 2) / (2 * sigma_x ** 2) + ((y - y0) ** 2) / (2 * sigma_y ** 2))
+#         )
 
-    def fit_gaussian_2d(self, illumination_profile, sigma_smooth=200):
-        """Fit a 2D Gaussian to the illumination profile and apply additional smoothing."""
-        y = np.arange(illumination_profile.shape[0])
-        x = np.arange(illumination_profile.shape[1])
-        x, y = np.meshgrid(x, y)
-        xdata = np.vstack((x.ravel(), y.ravel()))
-        ydata = illumination_profile.ravel()
+#     def fit_gaussian_2d(self, illumination_profile, sigma_smooth=200):
+#         """Fit a 2D Gaussian to the illumination profile and apply additional smoothing."""
+#         y = np.arange(illumination_profile.shape[0])
+#         x = np.arange(illumination_profile.shape[1])
+#         x, y = np.meshgrid(x, y)
+#         xdata = np.vstack((x.ravel(), y.ravel()))
+#         ydata = illumination_profile.ravel()
 
-        # Initial guess for parameters
-        initial_guess = (
-            illumination_profile.shape[1] / 2,
-            illumination_profile.shape[0] / 2,
-            illumination_profile.shape[1] / 4,
-            illumination_profile.shape[0] / 4,
-            np.max(illumination_profile),
-            np.min(illumination_profile),
-        )
+#         # Initial guess for parameters
+#         initial_guess = (
+#             illumination_profile.shape[1] / 2,
+#             illumination_profile.shape[0] / 2,
+#             illumination_profile.shape[1] / 4,
+#             illumination_profile.shape[0] / 4,
+#             np.max(illumination_profile),
+#             np.min(illumination_profile),
+#         )
 
-        # Fit Gaussian model
-        popt, _ = curve_fit(
-            lambda xy, x0, y0, sigma_x, sigma_y, amplitude, offset: self.gaussian_2d(
-                xy[0], xy[1], x0, y0, sigma_x, sigma_y, amplitude, offset
-            ),
-            xdata,
-            ydata,
-            p0=initial_guess,
-            maxfev=10000,
-        )
+#         # Fit Gaussian model
+#         popt, _ = curve_fit(
+#             lambda xy, x0, y0, sigma_x, sigma_y, amplitude, offset: self.gaussian_2d(
+#                 xy[0], xy[1], x0, y0, sigma_x, sigma_y, amplitude, offset
+#             ),
+#             xdata,
+#             ydata,
+#             p0=initial_guess,
+#             maxfev=10000,
+#         )
 
-        # Create fitted illumination profile
-        fitted_profile = self.gaussian_2d(x, y, *popt).reshape(illumination_profile.shape)
-        smoothed_fitted_profile = gaussian_filter(fitted_profile, sigma=sigma_smooth)
+#         # Create fitted illumination profile
+#         fitted_profile = self.gaussian_2d(x, y, *popt).reshape(illumination_profile.shape)
+#         smoothed_fitted_profile = gaussian_filter(fitted_profile, sigma=sigma_smooth)
 
-        return smoothed_fitted_profile
+#         return smoothed_fitted_profile
 
-    def average_illumination_profile(self, da, channel, sigma_smooth=200):
-        """
-        Compute the averaged illumination profile for a single channel across all images.
+#     def average_illumination_profile(self, da, channel, sigma_smooth=200):
+#         """
+#         Compute the averaged illumination profile for a single channel across all images.
 
-        Parameters:
-        - da: Dask array with shape [P, T, C, Z, Y, X]
-        - channel: int, channel index to process
-        - sigma_smooth: int, smoothing factor for Gaussian fitting
+#         Parameters:
+#         - da: Dask array with shape [P, T, C, Z, Y, X]
+#         - channel: int, channel index to process
+#         - sigma_smooth: int, smoothing factor for Gaussian fitting
 
-        Returns:
-        - avg_projection: np.ndarray, averaged projection
-        - smoothed_profile: np.ndarray, smoothed illumination profile
-        """
-        avg_projection = None
-        num_images = da.shape[0]  # Number of positions
+#         Returns:
+#         - avg_projection: np.ndarray, averaged projection
+#         - smoothed_profile: np.ndarray, smoothed illumination profile
+#         """
+#         avg_projection = None
+#         num_images = da.shape[0]  # Number of positions
 
-        for pos_idx in range(num_images):
-            image = da[pos_idx]  # Select position
-            if image.ndim < 5 or channel >= image.shape[2]:
-                print(f"Warning: Skipping position {pos_idx} due to incompatible dimensions for channel {channel}")
-                continue
+#         for pos_idx in range(num_images):
+#             image = da[pos_idx]  # Select position
+#             if image.ndim < 5 or channel >= image.shape[2]:
+#                 print(f"Warning: Skipping position {pos_idx} due to incompatible dimensions for channel {channel}")
+#                 continue
 
-            # Compute mean over positions (p) and time (c)
-            projection = image.mean(axis=(0, 2))[channel].compute() #TODO: check if this is correct
-            projection = projection.astype(np.float64)
+#             # Compute mean over positions (p) and time (c)
+#             projection = image.mean(axis=(0, 2))[channel].compute() #TODO: check if this is correct
+#             projection = projection.astype(np.float64)
 
-            # Accumulate the projection values
-            if avg_projection is None:
-                avg_projection = projection
-            else:
-                avg_projection += projection
+#             # Accumulate the projection values
+#             if avg_projection is None:
+#                 avg_projection = projection
+#             else:
+#                 avg_projection += projection
 
-        if avg_projection is None:
-            raise ValueError("No valid images found for the specified channel.")
+#         if avg_projection is None:
+#             raise ValueError("No valid images found for the specified channel.")
 
-        # Average the projection
-        avg_projection /= num_images
+#         # Average the projection
+#         avg_projection /= num_images
 
-        # Fit and smooth the illumination profile
-        smoothed_profile = self.fit_gaussian_2d(avg_projection, sigma_smooth=sigma_smooth)
+#         # Fit and smooth the illumination profile
+#         smoothed_profile = self.fit_gaussian_2d(avg_projection, sigma_smooth=sigma_smooth)
 
-        # Normalize smoothed profile so that its maximum value is 1
-        smoothed_profile /= np.max(smoothed_profile)
+#         # Normalize smoothed profile so that its maximum value is 1
+#         smoothed_profile /= np.max(smoothed_profile)
 
-        return avg_projection, smoothed_profile
+#         return avg_projection, smoothed_profile
 
-    def correct_image(self, da, smoothed_profiles):
-        """
-        Apply the calculated illumination correction to each channel and Z-slice independently.
+#     def correct_image(self, da, smoothed_profiles):
+#         """
+#         Apply the calculated illumination correction to each channel and Z-slice independently.
 
-        Parameters:
-        - da: Dask array with shape [P, T, C, Z, Y, X]
-        - smoothed_profiles: dict, with channel indices as keys and illumination profiles as values
+#         Parameters:
+#         - da: Dask array with shape [P, T, C, Z, Y, X]
+#         - smoothed_profiles: dict, with channel indices as keys and illumination profiles as values
 
-        Returns:
-        - corrected_da: Dask array, illumination-corrected image
-        """
-        epsilon = 1e-6  # Small constant to avoid division by zero
+#         Returns:
+#         - corrected_da: Dask array, illumination-corrected image
+#         """
+#         epsilon = 1e-6  # Small constant to avoid division by zero
 
-        if da.ndim < 5:
-            raise ValueError("Input must have at least 5 dimensions [P, T, C, Z, Y, X]")
+#         if da.ndim < 5:
+#             raise ValueError("Input must have at least 5 dimensions [P, T, C, Z, Y, X]")
 
-        corrected_da = da.copy()
+#         corrected_da = da.copy()
 
-        for p in range(da.shape[0]):  # Loop over positions
-            for c in range(da.shape[2]):  # Loop over channels
-                # if c not in range(smoothed_profiles.shape[0]):
-                #     print(f"Warning: No illumination profile for channel {c}. Skipping correction for this channel.")
-                #     continue
+#         for p in range(da.shape[0]):  # Loop over positions
+#             for c in range(da.shape[2]):  # Loop over channels
+#                 # if c not in range(smoothed_profiles.shape[0]):
+#                 #     print(f"Warning: No illumination profile for channel {c}. Skipping correction for this channel.")
+#                 #     continue
 
-                # Retrieve the smoothed illumination profile for the current channel
-                correction_factor = 1.0 / (smoothed_profiles[c] + epsilon)
-                correction_factor /= np.median(correction_factor)  # Normalize by median value
+#                 # Retrieve the smoothed illumination profile for the current channel
+#                 correction_factor = 1.0 / (smoothed_profiles[c] + epsilon)
+#                 correction_factor /= np.median(correction_factor)  # Normalize by median value
 
-                for z in range(da.shape[3]):  # Loop over Z-slices
-                    # Extract all time points for this position, channel, and Z-slice
-                    channel_slice = da[p, :, c, z, :, :].compute()  # [T, Y, X] for this Z-slice
+#                 for z in range(da.shape[3]):  # Loop over Z-slices
+#                     # Extract all time points for this position, channel, and Z-slice
+#                     channel_slice = da[p, :, c, z, :, :].compute()  # [T, Y, X] for this Z-slice
 
-                    # Apply correction factor
-                    corrected_slice = channel_slice * correction_factor[np.newaxis, :, :]
+#                     # Apply correction factor
+#                     corrected_slice = channel_slice * correction_factor[np.newaxis, :, :]
 
-                    # Rescale intensity for each time point in this Z-slice
-                    corrected_slice = np.array([
-                        exposure.rescale_intensity(slice_, out_range=(slice_.min(), slice_.max()))
-                        for slice_ in corrected_slice
-                    ])
+#                     # Rescale intensity for each time point in this Z-slice
+#                     corrected_slice = np.array([
+#                         exposure.rescale_intensity(slice_, out_range=(slice_.min(), slice_.max()))
+#                         for slice_ in corrected_slice
+#                     ])
 
-                    # Assign corrected slices back to the array
-                    corrected_da[p, :, c, z, :, :] = da.from_array(corrected_slice)
+#                     # Assign corrected slices back to the array
+#                     corrected_da[p, :, c, z, :, :] = da.from_array(corrected_slice)
 
-        return corrected_da
+#         return corrected_da
 
-    def show_illumination_profiles(self, illumination_profiles, corrected_profiles):
-        """Display the reconstructed illumination profiles for each channel before and after correction as heatmaps with contour lines."""
-        if self.display_plots:
-            num_channels = len(illumination_profiles)  # Number of channels
+#     def show_illumination_profiles(self, illumination_profiles, corrected_profiles):
+#         """Display the reconstructed illumination profiles for each channel before and after correction as heatmaps with contour lines."""
+#         if self.display_plots:
+#             num_channels = len(illumination_profiles)  # Number of channels
 
-            for channel in range(num_channels):
-                # Compute illumination profiles into NumPy arrays
-                original_profile = illumination_profiles[channel]
-                corrected_profile = corrected_profiles[channel]
+#             for channel in range(num_channels):
+#                 # Compute illumination profiles into NumPy arrays
+#                 original_profile = illumination_profiles[channel]
+#                 corrected_profile = corrected_profiles[channel]
 
-                # Rescale intensity for visualization (optional, based on range of interest)
-                original_profile = exposure.rescale_intensity(
-                    original_profile, in_range=(np.percentile(original_profile, 1), np.percentile(original_profile, 99))
-                )
-                corrected_profile = exposure.rescale_intensity(
-                    corrected_profile, in_range=(np.percentile(corrected_profile, 1), np.percentile(corrected_profile, 99))
-                )
+#                 # Rescale intensity for visualization (optional, based on range of interest)
+#                 original_profile = exposure.rescale_intensity(
+#                     original_profile, in_range=(np.percentile(original_profile, 1), np.percentile(original_profile, 99))
+#                 )
+#                 corrected_profile = exposure.rescale_intensity(
+#                     corrected_profile, in_range=(np.percentile(corrected_profile, 1), np.percentile(corrected_profile, 99))
+#                 )
 
-                # Plot original and corrected illumination profiles
-                fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+#                 # Plot original and corrected illumination profiles
+#                 fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
 
-                sns.heatmap(original_profile, cmap='hot', cbar=True, ax=axes[0])
-                axes[0].set_title(f'Original Illumination Profile - Channel {channel}')
-                axes[0].axis('off')
-                contours = axes[0].contour(original_profile, colors='white', linewidths=0.5, alpha=0.7)
-                axes[0].clabel(contours, inline=True, fontsize=8, fmt="%.2f")
+#                 sns.heatmap(original_profile, cmap='hot', cbar=True, ax=axes[0])
+#                 axes[0].set_title(f'Original Illumination Profile - Channel {channel}')
+#                 axes[0].axis('off')
+#                 contours = axes[0].contour(original_profile, colors='white', linewidths=0.5, alpha=0.7)
+#                 axes[0].clabel(contours, inline=True, fontsize=8, fmt="%.2f")
 
-                sns.heatmap(corrected_profile, cmap='hot', cbar=True, ax=axes[1])
-                axes[1].set_title(f'Corrected Illumination Profile - Channel {channel}')
-                axes[1].axis('off')
-                contours = axes[1].contour(corrected_profile, colors='white', linewidths=0.5, alpha=0.7)
-                axes[1].clabel(contours, inline=True, fontsize=8, fmt="%.2f")
+#                 sns.heatmap(corrected_profile, cmap='hot', cbar=True, ax=axes[1])
+#                 axes[1].set_title(f'Corrected Illumination Profile - Channel {channel}')
+#                 axes[1].axis('off')
+#                 contours = axes[1].contour(corrected_profile, colors='white', linewidths=0.5, alpha=0.7)
+#                 axes[1].clabel(contours, inline=True, fontsize=8, fmt="%.2f")
 
-                plt.tight_layout()
-                plt.show()
+#                 plt.tight_layout()
+#                 plt.show()
 
-    def show_corrected_max_projection(self):
+#     def show_corrected_max_projection(self):
         """Display max projections of the original and corrected 3D stack for all channels side-by-side."""
         if self.display_plots:
             num_channels = self.da.shape[2]  # Number of channels in the 5D array
