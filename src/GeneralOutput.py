@@ -12,11 +12,13 @@ import gc
 
 def close_h5_files():
     for obj in gc.get_objects():
-        if isinstance(obj, h5py.File):
+
             # check if the file is open
             try:
-                print(f"Closing {obj.filename}")
-                obj.close()
+                if isinstance(obj, h5py.File):
+                    if 'temp' not in obj.filename:
+                        print(f"Closing {obj.filename}")
+                        obj.close()
             except:
                 pass
 

@@ -27,8 +27,9 @@ def close_h5_files():
         if isinstance(obj, h5py.File):
             # check if the file is open
             try:
-                print(f"Closing {obj.filename}")
-                obj.close()
+                if 'temp' not in obj.filename:
+                    print(f"Closing {obj.filename}")
+                    obj.close()
             except:
                 pass
 
@@ -201,7 +202,8 @@ class Save_Masks(Saving):
                     if '/masks' in h5:
                         del h5['/masks']
 
-                    h5.create_dataset('/masks', data=computed_masks[position_indexs[i-1] if i > 0 else 0:position_indexs[i]])
+                    chunk_size = (1,) + computed_masks.shape[1:]  # Define chunk size
+                    h5.create_dataset('/masks', data=computed_masks[position_indexs[i-1] if i > 0 else 0:position_indexs[i]], chunks=chunk_size, compression="gzip")
                     
 
 

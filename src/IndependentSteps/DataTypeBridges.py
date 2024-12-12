@@ -292,8 +292,10 @@ class FFF2NativeDataType(DataTypeBridge):
                             masks[r, 0, nucChannel, 0, :, :] = da.from_array(mask)
                     count += 1
 
-        da.to_hdf5(os.path.join(folder, H5_name), '/raw_images', imgs)
-        da.to_hdf5(os.path.join(folder, H5_name), '/masks', masks)
+        imgs = imgs.rechunk((1, 1, -1, -1, -1, -1))
+        masks = masks.rechunk((1, 1, -1, -1, -1, -1))
+        
+        da.to_hdf5(os.path.join(folder, H5_name), {'/raw_images': imgs, '/masks': masks}, compression='gzip')
 
         metadata_str = json.dumps(img_metadata)
         with h5py.File(os.path.join(folder, H5_name), 'a') as h5f:

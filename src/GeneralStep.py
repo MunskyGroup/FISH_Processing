@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import inspect
 from copy import copy
 
-from .Parameters import Parameters
+from .Parameters import Parameters, DataContainer
 # from . import Settings, Experiment, ScopeClass, DataContainer
 
 
@@ -82,8 +82,7 @@ class StepClass(ABC):
                 params['cyto_mask'][params['nuc_mask'] >= 1] = 0
             else:
                 params['cyto_mask'] = None
-            
-        
+
         return params
 
     def get_parameters(self):
@@ -138,15 +137,17 @@ class StepClass(ABC):
 
         # return the list of all children and the class so it can be initialized
         return children
-            
 
     @abstractmethod
     def main(self, **kwargs):
         pass
 
     def run(self, p: int = None, t:int = None):
+        DataContainer().load_temp()
         kwargs = self.load_in_parameters(p, t)
-        return self.main(**kwargs) 
+        results = self.main(**kwargs) 
+        DataContainer().save_temp()
+        return 
 
 class SequentialStepsClass(StepClass):
     order = 'pt'
@@ -190,6 +191,7 @@ class SequentialStepsClass(StepClass):
             raise ValueError('Order must be either "pt" or "tp"')
 
     def run(self, p:int = None, t:int = None):
+        DataContainer().load_temp()
         if p is None and t is None:
             params = Parameters.get_parameters()
             number_of_chunks = params['num_chunks_to_run']
@@ -237,7 +239,7 @@ class SequentialStepsClass(StepClass):
             print(' ###################### ')
             params = self.load_in_parameters(p, t)
             output = self.main(**params)
-        
+        DataContainer().save_temp()
         return output
 
     def main(self, **kwargs):

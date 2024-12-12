@@ -10,6 +10,7 @@ import dask.dataframe as dd
 import dask.bag as db
 import h5py
 from dataclasses import asdict
+import gc
 
 @dataclass
 class Parameters(ABC):
@@ -216,20 +217,87 @@ class DataContainer(Parameters):
     total_num_chunks: int = None
     images: da = None
     masks: da = None
+    temp_h5: h5py.File = None
 
     def __init__(self, **kwargs):
+        if not hasattr(self, 'temp_name'):
+            self.temp_name = f'temp_{np.random.randint(0, 100000)}.h5'
+
         if kwargs is not None:
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
+    def __post_init__(self):
+        self.save_temp()
+        self.load_temp()
+
     def __setattr__(self, name, value):
-        super().__setattr__(name, value)
         if name == 'total_num_chunks':
             for instance in Parameters._instances:
                 if isinstance(instance, Settings):
                     l = [instance.num_chunks_to_run, value]
                     instance.num_chunks_to_run = min(i for i in l if i is not None)
 
+        if name == 'images':
+            self._images_modified = True
+
+        if name == 'masks':
+            self._masks_modified = True
+        super().__setattr__(name, value)
+
+
+    def save_temp(self):
+        if self.temp_h5 is None:
+            with h5py.File(self.temp_name, 'w') as f:
+                pass
+            
+            self.temp_h5 = h5py.File(self.temp_name, 'r+')
+
+        if not hasattr(self, '_images_modified'):
+            self._images_modified = False
+
+        if not hasattr(self, '_masks_modified'):
+            self._masks_modified = False
+            if self.images is not None and self._images_modified:
+                da.to_hdf5(self.temp_name, '/images', self.images, compression='gzip', compression_opts=9, chunks=True)
+
+            if self.masks is not None and self._masks_modified:
+                da.to_hdf5(self.temp_name, '/masks', self.masks, compression='gzip', compression_opts=9, chunks=True)
+
+        del self.images
+        del self.masks
+        gc.collect()
+
+        if '/images' in self.temp_h5:
+            self.images = da.from_array(self.temp_h5['/images'])
+            self._images_modified = False
+
+        if '/masks' in self.temp_h5:
+            self.masks = da.from_array(self.temp_h5['/masks'])
+            self._masks_modified = False
+
+
+    def load_temp(self):
+        if hasattr(self, 'temp_name'):
+            if os.path.exists(self.temp_name):
+                if '/images' in self.temp_h5:
+                    self.images = da.from_array(self.temp_h5['/images'])
+                    self._images_modified = False
+
+                if '/masks' in self.temp_h5:
+                    self.masks = da.from_array(self.temp_h5['/masks'])
+                    self._masks_modified = False
+
+                # with h5py.File(self.temp_name, 'r') as temp_file:
+                #     if 'images' in temp_file:
+                #         self.images = da.from_array(temp_file['/images'])
+                #     if 'masks' in temp_file:
+                #         self.masks = da.from_array(temp_file['/masks'])
+
+
+    def delete_temp(self):
+        if hasattr(self, 'temp_name') and os.path.exists(self.temp_name):
+            os.remove(self.temp_name)
 
 repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @dataclass

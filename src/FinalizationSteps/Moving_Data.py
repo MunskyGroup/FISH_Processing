@@ -52,6 +52,19 @@ class remove_local_data_but_keep_h5(Moving_Data):
                 else:
                     os.remove(os.path.join(os.path.dirname(folder), file))
 
+class remove_temp(Moving_Data):
+    def main(self, temp_name, **kwargs):
+        shutil.rmtree(temp_name)
+
+class remove_all_temp(Moving_Data):
+    def main(self, temp_name, **kwargs):
+        for root, dirs, files in os.walk(temp_name):
+            for dir in dirs:
+                if 'temp' in dir:
+                    shutil.rmtree(os.path.join(root, dir))
+        shutil.rmtree(temp_name)
+
+
 
 
 
