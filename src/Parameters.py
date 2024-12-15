@@ -8,9 +8,12 @@ from pycromanager import Dataset
 import dask.array as da
 import dask.dataframe as dd
 import dask.bag as db
+from dask_image import imread
 import h5py
 from dataclasses import asdict
 import gc
+from skimage.io import imsave
+import tempfile
 
 @dataclass
 class Parameters(ABC):
@@ -221,7 +224,7 @@ class DataContainer(Parameters):
 
     def __init__(self, **kwargs):
         if not hasattr(self, 'temp_name'):
-            self.temp_name = f'temp_{np.random.randint(0, 100000)}.h5'
+            self.temp_name = f'temp_{np.random.randint(0, 100000)}'
 
         if kwargs is not None:
             for key, value in kwargs.items():
@@ -247,57 +250,59 @@ class DataContainer(Parameters):
 
 
     def save_temp(self):
-        if self.temp_h5 is None:
-            with h5py.File(self.temp_name, 'w') as f:
-                pass
-            
-            self.temp_h5 = h5py.File(self.temp_name, 'r+')
+        if not hasattr(self, 'temp_masks'):
+            self.temp_masks = tempfile.TemporaryDirectory()
+
+        if not hasattr(self, 'temp_images'):
+            self.temp_images = tempfile.TemporaryDirectory()
 
         if not hasattr(self, '_images_modified'):
             self._images_modified = False
 
         if not hasattr(self, '_masks_modified'):
             self._masks_modified = False
-            if self.images is not None and self._images_modified:
-                da.to_hdf5(self.temp_name, '/images', self.images, compression='gzip', compression_opts=9, chunks=True)
 
-            if self.masks is not None and self._masks_modified:
-                da.to_hdf5(self.temp_name, '/masks', self.masks, compression='gzip', compression_opts=9, chunks=True)
+        self.images = self.images.compute()
+        self.masks = self.masks.compute()
+        self.temp_masks.cleanup()
+        self.temp_images.cleanup()
+
+        if self.images is not None and self._images_modified:
+            self.images = da.rechunk(da.from_array(self.images), (1, 1, -1, -1,-1,-1))
+            da.to_npy_stack(self.temp_images.name, self.images) 
+            self._images_modified = False
+
+        if self.masks is not None and self._masks_modified:
+            self.masks = da.rechunk(da.from_array(self.masks), (1, 1, -1, -1,-1,-1))
+            da.to_npy_stack(self.temp_masks.name, self.masks) 
+            self._masks_modified = False
 
         del self.images
         del self.masks
         gc.collect()
-
-        if '/images' in self.temp_h5:
-            self.images = da.from_array(self.temp_h5['/images'])
-            self._images_modified = False
-
-        if '/masks' in self.temp_h5:
-            self.masks = da.from_array(self.temp_h5['/masks'])
-            self._masks_modified = False
+        
+        self.images = da.from_npy_stack(self.temp_images.name) 
+        self.masks = da.from_npy_stack(self.temp_masks.name)
 
 
     def load_temp(self):
-        if hasattr(self, 'temp_name'):
-            if os.path.exists(self.temp_name):
-                if '/images' in self.temp_h5:
-                    self.images = da.from_array(self.temp_h5['/images'])
-                    self._images_modified = False
-
-                if '/masks' in self.temp_h5:
-                    self.masks = da.from_array(self.temp_h5['/masks'])
-                    self._masks_modified = False
-
-                # with h5py.File(self.temp_name, 'r') as temp_file:
-                #     if 'images' in temp_file:
-                #         self.images = da.from_array(temp_file['/images'])
-                #     if 'masks' in temp_file:
-                #         self.masks = da.from_array(temp_file['/masks'])
-
+        # if hasattr(self, 'temp_name'):
+        #     if os.path.exists(f'{self.temp_name}_images'):
+        #         self.images = da.from_npy_stack(f'{self.temp_name}_images') 
+        #         self._images_modified = False
+        #     if os.path.exists(f'{self.temp_name}_masks'):
+        #         da.from_npy_stack(f'{self.temp_name}_masks')
+        #         self._masks_modified = False
+        pass
 
     def delete_temp(self):
-        if hasattr(self, 'temp_name') and os.path.exists(self.temp_name):
-            os.remove(self.temp_name)
+        if hasattr(self, 'temp_masks'):
+            self.temp_masks.cleanup()
+            del self.temp_masks
+
+        if hasattr(self, 'temp_images'):
+            self.temp_images.cleanup()
+            del self.temp_images
 
 repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 @dataclass
