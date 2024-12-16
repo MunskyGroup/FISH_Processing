@@ -5,7 +5,7 @@ from .Filters import (rescale_images, remove_background, exposure_correction)
 from .Segmentation_Steps import (CellSegmentationStepClass_JF, SimpleCellposeSegmentaion, BIGFISH_Tensorflow_Segmentation,
                                   CellSegmentationStepClass_Luis, DilationedCytoMask)
 
-from .IlluminationCorrection_Steps import IlluminationCorrection
+from .IlluminationCorrection_Steps import IlluminationCorrection, IlluminationCorrection_BGFG
 
 from .CellProperty_Step import CellProperties
 
